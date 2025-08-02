@@ -44,7 +44,7 @@ Visit our [docs](https://docs.scaffoldeth.io) to learn how to start building wit
 
 To know more about its features, check out our [website](https://scaffoldeth.io).
 
-Visit [Farcaster MiniApp Docs](https://miniapps.farcaster.xyz) to learn how to start building a FArcaster MiniApp.
+Visit [Farcaster MiniApp Docs](https://miniapps.farcaster.xyz) to learn how to start building a Farcaster MiniApp.
 
 
 Have Fun! 🚀🚀🚀
