@@ -1,10 +1,5 @@
 # Final Bid
 
-<h4 align="center">
-  <a href="https://docs.scaffoldeth.io">Documentation</a> |
-  <a href="https://scaffoldeth.io">Website</a>
-</h4>
-
 🧪 An open-source, all-pay auction game built onchain using <a href="https://scaffoldeth.io">Scaffold ETH2</a> with <a href="https://github.com/NikolaiL/miniapp-extension">Nikolai's MiniApp Extension.
 
 ## Quickstart
