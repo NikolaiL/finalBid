@@ -47,13 +47,9 @@ contract FinalBidContract is Ownable, Pausable {
 
     mapping(address => uint256) public referralRewards;
 
-
-    
-
-
     event AuctionCreated(uint256 indexed auctionId, address indexed tokenAddress, uint256 auctionAmount, uint256 startTime, uint256 endTime, uint256 startingAmount);
     event BidPlaced(uint256 indexed auctionId, address indexed bidder, uint256 amount, address indexed referral);
-    event AuctionEnded(uint256 indexed auctionId, address indexed winner, uint256 amount);
+    event AuctionEnded(uint256 indexed auctionId, address indexed winner, uint256 amount, uint256 highestBid);
     event AuctionCancelled(uint256 indexed auctionId);
 
     // Constructor: Called once on contract deployment
@@ -92,7 +88,7 @@ contract FinalBidContract is Ownable, Pausable {
             IERC20 token = IERC20(auction.tokenAddress);
             token.transfer(auction.highestBidder, auction.auctionAmount);
         }
-        emit AuctionEnded(_auctionId, auction.highestBidder, auction.auctionAmount);
+        emit AuctionEnded(_auctionId, auction.highestBidder, auction.auctionAmount, auction.highestBid);
     }
 
     function startAuction() public whenNotPaused {

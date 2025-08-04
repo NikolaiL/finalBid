@@ -6,19 +6,33 @@ import { useAccount } from "wagmi";
 import { BugAntIcon, MagnifyingGlassIcon } from "@heroicons/react/24/outline";
 import { MiniappUserInfo } from "~~/components/MiniappUserInfo";
 import { Address } from "~~/components/scaffold-eth";
+import { useScaffoldEventHistory } from "~~/hooks/scaffold-eth";
 
 const Home: NextPage = () => {
   const { address: connectedAddress } = useAccount();
 
+  const fromBlock = 0n;
+
+  const { data: BidEvents, isLoading: isBidEventsLoading } = useScaffoldEventHistory({
+    contractName: "FinalBidContract",
+    eventName: "BidPlaced",
+    fromBlock: fromBlock,
+  });
+
+  console.log(BidEvents);
+
   return (
     <>
-      <div className="flex items-center flex-col grow pt-10">
+      <div className="flex items-center flex-col grow pt-2">
         <div className="px-5">
-          <h1 className="text-center">
-            <span className="block text-2xl mb-2">Welcome to</span>
-            <span className="block text-4xl font-bold">Scaffold-ETH 2</span>
-            <span className="block text-xl font-bold">(miniapp extension)</span>
-          </h1>
+          {/* if isBidEventsLoading, show a loading spinner */}
+          {isBidEventsLoading ? (
+            <div className="flex justify-center items-center">
+              <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-gray-900"></div>
+            </div>
+          ) : (
+            <></>
+          )}
           <div className="flex justify-center items-center space-x-2 flex-col">
             <p className="my-2 font-medium">Connected Address:</p>
             <Address address={connectedAddress} />
