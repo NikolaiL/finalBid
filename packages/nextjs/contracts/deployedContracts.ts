@@ -7,7 +7,7 @@ import { GenericContractsDeclaration } from "~~/utils/scaffold-eth/contract";
 const deployedContracts = {
   31337: {
     DummyUsdcContract: {
-      address: "0xf5059a5D33d5853360D16C683c16e67980206f36",
+      address: "0x5FbDB2315678afecb367f032d93F642f64180aa3",
       abi: [
         {
           inputs: [
@@ -534,10 +534,10 @@ const deployedContracts = {
         renounceOwnership: "@openzeppelin/contracts/access/Ownable.sol",
         transferOwnership: "@openzeppelin/contracts/access/Ownable.sol",
       },
-      deployedOnBlock: 114,
+      deployedOnBlock: 1,
     },
     FinalBidContract: {
-      address: "0x95401dc811bb5740090279Ba06cfA8fcF6113778",
+      address: "0x2279B7A0a67DB372996a5FaB50D91eAA73d2eBe6",
       abi: [
         {
           inputs: [
@@ -586,19 +586,6 @@ const deployedContracts = {
           ],
           name: "OwnableUnauthorizedAccount",
           type: "error",
-        },
-        {
-          anonymous: false,
-          inputs: [
-            {
-              indexed: true,
-              internalType: "uint256",
-              name: "auctionId",
-              type: "uint256",
-            },
-          ],
-          name: "AuctionCancelled",
-          type: "event",
         },
         {
           anonymous: false,
@@ -1098,7 +1085,7 @@ const deployedContracts = {
         transferOwnership: "@openzeppelin/contracts/access/Ownable.sol",
         paused: "@openzeppelin/contracts/utils/Pausable.sol",
       },
-      deployedOnBlock: 116,
+      deployedOnBlock: 28,
     },
   },
   84532: {

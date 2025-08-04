@@ -1,43 +1,182 @@
 "use client";
 
+import { useMemo } from "react";
 import Link from "next/link";
 import type { NextPage } from "next";
 import { useAccount } from "wagmi";
 import { BugAntIcon, MagnifyingGlassIcon } from "@heroicons/react/24/outline";
 import { MiniappUserInfo } from "~~/components/MiniappUserInfo";
 import { Address } from "~~/components/scaffold-eth";
-import { useScaffoldEventHistory } from "~~/hooks/scaffold-eth";
+import { useScaffoldEventHistory, useScaffoldReadContract } from "~~/hooks/scaffold-eth";
 
 const Home: NextPage = () => {
   const { address: connectedAddress } = useAccount();
 
   const fromBlock = 0n;
 
+  // get current auction id
+  const { data: AuctionId, isLoading: isAuctionIdLoading } = useScaffoldReadContract({
+    contractName: "FinalBidContract",
+    functionName: "auctionId",
+    watch: true, // Enable live updates
+  });
+
+  console.log(AuctionId);
+
+  // get current auction data and keep it updated
+  const { data: AuctionData, isLoading: isAuctionDataLoading } = useScaffoldReadContract({
+    contractName: "FinalBidContract",
+    functionName: "auctions",
+    args: [AuctionId],
+    watch: true, // Enable live updates
+  });
+
+  console.log("AuctionData", AuctionData);
+
   const { data: BidEvents, isLoading: isBidEventsLoading } = useScaffoldEventHistory({
     contractName: "FinalBidContract",
     eventName: "BidPlaced",
     fromBlock: fromBlock,
+    watch: true, // Enable live updates
   });
 
-  console.log(BidEvents);
+  const { data: AuctionEndedEvents, isLoading: isAuctionEndedEventsLoading } = useScaffoldEventHistory({
+    contractName: "FinalBidContract",
+    eventName: "AuctionEnded",
+    fromBlock: fromBlock,
+    watch: true, // Enable live updates
+  });
+
+  const { data: AuctionCreatedEvents, isLoading: isAuctionCreatedEventsLoading } = useScaffoldEventHistory({
+    contractName: "FinalBidContract",
+    eventName: "AuctionCreated",
+    fromBlock: fromBlock,
+    watch: true, // Enable live updates
+  });
+
+  // Combine all events and sort them chronologically
+  const allEvents = useMemo(() => {
+    const events: any[] = [];
+
+    // Add BidPlaced events
+    if (BidEvents) {
+      BidEvents.forEach((event: any) => {
+        events.push({
+          ...event,
+          eventType: "BidPlaced",
+          displayName: "Bid Placed",
+        });
+      });
+    }
+
+    // Add AuctionEnded events
+    if (AuctionEndedEvents) {
+      AuctionEndedEvents.forEach((event: any) => {
+        events.push({
+          ...event,
+          eventType: "AuctionEnded",
+          displayName: "Auction Ended",
+        });
+      });
+    }
+
+    // Add AuctionCreated events
+    if (AuctionCreatedEvents) {
+      AuctionCreatedEvents.forEach((event: any) => {
+        events.push({
+          ...event,
+          eventType: "AuctionCreated",
+          displayName: "Auction Created",
+        });
+      });
+    }
+
+    // Sort by block number and log index
+    return events.sort((a: any, b: any) => {
+      if (a.blockNumber !== b.blockNumber) {
+        return Number(b.blockNumber - a.blockNumber);
+      }
+      return Number(b.logIndex - a.logIndex);
+    });
+  }, [BidEvents, AuctionEndedEvents, AuctionCreatedEvents]);
+
+  const isLoading =
+    isAuctionIdLoading ||
+    isAuctionDataLoading ||
+    isBidEventsLoading ||
+    isAuctionEndedEventsLoading ||
+    isAuctionCreatedEventsLoading;
+
+  console.log("All events in chronological order:", allEvents);
 
   return (
     <>
       <div className="flex items-center flex-col grow pt-2">
         <div className="px-5">
-          {/* if isBidEventsLoading, show a loading spinner */}
-          {isBidEventsLoading ? (
+          {/* if isLoading, show a loading spinner */}
+          {isLoading ? (
             <div className="flex justify-center items-center">
               <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-gray-900"></div>
             </div>
           ) : (
             <>
-              {BidEvents?.map(event => (
-                <div key={event.transactionHash} className="flex gap-2">
-                  <span>{event.args?.auctionId}</span>
-                  <span>{event.args?.bidder}</span>
-                  <span>{event.args?.amount}</span>
-                  <span>{event.args?.referral}</span>
+              <h2 className="text-xl font-bold mb-4">Current Auction Data</h2>
+              <div className="border p-3 mb-2 rounded">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <span className="font-bold text-blue-600">Auction ID</span>
+                    <span className="text-gray-500 ml-2">#{AuctionId}</span>
+                  </div>
+                  <div>
+                    <span className="font-bold text-blue-600">Auction Data</span>
+                    <span className="text-gray-500 ml-2">Win $100</span>
+                  </div>
+                </div>
+              </div>
+              <h2 className="text-xl font-bold mb-4">Contract Events (Chronological Order)</h2>
+              {allEvents?.map((event, index) => (
+                <div key={`${event.transactionHash}-${event.logIndex}`} className="border p-3 mb-2 rounded">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <span className="font-bold text-blue-600">{event.displayName}</span>
+                      <span className="text-gray-500 ml-2">#{index + 1}</span>
+                    </div>
+                    <span className="text-sm text-gray-400">Block: {event.blockNumber.toString()}</span>
+                  </div>
+
+                  {/* Display event-specific data */}
+                  {event.eventType === "BidPlaced" && (
+                    <div className="mt-2 text-sm">
+                      <span>Auction ID: {event.args?.auctionId?.toString()}</span>
+                      <span className="ml-4">Bidder: {event.args?.bidder}</span>
+                      <span className="ml-4">Amount: {event.args?.amount?.toString()}</span>
+                      <span className="ml-4">Referral: {event.args?.referral}</span>
+                    </div>
+                  )}
+
+                  {event.eventType === "AuctionCreated" && (
+                    <div className="mt-2 text-sm">
+                      <span>Auction ID: {event.args?.auctionId?.toString()}</span>
+                      <span className="ml-4">Token: {event.args?.tokenAddress}</span>
+                      <span className="ml-4">Amount: {event.args?.auctionAmount?.toString()}</span>
+                    </div>
+                  )}
+
+                  {event.eventType === "AuctionEnded" && (
+                    <div className="mt-2 text-sm">
+                      <span>Auction ID: {event.args?.auctionId?.toString()}</span>
+                      <span className="ml-4">Winner: {event.args?.winner}</span>
+                      <span className="ml-4">Amount: {event.args?.amount?.toString()}</span>
+                    </div>
+                  )}
+
+                  {event.eventType === "AuctionCancelled" && (
+                    <div className="mt-2 text-sm">
+                      <span>Auction ID: {event.args?.auctionId?.toString()}</span>
+                    </div>
+                  )}
+
+                  <div className="mt-1 text-xs text-gray-400">TX: {event.transactionHash}</div>
                 </div>
               ))}
             </>

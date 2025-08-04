@@ -50,7 +50,6 @@ contract FinalBidContract is Ownable, Pausable {
     event AuctionCreated(uint256 indexed auctionId, address indexed tokenAddress, uint256 auctionAmount, uint256 startTime, uint256 endTime, uint256 startingAmount);
     event BidPlaced(uint256 indexed auctionId, address indexed bidder, uint256 amount, address indexed referral);
     event AuctionEnded(uint256 indexed auctionId, address indexed winner, uint256 amount, uint256 highestBid);
-    event AuctionCancelled(uint256 indexed auctionId);
 
     // Constructor: Called once on contract deployment
     // Check packages/hardhat/deploy/00_deploy_your_contract.ts
@@ -93,7 +92,8 @@ contract FinalBidContract is Ownable, Pausable {
 
     function startAuction() public whenNotPaused {
         // no active auction or last auction time is finished
-        require(auctionId == 0 || auctions[auctionId].endTime < block.timestamp || auctions[auctionId].highestBid >= auctions[auctionId].auctionAmount, "Auction already active");
+        Auction storage auction = auctions[auctionId];
+        require(auctionId == 0 || auction.endTime < block.timestamp || auction.highestBid >= auction.auctionAmount, "Auction already active");
         // if auctionId > 0, we need to finalize the old auction, pay the winner etc...
         if (auctionId > 0 && auctions[auctionId].ended == false) {
             _finalizeAuction(auctionId);
@@ -104,7 +104,7 @@ contract FinalBidContract is Ownable, Pausable {
         emit AuctionCreated(auctionId, tokenAddress, auctionAmount, block.timestamp, block.timestamp + auctionDuration, startingAmount);
     }
 
-    // this call must also transfer teh bid amount in tokenAddress to the contract
+    // this call must also transfer the bid amount in tokenAddress to the contract
     function placeBid(address _referral) public whenNotPaused {
         Auction storage auction = auctions[auctionId];
         uint256 _bidAmount = (auction.highestBid == 0) ? auction.startingAmount : auction.highestBid + auction.bidIncrement;
@@ -113,10 +113,7 @@ contract FinalBidContract is Ownable, Pausable {
         // check for allowance, if less than required, ask for allowance
         IERC20 token = IERC20(auction.tokenAddress);
         uint256 allowance = token.allowance(msg.sender, address(this));
-        if (allowance < _totalBidAmount * 2) {
-            token.approve(address(this), (_totalBidAmount) * 2);
-        }
-        
+        require(allowance >= _totalBidAmount, "Insufficient allowance");
         
         // transfer the bid amount to the contract
         token.transferFrom(msg.sender, address(this), _totalBidAmount);

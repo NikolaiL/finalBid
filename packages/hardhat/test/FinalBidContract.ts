@@ -58,7 +58,7 @@ describe("FinalBidContract", function () {
 
       const auction = await finalBidContract.auctions(1);
 
-      const increaseTime = Number(auction.endTime - auction.startTime) + 1;
+      const increaseTime = Number(auction.endTime - auction.startTime) + 1000;
       await ethers.provider.send("evm_increaseTime", [increaseTime]);
       await ethers.provider.send("evm_mine");
 
@@ -196,8 +196,6 @@ describe("FinalBidContract", function () {
       const zeroAddress = "0x0000000000000000000000000000000000000000";
 
       await finalBidContract.connect(user1).placeBid(zeroAddress);
-
-      auction = await finalBidContract.auctions(1);
 
       const user1BalanceAfterBid = await dummyUsdcContract.balanceOf(user1.address);
 
