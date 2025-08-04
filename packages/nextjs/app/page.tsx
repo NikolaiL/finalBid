@@ -9,6 +9,15 @@ import { MiniappUserInfo } from "~~/components/MiniappUserInfo";
 import { Address } from "~~/components/scaffold-eth";
 import { useScaffoldEventHistory, useScaffoldReadContract } from "~~/hooks/scaffold-eth";
 
+// Utility function to format USDC amounts (6 decimals)
+const formatUSDC = (amount: bigint | undefined): string => {
+  if (!amount) return "0.00";
+
+  const amountNumber = Number(amount);
+  const usdcAmount = amountNumber / 1000000; // 6 decimals for USDC
+  return usdcAmount.toFixed(2);
+};
+
 const Home: NextPage = () => {
   const { address: connectedAddress } = useAccount();
 
@@ -31,7 +40,25 @@ const Home: NextPage = () => {
     watch: true, // Enable live updates
   });
 
-  console.log("AuctionData", AuctionData);
+  // let's convert AuctioNData to named properties
+  const auctionData = {
+    tokenAddress: AuctionData?.[0],
+    auctionAmount: AuctionData?.[1],
+    startTime: AuctionData?.[2],
+    endTime: AuctionData?.[3],
+    startingAmount: AuctionData?.[4],
+    bidIncrement: AuctionData?.[5],
+    referralFee: AuctionData?.[6],
+    platformFee: AuctionData?.[7],
+    bidCount: AuctionData?.[8],
+    highestBidder: AuctionData?.[9],
+    highestBid: AuctionData?.[10],
+    ended: AuctionData?.[11],
+  };
+
+  console.log("AuctionData", auctionData);
+
+  console.log("auctionAmount", auctionData.auctionAmount);
 
   const { data: BidEvents, isLoading: isBidEventsLoading } = useScaffoldEventHistory({
     contractName: "FinalBidContract",
@@ -129,7 +156,7 @@ const Home: NextPage = () => {
                   </div>
                   <div>
                     <span className="font-bold text-blue-600">Auction Data</span>
-                    <span className="text-gray-500 ml-2">Win $100</span>
+                    <span className="text-gray-500 ml-2">Win ${formatUSDC(auctionData.auctionAmount)}</span>
                   </div>
                 </div>
               </div>
@@ -149,7 +176,7 @@ const Home: NextPage = () => {
                     <div className="mt-2 text-sm">
                       <span>Auction ID: {event.args?.auctionId?.toString()}</span>
                       <span className="ml-4">Bidder: {event.args?.bidder}</span>
-                      <span className="ml-4">Amount: {event.args?.amount?.toString()}</span>
+                      <span className="ml-4">Amount: ${formatUSDC(event.args?.amount)}</span>
                       <span className="ml-4">Referral: {event.args?.referral}</span>
                     </div>
                   )}
