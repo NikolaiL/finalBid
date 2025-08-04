@@ -31,7 +31,16 @@ const Home: NextPage = () => {
               <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-gray-900"></div>
             </div>
           ) : (
-            <></>
+            <>
+              {BidEvents?.map(event => (
+                <div key={event.transactionHash} className="flex gap-2">
+                  <span>{event.args?.auctionId}</span>
+                  <span>{event.args?.bidder}</span>
+                  <span>{event.args?.amount}</span>
+                  <span>{event.args?.referral}</span>
+                </div>
+              ))}
+            </>
           )}
           <div className="flex justify-center items-center space-x-2 flex-col">
             <p className="my-2 font-medium">Connected Address:</p>
