@@ -40,20 +40,25 @@ const deployYourContract: DeployFunction = async function (hre: HardhatRuntimeEn
   let usdcAddress = usdcAddressMap[networkName as keyof typeof usdcAddressMap];
   console.log("👋 USDC Address:", usdcAddress);
 
+  let mintUsdc = false;
+  let usdcContract: any;
+
   // if network is undefined we should deploy a dummy usdc erc20 contract
   if (!usdcAddress) {
     console.log("👋 Deploying dummy USDC ERC20 contract");
     // deploy a dummy usdc erc20 contract
-    const usdcContract = await deploy("DummyUsdcContract", {
+    usdcContract = await deploy("DummyUsdcContract", {
       from: deployer,
       args: [deployer, 1000000000000], // 1,000,000 USDC (with 6 decimals)
       log: true,
       autoMine: true,
     });
+
     usdcAddress = usdcContract.address; // update the usdc address
+    mintUsdc = true;
   }
 
-  await deploy("FinalBidContract", {
+  const finalBidContract = await deploy("FinalBidContract", {
     from: deployer,
     // Contract constructor arguments
     args: [deployer, usdcAddress],
@@ -64,7 +69,16 @@ const deployYourContract: DeployFunction = async function (hre: HardhatRuntimeEn
   });
 
   // Get the deployed contract to interact with it after deploying.
-  // const yourContract = await hre.ethers.getContract<Contract>("FinalBidContract", deployer);
+  //const yourContract = await hre.ethers.getContract<Contract>("FinalBidContract", deployer);
+  console.log("👋 FinalBidContract deployed at:", finalBidContract.address);
+
+  if (mintUsdc) {
+    // Get the USDC contract instance for minting
+    const usdcContractInstance = await hre.ethers.getContractAt("DummyUsdcContract", usdcAddress);
+    console.log("👋 USDC Contract:", usdcAddress);
+    await usdcContractInstance.mint(deployer, 1000000000000);
+    await usdcContractInstance.mint(finalBidContract.address, 1000000000000);
+  }
 };
 
 export default deployYourContract;
