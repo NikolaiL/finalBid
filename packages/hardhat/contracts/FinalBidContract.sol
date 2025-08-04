@@ -6,51 +6,160 @@ import "hardhat/console.sol";
 
 // Use openzeppelin to inherit battle-tested implementations (ERC20, ERC721, etc)
 import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/utils/Pausable.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 /**
  * A smart contract that allows changing a state variable of the contract and tracking the changes
  * It also allows the owner to withdraw the Ether in the contract
  * @author BuidlGuidl
  */
-contract FinalBidContract is Ownable {
+contract FinalBidContract is Ownable, Pausable {
     // State Variables
-    string public greeting = "Building Unstoppable Apps!!!";
-    bool public premium = false;
-    uint256 public totalCounter = 0;
-    mapping(address => uint) public userGreetingCounter;
+    address public tokenAddress;
+    uint256 public auctionId;
+    uint256 public auctionAmount = 100000000; // 100 USDC
+    uint256 public auctionDuration = 60; // 1 minute
+    uint256 public auctionDurationIncrease = 60; // 1 minute
+    uint256 public startingAmount = 1000000; // 1 USDC
+    uint256 public bidIncrement = 250000; // 0.25 USDC
+    uint256 public referralFee = 250000; // 0.25 USDC
+    uint256 public platformFee = 1000000; // 1 USDC
+    uint256 public platformFeesCollected;
+    uint256 public platformFeesClaimed;
 
-    // Events: a way to emit log statements from smart contract that can be listened to by external parties
-    event GreetingChange(address indexed greetingSetter, string newGreeting, bool premium, uint256 value);
+    struct Auction {
+        address tokenAddress;
+        uint256 auctionAmount;
+        uint256 startTime;
+        uint256 endTime;
+        uint256 startingAmount;
+        uint256 bidIncrement;
+        uint256 referralFee;
+        uint256 platformFee;
+        uint256 bidCount;
+        address highestBidder;
+        uint256 highestBid;
+        bool ended;
+    }
+
+    mapping(uint256 => Auction) public auctions;
+
+    mapping(address => uint256) public referralRewards;
+
+
+    
+
+
+    event AuctionCreated(uint256 indexed auctionId, address indexed tokenAddress, uint256 auctionAmount, uint256 startTime, uint256 endTime, uint256 startingAmount);
+    event BidPlaced(uint256 indexed auctionId, address indexed bidder, uint256 amount, address indexed referral);
+    event AuctionEnded(uint256 indexed auctionId, address indexed winner, uint256 amount);
+    event AuctionCancelled(uint256 indexed auctionId);
 
     // Constructor: Called once on contract deployment
     // Check packages/hardhat/deploy/00_deploy_your_contract.ts
-    constructor(address _owner) Ownable(_owner) {
+    constructor(address _owner, address _tokenAddress) Ownable(_owner) {
         // Owner is set in the Ownable constructor
+        tokenAddress = _tokenAddress;
     }
 
-    /**
-     * Function that allows anyone to change the state variable "greeting" of the contract and increase the counters
-     *
-     * @param _newGreeting (string memory) - new greeting to save on the contract
-     */
-    function setGreeting(string memory _newGreeting) public payable {
-        // Print data to the hardhat chain console. Remove when deploying to a live network.
-        console.log("Setting new greeting '%s' from %s", _newGreeting, msg.sender);
+    function _createAuction(uint256 _auctionId, address _tokenAddress, uint256 _auctionAmount, uint256 _startTime, uint256 _endTime, uint256 _startingAmount, uint256 _bidIncrement, uint256 _referralFee, uint256 _platformFee) internal {
+        auctions[_auctionId] = Auction({
+            tokenAddress: _tokenAddress,
+            auctionAmount: _auctionAmount,
+            startTime: _startTime,
+            endTime: _endTime,
+            startingAmount: _startingAmount,
+            bidIncrement: _bidIncrement,
+            referralFee: _referralFee,
+            platformFee: _platformFee,
+            bidCount: 0,
+            highestBidder: address(0),
+            highestBid: 0,
+            ended: false
+        });
+    }
 
-        // Change state variables
-        greeting = _newGreeting;
-        totalCounter += 1;
-        userGreetingCounter[msg.sender] += 1;
+    function _finalizeAuction(uint256 _auctionId) internal {
+        Auction storage auction = auctions[_auctionId];
+        require (_auctionId > 0 && _auctionId <= auctionId, "Auction not found");
+        require(auction.ended == false, "Auction already ended");
+        require(auction.endTime < block.timestamp || auction.highestBid >= auction.auctionAmount, "Auction not ended");
 
-        // msg.value: built-in global variable that represents the amount of ether sent with the transaction
-        if (msg.value > 0) {
-            premium = true;
-        } else {
-            premium = false;
+        auction.ended = true;
+        if (auction.highestBidder != address(0)) {
+            // pay the winner
+            IERC20 token = IERC20(auction.tokenAddress);
+            token.transfer(auction.highestBidder, auction.auctionAmount);
+        }
+        emit AuctionEnded(_auctionId, auction.highestBidder, auction.auctionAmount);
+    }
+
+    function startAuction() public whenNotPaused {
+        // no active auction or last auction time is finished
+        require(auctionId == 0 || auctions[auctionId].endTime < block.timestamp || auctions[auctionId].highestBid >= auctions[auctionId].auctionAmount, "Auction already active");
+        // if auctionId > 0, we need to finalize the old auction, pay the winner etc...
+        if (auctionId > 0 && auctions[auctionId].ended == false) {
+            _finalizeAuction(auctionId);
+        }
+        auctionId ++;
+        // create new auction
+        _createAuction(auctionId, tokenAddress, auctionAmount, block.timestamp, block.timestamp + auctionDuration, startingAmount, bidIncrement, referralFee, platformFee);
+        emit AuctionCreated(auctionId, tokenAddress, auctionAmount, block.timestamp, block.timestamp + auctionDuration, startingAmount);
+    }
+
+    // this call must also transfer teh bid amount in tokenAddress to the contract
+    function placeBid(address _referral) public whenNotPaused {
+        Auction storage auction = auctions[auctionId];
+        uint256 _bidAmount = (auction.highestBid == 0) ? auction.startingAmount : auction.highestBid + auction.bidIncrement;
+        uint256 _totalBidAmount = _bidAmount + platformFee;
+        require(auction.startTime <= block.timestamp && auction.endTime > block.timestamp, "Auction not active");
+        // check for allowance, if less than required, ask for allowance
+        IERC20 token = IERC20(auction.tokenAddress);
+        uint256 allowance = token.allowance(msg.sender, address(this));
+        if (allowance < _totalBidAmount * 2) {
+            token.approve(address(this), (_totalBidAmount) * 2);
+        }
+        
+        
+        // transfer the bid amount to the contract
+        token.transferFrom(msg.sender, address(this), _totalBidAmount);
+
+        // we need to send back the previous highest bid to the previous highest bidder
+        if (auction.highestBidder != address(0)) {
+            token.transfer(auction.highestBidder, auction.highestBid);
         }
 
-        // emit: keyword used to trigger an event
-        emit GreetingChange(msg.sender, _newGreeting, msg.value > 0, msg.value);
+        // place bid
+        auction.highestBidder = msg.sender;
+        auction.highestBid = _bidAmount;
+        auction.bidCount++;
+
+        // pay the referral
+        if (_referral != address(0)) {
+            referralRewards[_referral] += referralFee;
+            platformFeesCollected += (platformFee - referralFee);
+        } else {
+            platformFeesCollected += platformFee;
+        }
+
+        // check if the auction duration needs to be increased
+        if (auction.endTime - block.timestamp < auctionDurationIncrease && auction.highestBid < auction.auctionAmount) {
+            auction.endTime += auctionDurationIncrease;
+        }
+        emit BidPlaced(auctionId, msg.sender, _bidAmount, _referral);
+
+        if (auction.highestBid >= auction.auctionAmount) {
+            startAuction();
+        }
+    }
+
+    function pause() public onlyOwner {
+        _pause();
+    }
+
+    function unpause() public onlyOwner {
+        _unpause();
     }
 
     /**
@@ -62,8 +171,30 @@ contract FinalBidContract is Ownable {
         require(success, "Failed to send Ether");
     }
 
+    function withdrawPlatformFees() public onlyOwner {
+        // withdraw from token contract
+        require(platformFeesCollected > platformFeesClaimed, "No fees to claim");
+        IERC20 token = IERC20(tokenAddress);
+        uint256 platfromFeesToClaim = platformFeesCollected - platformFeesClaimed;
+        token.transfer(owner(), platfromFeesToClaim);
+        platformFeesClaimed += platfromFeesToClaim;
+    }
+
+    /**
+     * function that allows a referral to withdraw his referral fees
+     */
+    function withdrawReferralRewards() public {
+        require(referralRewards[msg.sender] > 0, "No rewards to claim");
+        IERC20 token = IERC20(tokenAddress);
+        token.transfer(msg.sender, referralRewards[msg.sender]);
+        referralRewards[msg.sender] = 0;
+    }
+
     /**
      * Function that allows the contract to receive ETH
      */
     receive() external payable {}
+    
+
+
 }
