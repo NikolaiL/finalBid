@@ -48,8 +48,8 @@ contract DummyUsdcContract is ERC20, Ownable {
     }
 
     function grab() public {
-        _mint(msg.sender, 100000000000000000000); // 100 USDC
-        emit Minted(msg.sender, 100000000000000000000);
+        _mint(msg.sender, 10000000); // 10 USDC
+        emit Minted(msg.sender, 10000000);
     }
 
     /**

@@ -64,9 +64,15 @@ contract FinalBidContract is Ownable, Pausable {
     function _createAuction(uint256 _auctionId, address _tokenAddress, uint256 _auctionAmount, uint256 _startTime, uint256 _endTime, uint256 _startingAmount, uint256 _bidIncrement, uint256 _referralFee, uint256 _platformFee) internal {
         // check if _auctionAmount is available
         uint256 availableAmount = IERC20(_tokenAddress).balanceOf(address(this));
-        uint256 totalFees = platformFeesCollected + totalReferralRewardsCollected - platformFeesClaimed - totalReferralRewardsClaimed;
-        require (availableAmount > totalFees + _startingAmount + _bidIncrement, "Insufficient balance to start auction");
+        uint256 totalReferralFees = totalReferralRewardsCollected - totalReferralRewardsClaimed;
+        uint256 totalPlatfromFees = platformFeesCollected - platformFeesClaimed;
+        require (availableAmount > totalReferralFees + _startingAmount + _bidIncrement, "Insufficient balance to start auction");
         uint256 auctionAmountToUse = availableAmount > _auctionAmount ? _auctionAmount : availableAmount;
+
+        if (auctionAmountToUse > availableAmount - totalPlatfromFees) {
+            platformFeesClaimed += (auctionAmountToUse - (availableAmount - totalPlatfromFees));
+        }
+        
         auctions[_auctionId] = Auction({
             tokenAddress: _tokenAddress,
             auctionAmount: auctionAmountToUse,

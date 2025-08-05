@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import type { NextPage } from "next";
-import { useAccount } from "wagmi";
+import { useAccount, useBlockNumber } from "wagmi";
 import { BugAntIcon, MagnifyingGlassIcon } from "@heroicons/react/24/outline";
 import { MiniappUserInfo } from "~~/components/MiniappUserInfo";
 import { Address } from "~~/components/scaffold-eth";
@@ -24,10 +24,12 @@ const formatUSDC = (amount: bigint | undefined): string => {
 };
 
 const Home: NextPage = () => {
+  let isLoading = true;
   const { address: connectedAddress } = useAccount();
 
-  const fromBlock = 0n;
-
+  // get the latest block number and decrease by 500
+  const { data: latestBlock } = useBlockNumber({ watch: true });
+  const fromBlock = latestBlock ? (latestBlock > 500n ? latestBlock - 500n : 0n) : 0n;
   // get current auction id
   const { data: AuctionId, isLoading: isAuctionIdLoading } = useScaffoldReadContract({
     contractName: "FinalBidContract",
@@ -128,7 +130,7 @@ const Home: NextPage = () => {
     });
   }, [BidEvents, AuctionEndedEvents, AuctionCreatedEvents]);
 
-  const isLoading =
+  isLoading =
     isAuctionIdLoading ||
     isAuctionDataLoading ||
     isBidEventsLoading ||
@@ -156,6 +158,7 @@ const Home: NextPage = () => {
     contractName: "DummyUsdcContract",
     functionName: "allowance",
     args: [connectedAddress, finalBidContractInfo?.address],
+    watch: true, // Enable live updates
   });
 
   auctionData.readyToEnd =
@@ -196,9 +199,18 @@ const Home: NextPage = () => {
 
     try {
       console.log("Placing bid...");
+      // Get referrer from sessionStorage, fallback to zero address
+      let referrer = "0x0000000000000000000000000000000000000000";
+      if (typeof window !== "undefined") {
+        const storedRef = sessionStorage.getItem("referrer");
+        if (storedRef && /^0x[a-fA-F0-9]{40}$/.test(storedRef)) {
+          referrer = storedRef;
+        }
+        console.log("referrer used:", referrer);
+      }
       await writeContractAsync({
         functionName: "placeBid",
-        args: [connectedAddress], // Use connected address as referral
+        args: [referrer],
       });
     } catch (error) {
       console.error("Error placing bid:", error);
@@ -227,26 +239,30 @@ const Home: NextPage = () => {
             </div>
           ) : (
             <>
-              <h2 className="text-xl font-bold mb-4">Current Auction Data</h2>
-              <div className="border p-3 mb-2 rounded">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <span className="font-bold text-blue-600">Auction ID</span>
-                    <span className="text-gray-500 ml-2">#{AuctionId}</span>
-                  </div>
-                  <div>
-                    <span className="font-bold text-blue-600">Auction Data</span>
-                    <span className="text-gray-500 ml-2">Win ${formatUSDC(auctionData.auctionAmount)}</span>
-                  </div>
-                  <div>
-                    <span className="font-bold text-blue-600">Auction Ends In</span>
-                    <span className="text-gray-500 ml-2">
-                      {auctionData.endTime && currentTimestamp ? Number(auctionData.endTime - currentTimestamp) : 0}{" "}
-                      seconds
-                    </span>
+              {!isAuctionDataLoading && (auctionData.auctionId || 0n) > 0n && (
+                <div>
+                  <h2 className="text-xl font-bold mb-4">Current Auction Data</h2>
+                  <div className="border p-3 mb-2 rounded">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <span className="font-bold text-blue-600">Auction ID</span>
+                        <span className="text-gray-500 ml-2">#{AuctionId}</span>
+                      </div>
+                      <div>
+                        <span className="font-bold text-blue-600">Auction Data</span>
+                        <span className="text-gray-500 ml-2">Win ${formatUSDC(auctionData.auctionAmount)}</span>
+                      </div>
+                      <div>
+                        <span className="font-bold text-blue-600">Auction Ends In</span>
+                        <span className="text-gray-500 ml-2">
+                          {auctionData.endTime && currentTimestamp ? Number(auctionData.endTime - currentTimestamp) : 0}{" "}
+                          seconds
+                        </span>
+                      </div>
+                    </div>
                   </div>
                 </div>
-              </div>
+              )}
               <div className="rounded my-4 text-center w-full">
                 {AuctionId === 0n && (
                   <button
@@ -296,25 +312,28 @@ const Home: NextPage = () => {
                   </button>
                 )}
               </div>
-              <h2 className="text-xl font-bold mb-4">Contract Events (Chronological Order)</h2>
-              {allEvents?.map((event, index) => (
-                <div key={`${event.transactionHash}-${event.logIndex}`} className="border p-3 mb-2 rounded">
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <span className="font-bold text-blue-600">{event.displayName}</span>
-                      <span className="text-gray-500 ml-2">#{index + 1}</span>
-                    </div>
-                    <span className="text-sm text-gray-400">Block: {event.blockNumber.toString()}</span>
-                  </div>
-
+              <h2 className="text-lg mb-4 w-full text-center">Bid Story</h2>
+              {allEvents?.map(event => (
+                <div
+                  key={`${event.transactionHash}-${event.logIndex}`}
+                  className="border mb-4 px-3 py-2 rounded-xl shadow-lg"
+                >
                   {/* Display event-specific data */}
                   {event.eventType === "BidPlaced" && (
-                    <div className="mt-2 text-sm">
-                      <span>Auction ID: {event.args?.auctionId?.toString()}</span>
-                      <span className="ml-4">Bidder: {event.args?.bidder}</span>
-                      <span className="ml-4">Amount: ${formatUSDC(event.args?.amount)}</span>
-                      <span className="ml-4">Referral: {event.args?.referral}</span>
-                    </div>
+                    <>
+                      <div className="mt-2 text-xl flex justify-center w-full items-center">
+                        <Address address={event.args?.bidder} size="xl" />
+                        <span className="ml-2">bids</span>
+                        <span className="ml-2 font-bold text-4xl">${formatUSDC(event.args?.amount)}</span>
+                      </div>
+                      {event.args?.referral &&
+                        event.args?.referral !== "0x0000000000000000000000000000000000000000" && (
+                          <div className="opacity-50 mt-2 text-xs flex justify-center w-full items-center">
+                            <span className="ml-4 flex mr-2">Referred by:</span>
+                            <Address address={event.args?.referral} size="xs" />
+                          </div>
+                        )}
+                    </>
                   )}
 
                   {event.eventType === "AuctionCreated" && (
@@ -338,8 +357,6 @@ const Home: NextPage = () => {
                       <span>Auction ID: {event.args?.auctionId?.toString()}</span>
                     </div>
                   )}
-
-                  <div className="mt-1 text-xs text-gray-400">TX: {event.transactionHash}</div>
                 </div>
               ))}
             </>

@@ -91,6 +91,42 @@ describe("FinalBidContract", function () {
 
       await expect(finalBidContract.startAuction()).to.be.revertedWith("Insufficient balance to start auction");
     });
+    it("Should increase claimed platfom fees if we need to use some of it to start a new auction", async function () {
+      // burn everything from the contract
+
+      const zeroAddress = "0x0000000000000000000000000000000000000000";
+      const balanceBefore = await dummyUsdcContract.balanceOf(finalBidContract.target);
+      await dummyUsdcContract.connect(owner).burnFrom(finalBidContract.target, balanceBefore);
+
+      const balance = 100000000; // 100 USDC
+      await dummyUsdcContract.mint(finalBidContract.target, balance);
+
+      // now, let's start an auction
+      await finalBidContract.startAuction();
+      expect(await finalBidContract.auctionId()).to.equal(1);
+
+      // now, let's place 20 bids
+      for (let i = 0; i < 20; i++) {
+        await finalBidContract.connect(user1).placeBid(zeroAddress);
+        await finalBidContract.connect(user2).placeBid(zeroAddress);
+      }
+
+      const auction = await finalBidContract.auctions(1);
+
+      const increaseTime = Number(auction.endTime - auction.startTime) + 10;
+      await ethers.provider.send("evm_increaseTime", [increaseTime]);
+      await ethers.provider.send("evm_mine");
+
+      const platformFeesClaimedBefore = await finalBidContract.platformFeesClaimed();
+
+      // now lets start the new auction
+      await finalBidContract.startAuction();
+      expect(await finalBidContract.auctionId()).to.equal(2);
+
+      const platformFeesClaimedAfter = await finalBidContract.platformFeesClaimed();
+
+      expect(platformFeesClaimedAfter).to.be.greaterThan(platformFeesClaimedBefore);
+    });
   });
 
   describe("Place Bid", function () {

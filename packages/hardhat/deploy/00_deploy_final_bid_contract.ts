@@ -76,8 +76,8 @@ const deployYourContract: DeployFunction = async function (hre: HardhatRuntimeEn
     // Get the USDC contract instance for minting
     const usdcContractInstance = await hre.ethers.getContractAt("DummyUsdcContract", usdcAddress);
     console.log("👋 USDC Contract:", usdcAddress);
-    await usdcContractInstance.mint(deployer, 1000000000000);
-    await usdcContractInstance.mint(finalBidContract.address, 1000000000000);
+    await usdcContractInstance.mint(deployer, 100000000);
+    await usdcContractInstance.mint(finalBidContract.address, 100000000);
   }
 };
 
