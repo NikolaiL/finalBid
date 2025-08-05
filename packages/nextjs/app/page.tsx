@@ -1,13 +1,18 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import type { NextPage } from "next";
 import { useAccount } from "wagmi";
 import { BugAntIcon, MagnifyingGlassIcon } from "@heroicons/react/24/outline";
 import { MiniappUserInfo } from "~~/components/MiniappUserInfo";
 import { Address } from "~~/components/scaffold-eth";
-import { useScaffoldEventHistory, useScaffoldReadContract } from "~~/hooks/scaffold-eth";
+import {
+  useDeployedContractInfo,
+  useScaffoldEventHistory,
+  useScaffoldReadContract,
+  useScaffoldWriteContract,
+} from "~~/hooks/scaffold-eth";
 
 // Utility function to format USDC amounts (6 decimals)
 const formatUSDC = (amount: bigint | undefined): string => {
@@ -29,8 +34,6 @@ const Home: NextPage = () => {
     functionName: "auctionId",
     watch: true, // Enable live updates
   });
-
-  console.log(AuctionId);
 
   // get current auction data and keep it updated
   const { data: AuctionData, isLoading: isAuctionDataLoading } = useScaffoldReadContract({
@@ -54,11 +57,9 @@ const Home: NextPage = () => {
     highestBidder: AuctionData?.[9],
     highestBid: AuctionData?.[10],
     ended: AuctionData?.[11],
+    auctionId: AuctionId,
+    readyToEnd: false,
   };
-
-  console.log("AuctionData", auctionData);
-
-  console.log("auctionAmount", auctionData.auctionAmount);
 
   const { data: BidEvents, isLoading: isBidEventsLoading } = useScaffoldEventHistory({
     contractName: "FinalBidContract",
@@ -134,7 +135,86 @@ const Home: NextPage = () => {
     isAuctionEndedEventsLoading ||
     isAuctionCreatedEventsLoading;
 
-  console.log("All events in chronological order:", allEvents);
+  const { writeContractAsync } = useScaffoldWriteContract({
+    contractName: "FinalBidContract",
+  });
+
+  const { writeContractAsync: writeUsdcContractAsync } = useScaffoldWriteContract({
+    contractName: "DummyUsdcContract",
+  });
+
+  // Get current timestamp
+  const [currentTimestamp, setCurrentTimestamp] = useState<bigint>(BigInt(Math.floor(Date.now() / 1000)));
+
+  // Get FinalBidContract address from deployed contracts
+  const { data: finalBidContractInfo } = useDeployedContractInfo({
+    contractName: "FinalBidContract",
+  });
+
+  // Check allowance at component level
+  const { data: allowance, isLoading: isAllowanceLoading } = useScaffoldReadContract({
+    contractName: "DummyUsdcContract",
+    functionName: "allowance",
+    args: [connectedAddress, finalBidContractInfo?.address],
+  });
+
+  auctionData.readyToEnd =
+    auctionData.endTime &&
+    currentTimestamp &&
+    auctionData.endTime > currentTimestamp &&
+    !auctionData.ended &&
+    (auctionData.highestBid || 0n) < (auctionData.auctionAmount || 0n)
+      ? false
+      : true;
+
+  // Wrapper function to handle approval and bidding
+  const handlePlaceBid = async () => {
+    if (!connectedAddress) {
+      console.error("No connected address");
+      return;
+    }
+    if (isAllowanceLoading) {
+      console.log("Allowance still loading...");
+      return;
+    }
+
+    // Check if approval is needed
+    const nextBidAmount = auctionData.highestBid
+      ? auctionData.highestBid + (auctionData.bidIncrement || 0n)
+      : auctionData.startingAmount || 0n;
+    console.log("Allowance:", allowance);
+    console.log("Next Bid amount:", nextBidAmount);
+    console.log("FinalBidContract address:", finalBidContractInfo?.address);
+    console.log("Is it smaller than auction amount?", (allowance || 0n) < nextBidAmount);
+    if ((allowance || 0n) < nextBidAmount) {
+      console.log("Approving contract to spend the token");
+      await writeUsdcContractAsync({
+        functionName: "approve",
+        args: [finalBidContractInfo?.address, nextBidAmount * 2n],
+      });
+    }
+
+    try {
+      console.log("Placing bid...");
+      await writeContractAsync({
+        functionName: "placeBid",
+        args: [connectedAddress], // Use connected address as referral
+      });
+    } catch (error) {
+      console.error("Error placing bid:", error);
+    }
+  };
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentTimestamp(BigInt(Math.floor(Date.now() / 1000)));
+    }, 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const nextBidAmount = auctionData.highestBid
+    ? auctionData.highestBid + (auctionData.bidIncrement || 0n)
+    : auctionData.startingAmount || 0n;
 
   return (
     <>
@@ -158,7 +238,63 @@ const Home: NextPage = () => {
                     <span className="font-bold text-blue-600">Auction Data</span>
                     <span className="text-gray-500 ml-2">Win ${formatUSDC(auctionData.auctionAmount)}</span>
                   </div>
+                  <div>
+                    <span className="font-bold text-blue-600">Auction Ends In</span>
+                    <span className="text-gray-500 ml-2">
+                      {auctionData.endTime && currentTimestamp ? Number(auctionData.endTime - currentTimestamp) : 0}{" "}
+                      seconds
+                    </span>
+                  </div>
                 </div>
+              </div>
+              <div className="rounded my-4 text-center w-full">
+                {AuctionId === 0n && (
+                  <button
+                    className="btn btn-primary text-xl"
+                    onClick={async () => {
+                      console.log("Starting auction");
+                      await writeContractAsync({
+                        functionName: "startAuction",
+                      });
+                    }}
+                  >
+                    Start Auction
+                  </button>
+                )}
+                {AuctionId &&
+                  AuctionId > 0n &&
+                  !auctionData.readyToEnd &&
+                  auctionData.highestBidder != connectedAddress && (
+                    <div>
+                      <button className="btn btn-primary text-xl" onClick={handlePlaceBid}>
+                        Bid ${formatUSDC(nextBidAmount)} USDC
+                      </button>
+                      <div className="mt-1 text-gray-500 text-xs">
+                        (${formatUSDC(auctionData.platformFee)} USDC fee applies)
+                      </div>
+                    </div>
+                  )}
+                {AuctionId &&
+                  AuctionId > 0n &&
+                  !auctionData.readyToEnd &&
+                  auctionData.highestBidder == connectedAddress && (
+                    <div className="text-gray-500 ml-2">You are the highest bidder!</div>
+                  )}
+                {AuctionId && AuctionId > 0n && auctionData.readyToEnd && (
+                  <button
+                    className="btn btn-primary text-xl"
+                    onClick={async () => {
+                      console.log("Ending auction and starting a new one");
+                      await writeContractAsync({
+                        functionName: "startAuction",
+                      });
+                    }}
+                  >
+                    {auctionData.highestBidder == connectedAddress
+                      ? "🎉 Congrats! Collect your winnings!"
+                      : "Start a New Auction"}
+                  </button>
+                )}
               </div>
               <h2 className="text-xl font-bold mb-4">Contract Events (Chronological Order)</h2>
               {allEvents?.map((event, index) => (

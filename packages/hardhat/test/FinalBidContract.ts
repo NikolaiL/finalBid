@@ -29,10 +29,11 @@ describe("FinalBidContract", function () {
     finalBidContract = (await finalBidContractFactory.deploy(owner.address, tokenAddress)) as FinalBidContract;
     await finalBidContract.waitForDeployment();
 
-    // mint 1000000000000 USDC to user1
+    // mint 1000000000000 USDC to user1, user2, user3, contrcat
     await dummyUsdcContract.mint(user1.address, 1000000000000);
     await dummyUsdcContract.mint(user2.address, 1000000000000);
     await dummyUsdcContract.mint(user3.address, 1000000000000);
+    await dummyUsdcContract.mint(finalBidContract.target, 1000000000000);
 
     // allowance for user1 to spend 1000000000000 USDC
     await dummyUsdcContract.connect(user1).approve(finalBidContract.target, 1000000000000);
@@ -65,6 +66,31 @@ describe("FinalBidContract", function () {
       await finalBidContract.startAuction();
       expect(await finalBidContract.auctionId()).to.equal(2);
     });
+    it("Should reduce the auction amount if the auction amount is greater than the available balance", async function () {
+      // burn everything from the contract
+      const balanceBefore = await dummyUsdcContract.balanceOf(finalBidContract.target);
+      await dummyUsdcContract.connect(owner).burnFrom(finalBidContract.target, balanceBefore);
+
+      const balance = 50000000; // 50 USDC
+
+      await dummyUsdcContract.mint(finalBidContract.target, balance);
+
+      await finalBidContract.startAuction();
+      expect(await finalBidContract.auctionId()).to.equal(1);
+
+      const auction = await finalBidContract.auctions(1);
+      expect(auction.auctionAmount).to.equal(balance);
+    });
+    it("Should revert if the balance is below the minimum amount", async function () {
+      // burn everything from the contract
+      const balanceBefore = await dummyUsdcContract.balanceOf(finalBidContract.target);
+      await dummyUsdcContract.connect(owner).burnFrom(finalBidContract.target, balanceBefore);
+
+      const balance = 500000; // 0.5 USDC
+      await dummyUsdcContract.mint(finalBidContract.target, balance);
+
+      await expect(finalBidContract.startAuction()).to.be.revertedWith("Insufficient balance to start auction");
+    });
   });
 
   describe("Place Bid", function () {
@@ -74,6 +100,8 @@ describe("FinalBidContract", function () {
 
       const referralAddress = "0x0000000000000000000000000000000000000000";
 
+      const balanceBefore = await dummyUsdcContract.balanceOf(finalBidContract.target);
+
       // call as user1
       await finalBidContract.connect(user1).placeBid(referralAddress);
       const auction = await finalBidContract.auctions(1);
@@ -82,7 +110,7 @@ describe("FinalBidContract", function () {
       expect(auction.highestBid).to.equal(1000000); // 1 USD
       expect(auction.bidCount).to.equal(1);
 
-      expect(await dummyUsdcContract.balanceOf(finalBidContract.target)).to.equal(2000000);
+      expect((await dummyUsdcContract.balanceOf(finalBidContract.target)) - balanceBefore).to.equal(2000000);
 
       // we should also expect the platformFeesCollected to be 1000000
       expect(await finalBidContract.platformFeesCollected()).to.equal(1000000);

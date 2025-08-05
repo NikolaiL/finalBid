@@ -27,6 +27,9 @@ contract FinalBidContract is Ownable, Pausable {
     uint256 public platformFee = 1000000; // 1 USDC
     uint256 public platformFeesCollected;
     uint256 public platformFeesClaimed;
+    uint256 public totalReferralRewardsCollected;
+    uint256 public totalReferralRewardsClaimed;
+    
 
     struct Auction {
         address tokenAddress;
@@ -59,9 +62,14 @@ contract FinalBidContract is Ownable, Pausable {
     }
 
     function _createAuction(uint256 _auctionId, address _tokenAddress, uint256 _auctionAmount, uint256 _startTime, uint256 _endTime, uint256 _startingAmount, uint256 _bidIncrement, uint256 _referralFee, uint256 _platformFee) internal {
+        // check if _auctionAmount is available
+        uint256 availableAmount = IERC20(_tokenAddress).balanceOf(address(this));
+        uint256 totalFees = platformFeesCollected + totalReferralRewardsCollected - platformFeesClaimed - totalReferralRewardsClaimed;
+        require (availableAmount > totalFees + _startingAmount + _bidIncrement, "Insufficient balance to start auction");
+        uint256 auctionAmountToUse = availableAmount > _auctionAmount ? _auctionAmount : availableAmount;
         auctions[_auctionId] = Auction({
             tokenAddress: _tokenAddress,
-            auctionAmount: _auctionAmount,
+            auctionAmount: auctionAmountToUse,
             startTime: _startTime,
             endTime: _endTime,
             startingAmount: _startingAmount,
@@ -129,9 +137,10 @@ contract FinalBidContract is Ownable, Pausable {
         auction.bidCount++;
 
         // pay the referral
-        if (_referral != address(0)) {
+        if (_referral != address(0) && _referral != msg.sender) {
             referralRewards[_referral] += referralFee;
             platformFeesCollected += (platformFee - referralFee);
+            totalReferralRewardsCollected += referralFee;
         } else {
             platformFeesCollected += platformFee;
         }
@@ -180,6 +189,7 @@ contract FinalBidContract is Ownable, Pausable {
         require(referralRewards[msg.sender] > 0, "No rewards to claim");
         IERC20 token = IERC20(tokenAddress);
         token.transfer(msg.sender, referralRewards[msg.sender]);
+        totalReferralRewardsClaimed += referralRewards[msg.sender];
         referralRewards[msg.sender] = 0;
     }
 

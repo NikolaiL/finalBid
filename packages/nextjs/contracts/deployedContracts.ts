@@ -537,7 +537,7 @@ const deployedContracts = {
       deployedOnBlock: 1,
     },
     FinalBidContract: {
-      address: "0x2279B7A0a67DB372996a5FaB50D91eAA73d2eBe6",
+      address: "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512",
       abi: [
         {
           inputs: [
@@ -1085,7 +1085,7 @@ const deployedContracts = {
         transferOwnership: "@openzeppelin/contracts/access/Ownable.sol",
         paused: "@openzeppelin/contracts/utils/Pausable.sol",
       },
-      deployedOnBlock: 28,
+      deployedOnBlock: 3,
     },
   },
   84532: {
