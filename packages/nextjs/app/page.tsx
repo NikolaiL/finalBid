@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import type { NextPage } from "next";
-import { useAccount, useBlockNumber } from "wagmi";
+import { useAccount, useBlockNumber, useReadContract, useWriteContract } from "wagmi";
 import { BugAntIcon, MagnifyingGlassIcon } from "@heroicons/react/24/outline";
 import { MiniappUserInfo } from "~~/components/MiniappUserInfo";
 import { Address } from "~~/components/scaffold-eth";
@@ -141,10 +141,6 @@ const Home: NextPage = () => {
     contractName: "FinalBidContract",
   });
 
-  const { writeContractAsync: writeUsdcContractAsync } = useScaffoldWriteContract({
-    contractName: "DummyUsdcContract",
-  });
-
   // Get current timestamp
   const [currentTimestamp, setCurrentTimestamp] = useState<bigint>(BigInt(Math.floor(Date.now() / 1000)));
 
@@ -153,12 +149,47 @@ const Home: NextPage = () => {
     contractName: "FinalBidContract",
   });
 
+  // Get token address from FinalBidContract
+  const { data: tokenAddress } = useScaffoldReadContract({
+    contractName: "FinalBidContract",
+    functionName: "tokenAddress",
+  });
+
+  const { writeContract } = useWriteContract();
+
   // Check allowance at component level
-  const { data: allowance, isLoading: isAllowanceLoading } = useScaffoldReadContract({
-    contractName: "DummyUsdcContract",
+  // In production, this would use the actual token contract address from tokenAddress
+  // For now, using DummyUsdcContract for development
+  // ERC20 ABI for allowance function
+  const ERC20_ABI = [
+    {
+      inputs: [
+        { name: "owner", type: "address" },
+        { name: "spender", type: "address" },
+      ],
+      name: "allowance",
+      outputs: [{ name: "", type: "uint256" }],
+      stateMutability: "view",
+      type: "function",
+    },
+    {
+      inputs: [
+        { name: "spender", type: "address" },
+        { name: "amount", type: "uint256" },
+      ],
+      name: "approve",
+      outputs: [{ name: "", type: "bool" }],
+      stateMutability: "nonpayable",
+      type: "function",
+    },
+  ];
+
+  // Use the token address from the contract
+  const { data: allowance, isLoading: isAllowanceLoading } = useReadContract({
+    address: tokenAddress as `0x${string}`,
+    abi: ERC20_ABI,
     functionName: "allowance",
     args: [connectedAddress, finalBidContractInfo?.address],
-    watch: true, // Enable live updates
   });
 
   auctionData.readyToEnd =
@@ -188,10 +219,14 @@ const Home: NextPage = () => {
     console.log("Allowance:", allowance);
     console.log("Next Bid amount:", nextBidAmount);
     console.log("FinalBidContract address:", finalBidContractInfo?.address);
-    console.log("Is it smaller than auction amount?", (allowance || 0n) < nextBidAmount);
-    if ((allowance || 0n) < nextBidAmount) {
+    console.log("Is it smaller than auction amount?", (allowance as bigint) < nextBidAmount);
+    if ((allowance as bigint) < nextBidAmount) {
       console.log("Approving contract to spend the token");
-      await writeUsdcContractAsync({
+      // Use dynamic approval with the token address
+      // Note: In production, you would use useWriteContract with the token address
+      writeContract({
+        address: tokenAddress as `0x${string}`,
+        abi: ERC20_ABI,
         functionName: "approve",
         args: [finalBidContractInfo?.address, nextBidAmount * 2n],
       });

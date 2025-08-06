@@ -537,7 +537,7 @@ const deployedContracts = {
       deployedOnBlock: 1,
     },
     FinalBidContract: {
-      address: "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512",
+      address: "0xB7f8BC63BbcaD18155201308C8f3540b07f84F5e",
       abi: [
         {
           inputs: [
@@ -1111,12 +1111,12 @@ const deployedContracts = {
         transferOwnership: "@openzeppelin/contracts/access/Ownable.sol",
         paused: "@openzeppelin/contracts/utils/Pausable.sol",
       },
-      deployedOnBlock: 3,
+      deployedOnBlock: 432,
     },
   },
   84532: {
     FinalBidContract: {
-      address: "0x7cC26bcb2500b8b6e7883421D7777f7D45bAe008",
+      address: "0x32E2cCf46A15b1De442D779073743a8f4586d499",
       abi: [
         {
           inputs: [
@@ -1175,19 +1175,6 @@ const deployedContracts = {
               name: "auctionId",
               type: "uint256",
             },
-          ],
-          name: "AuctionCancelled",
-          type: "event",
-        },
-        {
-          anonymous: false,
-          inputs: [
-            {
-              indexed: true,
-              internalType: "uint256",
-              name: "auctionId",
-              type: "uint256",
-            },
             {
               indexed: true,
               internalType: "address",
@@ -1215,7 +1202,7 @@ const deployedContracts = {
             {
               indexed: false,
               internalType: "uint256",
-              name: "startingPrice",
+              name: "startingAmount",
               type: "uint256",
             },
           ],
@@ -1241,6 +1228,12 @@ const deployedContracts = {
               indexed: false,
               internalType: "uint256",
               name: "amount",
+              type: "uint256",
+            },
+            {
+              indexed: false,
+              internalType: "uint256",
+              name: "highestBid",
               type: "uint256",
             },
           ],
@@ -1407,7 +1400,7 @@ const deployedContracts = {
             },
             {
               internalType: "uint256",
-              name: "startingPrice",
+              name: "startingAmount",
               type: "uint256",
             },
             {
@@ -1595,7 +1588,7 @@ const deployedContracts = {
         },
         {
           inputs: [],
-          name: "startingPrice",
+          name: "startingAmount",
           outputs: [
             {
               internalType: "uint256",
@@ -1614,6 +1607,32 @@ const deployedContracts = {
               internalType: "address",
               name: "",
               type: "address",
+            },
+          ],
+          stateMutability: "view",
+          type: "function",
+        },
+        {
+          inputs: [],
+          name: "totalReferralRewardsClaimed",
+          outputs: [
+            {
+              internalType: "uint256",
+              name: "",
+              type: "uint256",
+            },
+          ],
+          stateMutability: "view",
+          type: "function",
+        },
+        {
+          inputs: [],
+          name: "totalReferralRewardsCollected",
+          outputs: [
+            {
+              internalType: "uint256",
+              name: "",
+              type: "uint256",
             },
           ],
           stateMutability: "view",
@@ -1654,6 +1673,13 @@ const deployedContracts = {
           type: "function",
         },
         {
+          inputs: [],
+          name: "withdrawReferralRewards",
+          outputs: [],
+          stateMutability: "nonpayable",
+          type: "function",
+        },
+        {
           stateMutability: "payable",
           type: "receive",
         },
@@ -1664,7 +1690,7 @@ const deployedContracts = {
         transferOwnership: "@openzeppelin/contracts/access/Ownable.sol",
         paused: "@openzeppelin/contracts/utils/Pausable.sol",
       },
-      deployedOnBlock: 29189262,
+      deployedOnBlock: 29346570,
     },
   },
 } as const;
