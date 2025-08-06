@@ -19,7 +19,7 @@ contract FinalBidContract is Ownable, Pausable {
     address public tokenAddress;
     uint256 public auctionId;
     uint256 public auctionAmount = 100000000; // 100 USDC
-    uint256 public auctionDuration = 60; // 1 minute
+    uint256 public auctionDuration = 600; // 1 minute
     uint256 public auctionDurationIncrease = 60; // 1 minute
     uint256 public startingAmount = 1000000; // 1 USDC
     uint256 public bidIncrement = 250000; // 0.25 USDC

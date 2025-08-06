@@ -2,8 +2,9 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { readContract } from "@wagmi/core";
 import type { NextPage } from "next";
-import { useAccount, useBlockNumber, useReadContract, useWriteContract } from "wagmi";
+import { useAccount, useBlockNumber, useWriteContract } from "wagmi";
 import { BugAntIcon, MagnifyingGlassIcon } from "@heroicons/react/24/outline";
 import { MiniappUserInfo } from "~~/components/MiniappUserInfo";
 import { Address } from "~~/components/scaffold-eth";
@@ -13,6 +14,7 @@ import {
   useScaffoldReadContract,
   useScaffoldWriteContract,
 } from "~~/hooks/scaffold-eth";
+import { wagmiConfig } from "~~/services/web3/wagmiConfig";
 
 // Utility function to format USDC amounts (6 decimals)
 const formatUSDC = (amount: bigint | undefined): string => {
@@ -155,7 +157,7 @@ const Home: NextPage = () => {
     functionName: "tokenAddress",
   });
 
-  const { writeContract } = useWriteContract();
+  const { writeContractAsync: writeTokenContractAsync } = useWriteContract();
 
   // Check allowance at component level
   // In production, this would use the actual token contract address from tokenAddress
@@ -184,14 +186,6 @@ const Home: NextPage = () => {
     },
   ];
 
-  // Use the token address from the contract
-  const { data: allowance, isLoading: isAllowanceLoading } = useReadContract({
-    address: tokenAddress as `0x${string}`,
-    abi: ERC20_ABI,
-    functionName: "allowance",
-    args: [connectedAddress, finalBidContractInfo?.address],
-  });
-
   auctionData.readyToEnd =
     auctionData.endTime &&
     currentTimestamp &&
@@ -207,33 +201,65 @@ const Home: NextPage = () => {
       console.error("No connected address");
       return;
     }
-    if (isAllowanceLoading) {
-      console.log("Allowance still loading...");
-      return;
-    }
 
     // Check if approval is needed
     const nextBidAmount = auctionData.highestBid
-      ? auctionData.highestBid + (auctionData.bidIncrement || 0n)
-      : auctionData.startingAmount || 0n;
+      ? auctionData.highestBid + (auctionData.bidIncrement || 0n) + (auctionData.platformFee || 0n)
+      : (auctionData.startingAmount || 0n) + (auctionData.platformFee || 0n);
+
+    // get allowance from the contract by reading it from the contract
+    let allowance = await readContract(wagmiConfig, {
+      address: tokenAddress as `0x${string}`,
+      abi: ERC20_ABI,
+      functionName: "allowance",
+      args: [connectedAddress, finalBidContractInfo?.address],
+    });
+    allowance = BigInt(allowance?.toString() || "0");
+
     console.log("Allowance:", allowance);
     console.log("Next Bid amount:", nextBidAmount);
     console.log("FinalBidContract address:", finalBidContractInfo?.address);
     console.log("Is it smaller than auction amount?", (allowance as bigint) < nextBidAmount);
+
     if ((allowance as bigint) < nextBidAmount) {
       console.log("Approving contract to spend the token");
       // Use dynamic approval with the token address
-      // Note: In production, you would use useWriteContract with the token address
-      writeContract({
+      await writeTokenContractAsync({
         address: tokenAddress as `0x${string}`,
         abi: ERC20_ABI,
         functionName: "approve",
         args: [finalBidContractInfo?.address, nextBidAmount * 2n],
       });
+
+      console.log("Approval transaction completed");
+
+      // Wait for the approval transaction to be mined
+      console.log("Waiting for approval transaction to be mined...");
+      while ((allowance as bigint) < nextBidAmount) {
+        console.log("Waiting for approval transaction to be mined...");
+        await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 1 second for mining
+        allowance = await readContract(wagmiConfig, {
+          address: tokenAddress as `0x${string}`,
+          abi: ERC20_ABI,
+          functionName: "allowance",
+          args: [connectedAddress, finalBidContractInfo?.address],
+        });
+        allowance = BigInt(allowance?.toString() || "0");
+        console.log("Allowance:", allowance);
+      }
+
+      console.log("Proceeding with bid placement...");
     }
 
     try {
       console.log("Placing bid...");
+
+      // Double-check allowance before placing bid
+      if ((allowance as bigint) < nextBidAmount) {
+        console.error("Allowance still insufficient. Please try again.");
+        return;
+      }
+
       // Get referrer from sessionStorage, fallback to zero address
       let referrer = "0x0000000000000000000000000000000000000000";
       if (typeof window !== "undefined") {

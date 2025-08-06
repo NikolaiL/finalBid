@@ -27,9 +27,9 @@ const deployYourContract: DeployFunction = async function (hre: HardhatRuntimeEn
     mainnet: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
     sepolia: "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238",
     base: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
-    baseSepolia: "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
+    //baseSepolia: "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
     arbitrum: "0xaf88d065e77c8cC2239327C5EDb3A432268e5831",
-    arbitrumSepolia: "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
+    //arbitrumSepolia: "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
     optimism: "0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85",
     optimismSepolia: "0x5fd84259d66Cd46123540766Be93DFE6D43130D7",
   };
@@ -43,6 +43,12 @@ const deployYourContract: DeployFunction = async function (hre: HardhatRuntimeEn
   let mintUsdc = false;
   let usdcContract: any;
 
+  // Get the deployer signer
+  const deployerSigner = await hre.ethers.getSigner(deployer);
+
+  // Mint with explicit nonce management
+  let nonce = await deployerSigner.getNonce();
+
   // if network is undefined we should deploy a dummy usdc erc20 contract
   if (!usdcAddress) {
     console.log("👋 Deploying dummy USDC ERC20 contract");
@@ -52,6 +58,7 @@ const deployYourContract: DeployFunction = async function (hre: HardhatRuntimeEn
       args: [deployer, 1000000000000], // 1,000,000 USDC (with 6 decimals)
       log: true,
       autoMine: true,
+      nonce: nonce++,
     });
 
     usdcAddress = usdcContract.address; // update the usdc address
@@ -66,6 +73,7 @@ const deployYourContract: DeployFunction = async function (hre: HardhatRuntimeEn
     // autoMine: can be passed to the deploy function to make the deployment process faster on local networks by
     // automatically mining the contract deployment transaction. There is no effect on live networks.
     autoMine: true,
+    nonce: nonce++,
   });
 
   // Get the deployed contract to interact with it after deploying.
@@ -76,8 +84,27 @@ const deployYourContract: DeployFunction = async function (hre: HardhatRuntimeEn
     // Get the USDC contract instance for minting
     const usdcContractInstance = await hre.ethers.getContractAt("DummyUsdcContract", usdcAddress);
     console.log("👋 USDC Contract:", usdcAddress);
-    await usdcContractInstance.mint(deployer, 100000000);
-    await usdcContractInstance.mint(finalBidContract.address, 100000000);
+
+    await usdcContractInstance.connect(deployerSigner).mint(deployer, 100000000, { nonce: nonce++ });
+    console.log("👋 Minted USDC to deployer");
+
+    await usdcContractInstance.connect(deployerSigner).mint(finalBidContract.address, 100000000, { nonce: nonce++ });
+    console.log("👋 Minted USDC to finalBidContract");
+
+    await usdcContractInstance
+      .connect(deployerSigner)
+      .mint("0x296b0874401a354aF58CAe1222ca7876601d2828", 100000000, { nonce: nonce++ });
+    console.log("👋 Minted USDC to 0x296b0874401a354aF58CAe1222ca7876601d2828");
+
+    await usdcContractInstance
+      .connect(deployerSigner)
+      .mint("0x4b7b07D8BAf51975eeAb0E1eb4B481A5aC691ED6", 100000000, { nonce: nonce++ });
+    console.log("👋 Minted USDC to 0x4b7b07D8BAf51975eeAb0E1eb4B481A5aC691ED6");
+
+    await usdcContractInstance
+      .connect(deployerSigner)
+      .mint("0x8D6230427a37986D25Fe4D5B3d0aaEF1b924fEd6", 100000000, { nonce: nonce++ });
+    console.log("👋 Minted USDC to 0x8D6230427a37986D25Fe4D5B3d0aaEF1b924fEd6");
   }
 };
 
