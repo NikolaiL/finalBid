@@ -183,11 +183,7 @@ const Home: NextPage = () => {
   ];
 
   // Read allowance using useReadContract with automatic refetching
-  const {
-    data: allowance,
-    refetch: refetchAllowance,
-    isLoading: isAllowanceLoading,
-  } = useReadContract({
+  const { refetch: refetchAllowance } = useReadContract({
     address: tokenAddress as `0x${string}`,
     abi: ERC20_ABI,
     functionName: "allowance",
@@ -196,9 +192,6 @@ const Home: NextPage = () => {
       enabled: !!tokenAddress && !!connectedAddress && !!finalBidContractInfo?.address,
     },
   });
-
-  console.log("Allowance:", allowance);
-  console.log("Is Allowance Loading:", isAllowanceLoading);
 
   // Initialize useTransactor for approval transactions
   const writeApprovalTx = useTransactor();
