@@ -2,9 +2,8 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { readContract } from "@wagmi/core";
 import type { NextPage } from "next";
-import { useAccount, useBlockNumber, useWriteContract } from "wagmi";
+import { useAccount, useBlockNumber, useReadContract, useWriteContract } from "wagmi";
 import { BugAntIcon, MagnifyingGlassIcon } from "@heroicons/react/24/outline";
 import { MiniappUserInfo } from "~~/components/MiniappUserInfo";
 import { Address } from "~~/components/scaffold-eth";
@@ -13,8 +12,8 @@ import {
   useScaffoldEventHistory,
   useScaffoldReadContract,
   useScaffoldWriteContract,
+  useTransactor,
 } from "~~/hooks/scaffold-eth";
-import { wagmiConfig } from "~~/services/web3/wagmiConfig";
 
 // Utility function to format USDC amounts (6 decimals)
 const formatUSDC = (amount: bigint | undefined): string => {
@@ -159,10 +158,7 @@ const Home: NextPage = () => {
 
   const { writeContractAsync: writeTokenContractAsync } = useWriteContract();
 
-  // Check allowance at component level
-  // In production, this would use the actual token contract address from tokenAddress
-  // For now, using DummyUsdcContract for development
-  // ERC20 ABI for allowance function
+  // ERC20 ABI for allowance and approve functions
   const ERC20_ABI = [
     {
       inputs: [
@@ -186,6 +182,27 @@ const Home: NextPage = () => {
     },
   ];
 
+  // Read allowance using useReadContract with automatic refetching
+  const {
+    data: allowance,
+    refetch: refetchAllowance,
+    isLoading: isAllowanceLoading,
+  } = useReadContract({
+    address: tokenAddress as `0x${string}`,
+    abi: ERC20_ABI,
+    functionName: "allowance",
+    args: [connectedAddress, finalBidContractInfo?.address],
+    query: {
+      enabled: !!tokenAddress && !!connectedAddress && !!finalBidContractInfo?.address,
+    },
+  });
+
+  console.log("Allowance:", allowance);
+  console.log("Is Allowance Loading:", isAllowanceLoading);
+
+  // Initialize useTransactor for approval transactions
+  const writeApprovalTx = useTransactor();
+
   auctionData.readyToEnd =
     auctionData.endTime &&
     currentTimestamp &&
@@ -195,89 +212,123 @@ const Home: NextPage = () => {
       ? false
       : true;
 
-  // Wrapper function to handle approval and bidding
+  // State for button and transaction status
+  const [isBidding, setIsBidding] = useState(false);
+  const [bidStatus, setBidStatus] = useState<string>("");
+
+  // Simple and reliable bid function
   const handlePlaceBid = async () => {
     if (!connectedAddress) {
       console.error("No connected address");
       return;
     }
 
-    // Check if approval is needed
+    setIsBidding(true);
+    setBidStatus("Checking allowance...");
+
+    // Calculate the next bid amount
     const nextBidAmount = auctionData.highestBid
       ? auctionData.highestBid + (auctionData.bidIncrement || 0n) + (auctionData.platformFee || 0n)
       : (auctionData.startingAmount || 0n) + (auctionData.platformFee || 0n);
 
-    // get allowance from the contract by reading it from the contract
-    let allowance = await readContract(wagmiConfig, {
-      address: tokenAddress as `0x${string}`,
-      abi: ERC20_ABI,
-      functionName: "allowance",
-      args: [connectedAddress, finalBidContractInfo?.address],
-    });
-    allowance = BigInt(allowance?.toString() || "0");
-
-    console.log("Allowance:", allowance);
     console.log("Next Bid amount:", nextBidAmount);
-    console.log("FinalBidContract address:", finalBidContractInfo?.address);
-    console.log("Is it smaller than auction amount?", (allowance as bigint) < nextBidAmount);
 
-    if ((allowance as bigint) < nextBidAmount) {
-      console.log("Approving contract to spend the token");
-      // Use dynamic approval with the token address
-      await writeTokenContractAsync({
-        address: tokenAddress as `0x${string}`,
-        abi: ERC20_ABI,
-        functionName: "approve",
-        args: [finalBidContractInfo?.address, nextBidAmount * 2n],
-      });
+    let { data: currentAllowance } = await refetchAllowance();
+    currentAllowance = BigInt(currentAllowance as string);
+    console.log("Current allowance:", currentAllowance);
 
-      console.log("Approval transaction completed");
+    // Ensure currentAllowance is a bigint before comparison
+    if (typeof currentAllowance === "bigint" && currentAllowance < nextBidAmount) {
+      console.log("Current allowance is less than next bid amount, approving...");
+      setBidStatus("Approving allowance...");
 
-      // Wait for the approval transaction to be mined
-      console.log("Waiting for approval transaction to be mined...");
-      while ((allowance as bigint) < nextBidAmount) {
-        console.log("Waiting for approval transaction to be mined...");
-        await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 1 second for mining
-        allowance = await readContract(wagmiConfig, {
+      const approvalTransaction = () =>
+        writeTokenContractAsync({
           address: tokenAddress as `0x${string}`,
           abi: ERC20_ABI,
-          functionName: "allowance",
-          args: [connectedAddress, finalBidContractInfo?.address],
+          functionName: "approve",
+          args: [finalBidContractInfo?.address, nextBidAmount * 2n],
         });
-        allowance = BigInt(allowance?.toString() || "0");
-        console.log("Allowance:", allowance);
+
+      // Send approval transaction using useTransactor
+      try {
+        await writeApprovalTx(approvalTransaction, { blockConfirmations: 1 });
+      } catch (error: any) {
+        console.log("Error placing approval transaction", error);
+        setIsBidding(false);
+        setBidStatus("");
+        return; // Exit early if user rejects
       }
 
-      console.log("Proceeding with bid placement...");
+      while ((currentAllowance as bigint) < nextBidAmount) {
+        console.log("Current allowance is less than next bid amount, approving...");
+        const { data: currentAllowance2 } = await refetchAllowance();
+        currentAllowance = BigInt(currentAllowance2 as string);
+        console.log("Current allowance after approval:", currentAllowance2);
+        //wait half a second
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
+
+      console.log("Approval confirmed, retrying bid...");
+
+      // Wait a bit for the allowance to propagate
+
+      await new Promise(resolve => setTimeout(resolve, 1000));
+    }
+
+    // Get referrer from sessionStorage, fallback to zero address
+    let referrer = "0x0000000000000000000000000000000000000000";
+    if (typeof window !== "undefined") {
+      const storedRef = sessionStorage.getItem("referrer");
+      if (storedRef && /^0x[a-fA-F0-9]{40}$/.test(storedRef)) {
+        referrer = storedRef;
+      }
+      console.log("referrer used:", referrer);
     }
 
     try {
-      console.log("Placing bid...");
+      // Always try to place the bid first
+      console.log("Attempting to place bid...");
+      setBidStatus("Placing bid...");
 
-      // Double-check allowance before placing bid
-      if ((allowance as bigint) < nextBidAmount) {
-        console.error("Allowance still insufficient. Please try again.");
-        return;
+      try {
+        await writeContractAsync(
+          {
+            functionName: "placeBid",
+            args: [referrer],
+          },
+          {
+            onError: (error: any) => {
+              // Suppress "Insufficient allowance" error notifications
+              console.log("Error in onError:", error);
+              if (error instanceof Error && error.message.includes("Insufficient allowance")) {
+                console.log("Suppressing 'Insufficient allowance' error notification in onError");
+                return; // Don't show notification for this specific error
+              }
+              // Show notification for other errors
+              setIsBidding(false);
+              setBidStatus("");
+            },
+          },
+        );
+      } catch (error: any) {
+        console.log("Error placing bid transaction", error);
+        setIsBidding(false);
+        setBidStatus("");
+        return; // Exit early if user rejects
       }
 
-      // Get referrer from sessionStorage, fallback to zero address
-      let referrer = "0x0000000000000000000000000000000000000000";
-      if (typeof window !== "undefined") {
-        const storedRef = sessionStorage.getItem("referrer");
-        if (storedRef && /^0x[a-fA-F0-9]{40}$/.test(storedRef)) {
-          referrer = storedRef;
-        }
-        console.log("referrer used:", referrer);
-      }
-      await writeContractAsync({
-        functionName: "placeBid",
-        args: [referrer],
-      });
-    } catch (error) {
+      console.log("Bid placed successfully!");
+    } catch (error: any) {
       console.error("Error placing bid:", error);
+    } finally {
+      // Reset button state
+      setIsBidding(false);
+      setBidStatus("");
     }
   };
 
+  //
   useEffect(() => {
     const interval = setInterval(() => {
       setCurrentTimestamp(BigInt(Math.floor(Date.now() / 1000)));
@@ -343,11 +394,15 @@ const Home: NextPage = () => {
                   !auctionData.readyToEnd &&
                   auctionData.highestBidder != connectedAddress && (
                     <div>
-                      <button className="btn btn-primary text-xl" onClick={handlePlaceBid}>
-                        Bid ${formatUSDC(nextBidAmount)} USDC
+                      <button
+                        className="btn btn-primary text-xl transition-all"
+                        onClick={handlePlaceBid}
+                        disabled={isBidding}
+                      >
+                        {isBidding ? bidStatus : `Bid ${formatUSDC(nextBidAmount)} USDC`}
                       </button>
                       <div className="mt-1 text-gray-500 text-xs">
-                        (${formatUSDC(auctionData.platformFee)} USDC fee applies)
+                        {isBidding ? "Please wait..." : `(${formatUSDC(auctionData.platformFee)} USDC fee applies)`}
                       </div>
                     </div>
                   )}
