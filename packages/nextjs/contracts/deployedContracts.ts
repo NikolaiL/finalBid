@@ -537,7 +537,7 @@ const deployedContracts = {
       deployedOnBlock: 1,
     },
     FinalBidContract: {
-      address: "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512",
+      address: "0x0DCd1Bf9A1b36cE34237eEaFef220932846BCD82",
       abi: [
         {
           inputs: [
@@ -591,6 +591,25 @@ const deployedContracts = {
           anonymous: false,
           inputs: [
             {
+              indexed: false,
+              internalType: "uint256",
+              name: "oldAmount",
+              type: "uint256",
+            },
+            {
+              indexed: false,
+              internalType: "uint256",
+              name: "newAmount",
+              type: "uint256",
+            },
+          ],
+          name: "AuctionAmountUpdated",
+          type: "event",
+        },
+        {
+          anonymous: false,
+          inputs: [
+            {
               indexed: true,
               internalType: "uint256",
               name: "auctionId",
@@ -634,6 +653,44 @@ const deployedContracts = {
           anonymous: false,
           inputs: [
             {
+              indexed: false,
+              internalType: "uint256",
+              name: "oldIncrease",
+              type: "uint256",
+            },
+            {
+              indexed: false,
+              internalType: "uint256",
+              name: "newIncrease",
+              type: "uint256",
+            },
+          ],
+          name: "AuctionDurationIncreaseUpdated",
+          type: "event",
+        },
+        {
+          anonymous: false,
+          inputs: [
+            {
+              indexed: false,
+              internalType: "uint256",
+              name: "oldDuration",
+              type: "uint256",
+            },
+            {
+              indexed: false,
+              internalType: "uint256",
+              name: "newDuration",
+              type: "uint256",
+            },
+          ],
+          name: "AuctionDurationUpdated",
+          type: "event",
+        },
+        {
+          anonymous: false,
+          inputs: [
+            {
               indexed: true,
               internalType: "uint256",
               name: "auctionId",
@@ -659,6 +716,25 @@ const deployedContracts = {
             },
           ],
           name: "AuctionEnded",
+          type: "event",
+        },
+        {
+          anonymous: false,
+          inputs: [
+            {
+              indexed: false,
+              internalType: "uint256",
+              name: "oldAmount",
+              type: "uint256",
+            },
+            {
+              indexed: false,
+              internalType: "uint256",
+              name: "newAmount",
+              type: "uint256",
+            },
+          ],
+          name: "BidIncrementUpdated",
           type: "event",
         },
         {
@@ -722,6 +798,82 @@ const deployedContracts = {
             },
           ],
           name: "Paused",
+          type: "event",
+        },
+        {
+          anonymous: false,
+          inputs: [
+            {
+              indexed: false,
+              internalType: "uint256",
+              name: "oldAmount",
+              type: "uint256",
+            },
+            {
+              indexed: false,
+              internalType: "uint256",
+              name: "newAmount",
+              type: "uint256",
+            },
+          ],
+          name: "PlatformFeeUpdated",
+          type: "event",
+        },
+        {
+          anonymous: false,
+          inputs: [
+            {
+              indexed: false,
+              internalType: "uint256",
+              name: "oldAmount",
+              type: "uint256",
+            },
+            {
+              indexed: false,
+              internalType: "uint256",
+              name: "newAmount",
+              type: "uint256",
+            },
+          ],
+          name: "ReferralFeeUpdated",
+          type: "event",
+        },
+        {
+          anonymous: false,
+          inputs: [
+            {
+              indexed: false,
+              internalType: "uint256",
+              name: "oldAmount",
+              type: "uint256",
+            },
+            {
+              indexed: false,
+              internalType: "uint256",
+              name: "newAmount",
+              type: "uint256",
+            },
+          ],
+          name: "StartingAmountUpdated",
+          type: "event",
+        },
+        {
+          anonymous: false,
+          inputs: [
+            {
+              indexed: true,
+              internalType: "address",
+              name: "oldAddress",
+              type: "address",
+            },
+            {
+              indexed: true,
+              internalType: "address",
+              name: "newAddress",
+              type: "address",
+            },
+          ],
+          name: "TokenAddressUpdated",
           type: "event",
         },
         {
@@ -1001,6 +1153,110 @@ const deployedContracts = {
           type: "function",
         },
         {
+          inputs: [
+            {
+              internalType: "uint256",
+              name: "_auctionAmount",
+              type: "uint256",
+            },
+          ],
+          name: "setAuctionAmount",
+          outputs: [],
+          stateMutability: "nonpayable",
+          type: "function",
+        },
+        {
+          inputs: [
+            {
+              internalType: "uint256",
+              name: "_auctionDuration",
+              type: "uint256",
+            },
+          ],
+          name: "setAuctionDuration",
+          outputs: [],
+          stateMutability: "nonpayable",
+          type: "function",
+        },
+        {
+          inputs: [
+            {
+              internalType: "uint256",
+              name: "_auctionDurationIncrease",
+              type: "uint256",
+            },
+          ],
+          name: "setAuctionDurationIncrease",
+          outputs: [],
+          stateMutability: "nonpayable",
+          type: "function",
+        },
+        {
+          inputs: [
+            {
+              internalType: "uint256",
+              name: "_bidIncrement",
+              type: "uint256",
+            },
+          ],
+          name: "setBidIncrement",
+          outputs: [],
+          stateMutability: "nonpayable",
+          type: "function",
+        },
+        {
+          inputs: [
+            {
+              internalType: "uint256",
+              name: "_platformFee",
+              type: "uint256",
+            },
+          ],
+          name: "setPlatformFee",
+          outputs: [],
+          stateMutability: "nonpayable",
+          type: "function",
+        },
+        {
+          inputs: [
+            {
+              internalType: "uint256",
+              name: "_referralFee",
+              type: "uint256",
+            },
+          ],
+          name: "setReferralFee",
+          outputs: [],
+          stateMutability: "nonpayable",
+          type: "function",
+        },
+        {
+          inputs: [
+            {
+              internalType: "uint256",
+              name: "_startingAmount",
+              type: "uint256",
+            },
+          ],
+          name: "setStartingAmount",
+          outputs: [],
+          stateMutability: "nonpayable",
+          type: "function",
+        },
+        {
+          inputs: [
+            {
+              internalType: "address",
+              name: "_tokenAddress",
+              type: "address",
+            },
+          ],
+          name: "setTokenAddress",
+          outputs: [],
+          stateMutability: "nonpayable",
+          type: "function",
+        },
+        {
           inputs: [],
           name: "startAuction",
           outputs: [],
@@ -1111,7 +1367,7 @@ const deployedContracts = {
         transferOwnership: "@openzeppelin/contracts/access/Ownable.sol",
         paused: "@openzeppelin/contracts/utils/Pausable.sol",
       },
-      deployedOnBlock: 3,
+      deployedOnBlock: 450,
     },
   },
   84532: {

@@ -209,126 +209,96 @@ const Home: NextPage = () => {
   const [isBidding, setIsBidding] = useState(false);
   const [bidStatus, setBidStatus] = useState<string>("");
 
-  // Simple and reliable bid function
-  const handlePlaceBid = async () => {
-    if (!connectedAddress) {
-      console.error("No connected address");
-      return;
+  // Constants
+  const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
+
+  // Compute required token amount for the next bid (includes platform fee)
+  const calcRequiredAmount = () =>
+    auctionData.highestBid
+      ? auctionData.highestBid + (auctionData.bidIncrement || 0n) * 3n + (auctionData.platformFee || 0n) * 3n
+      : (auctionData.startingAmount || 0n) +
+        (auctionData.bidIncrement || 0n) * 3n +
+        (auctionData.platformFee || 0n) * 3n;
+
+  // Fetch allowance as bigint
+  const fetchAllowanceBig = async (): Promise<bigint> => {
+    const { data } = await refetchAllowance();
+    return BigInt(data as string);
+  };
+
+  // Get referrer from sessionStorage or fallback to zero
+  const getReferrer = (): `0x${string}` => {
+    if (typeof window === "undefined") return ZERO_ADDRESS as `0x${string}`;
+    const val = sessionStorage.getItem("referrer");
+    return val && /^0x[a-fA-F0-9]{40}$/.test(val) ? (val as `0x${string}`) : (ZERO_ADDRESS as `0x${string}`);
+  };
+
+  // Ensure allowance >= required; if not, approve then poll until updated
+  const ensureAllowance = async (required: bigint) => {
+    let allowance = await fetchAllowanceBig();
+    if (allowance >= required) return;
+    console.log("Approving allowance...", required, "Current allowance:", allowance);
+    setBidStatus("Approving allowance...");
+
+    const approvalTx = () =>
+      writeTokenContractAsync({
+        address: tokenAddress as `0x${string}`,
+        abi: ERC20_ABI,
+        functionName: "approve",
+        args: [finalBidContractInfo?.address, required * 2n], // buffer
+      });
+
+    await writeApprovalTx(approvalTx, {
+      blockConfirmations: 1,
+      successMessage: "Allowance approved!",
+      awaitingConfirmationMessage: "Awaiting to approve allowance",
+      waitingForTransactionMessage: "Waiting for allowance approval to complete.",
+    });
+
+    // Poll until allowance is sufficient
+    // short sleep between refetches to avoid hammering RPC
+    while (allowance < required) {
+      await new Promise(r => setTimeout(r, 500));
+      allowance = await fetchAllowanceBig();
     }
+    console.log("Updated allowance:", allowance);
+  };
+
+  const handlePlaceBid = async () => {
+    if (!connectedAddress) return;
 
     setIsBidding(true);
     setBidStatus("Checking allowance...");
 
-    // Calculate the next bid amount
-    const nextBidAmount = auctionData.highestBid
-      ? auctionData.highestBid + (auctionData.bidIncrement || 0n) + (auctionData.platformFee || 0n)
-      : (auctionData.startingAmount || 0n) + (auctionData.platformFee || 0n);
-
-    console.log("Next Bid amount:", nextBidAmount);
-
-    let { data: currentAllowance } = await refetchAllowance();
-    currentAllowance = BigInt(currentAllowance as string);
-    console.log("Current allowance:", currentAllowance);
-
-    // Ensure currentAllowance is a bigint before comparison
-    if (typeof currentAllowance === "bigint" && currentAllowance < nextBidAmount) {
-      console.log("Current allowance is less than next bid amount, approving...");
-      setBidStatus("Approving allowance...");
-
-      const approvalTransaction = () =>
-        writeTokenContractAsync({
-          address: tokenAddress as `0x${string}`,
-          abi: ERC20_ABI,
-          functionName: "approve",
-          args: [finalBidContractInfo?.address, nextBidAmount * 2n],
-        });
-
-      // Send approval transaction using useTransactor
-      try {
-        await writeApprovalTx(approvalTransaction, {
-          blockConfirmations: 1,
-          successMessage: "Allowance approved!",
-          awaitingConfirmationMessage: "Awaiting to approve allowance",
-          waitingForTransactionMessage: "Waiting for allowance approval to complete.",
-        });
-      } catch (error: any) {
-        console.log("Error placing approval transaction", error);
-        setIsBidding(false);
-        setBidStatus("");
-        return; // Exit early if user rejects
-      }
-
-      while ((currentAllowance as bigint) < nextBidAmount) {
-        console.log("Current allowance is less than next bid amount, approving...");
-        const { data: currentAllowance2 } = await refetchAllowance();
-        currentAllowance = BigInt(currentAllowance2 as string);
-        console.log("Current allowance after approval:", currentAllowance2);
-        //wait half a second
-        await new Promise(resolve => setTimeout(resolve, 500));
-      }
-
-      console.log("Approval confirmed, retrying bid...");
-
-      // Wait a bit for the allowance to propagate
-
-      await new Promise(resolve => setTimeout(resolve, 1000));
-    }
-
-    // Get referrer from sessionStorage, fallback to zero address
-    let referrer = "0x0000000000000000000000000000000000000000";
-    if (typeof window !== "undefined") {
-      const storedRef = sessionStorage.getItem("referrer");
-      if (storedRef && /^0x[a-fA-F0-9]{40}$/.test(storedRef)) {
-        referrer = storedRef;
-      }
-      console.log("referrer used:", referrer);
-    }
-
     try {
-      // Always try to place the bid first
-      console.log("Attempting to place bid...");
+      const required = calcRequiredAmount();
+      await ensureAllowance(required);
+
+      const referrer = getReferrer();
       setBidStatus("Placing bid...");
 
-      try {
-        await writeContractAsync(
-          {
-            functionName: "placeBid",
-            args: [referrer],
+      await writeContractAsync(
+        {
+          functionName: "placeBid",
+          args: [referrer],
+        },
+        {
+          onError: (error: any) => {
+            // Suppress known allowance error; clear UI for others
+            if (error instanceof Error && error.message.includes("Insufficient allowance")) return;
+            setIsBidding(false);
+            setBidStatus("");
           },
-          {
-            onError: (error: any) => {
-              // Suppress "Insufficient allowance" error notifications
-              console.log("Error in onError:", error);
-              if (error instanceof Error && error.message.includes("Insufficient allowance")) {
-                console.log("Suppressing 'Insufficient allowance' error notification in onError");
-                return; // Don't show notification for this specific error
-              }
-              // Show notification for other errors
-              setIsBidding(false);
-              setBidStatus("");
-            },
-            onBlockConfirmation: (receipt: any) => {
-              console.log("Bid transaction confirmed on block:", receipt.blockNumber);
-              console.log("Bid transaction:", receipt);
-              setBidStatus("Bid confirmed!");
-              // You can add additional logic here when the transaction is confirmed
-            },
-            successMessage: "Bid placed!",
-            blockConfirmations: 1,
+          onBlockConfirmation: (receipt: any) => {
+            console.log("Bid confirmed in block:", receipt.blockNumber);
           },
-        );
-      } catch (error: any) {
-        console.log("Error placing bid transaction", error);
-        setIsBidding(false);
-        setBidStatus("");
-        return; // Exit early if user rejects
-      }
-
-      console.log("Bid placed successfully!");
-    } catch (error: any) {
-      console.error("Error placing bid:", error);
+          successMessage: "Bid placed!",
+          blockConfirmations: 1,
+        },
+      );
+    } catch (e) {
+      console.error("handlePlaceBid error:", e);
     } finally {
-      // Reset button state
       setIsBidding(false);
       setBidStatus("");
     }
@@ -342,9 +312,13 @@ const Home: NextPage = () => {
     return () => clearInterval(interval);
   }, []);
 
-  const nextBidAmount = auctionData.highestBid
-    ? auctionData.highestBid + (auctionData.bidIncrement || 0n)
-    : auctionData.startingAmount || 0n;
+  const displayNextBidAmount = useMemo(
+    () =>
+      auctionData.highestBid
+        ? auctionData.highestBid + (auctionData.bidIncrement || 0n)
+        : auctionData.startingAmount || 0n,
+    [auctionData.highestBid, auctionData.bidIncrement, auctionData.startingAmount],
+  );
 
   return (
     <>
@@ -405,7 +379,7 @@ const Home: NextPage = () => {
                         onClick={handlePlaceBid}
                         disabled={isBidding}
                       >
-                        {isBidding ? bidStatus : `Bid ${formatUSDC(nextBidAmount)} USDC`}
+                        {isBidding ? bidStatus : `Bid ${formatUSDC(displayNextBidAmount)} USDC`}
                       </button>
                       <div className="mt-1 text-gray-500 text-xs">
                         {isBidding ? "Please wait..." : `(${formatUSDC(auctionData.platformFee)} USDC fee applies)`}

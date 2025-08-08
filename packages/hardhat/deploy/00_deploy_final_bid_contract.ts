@@ -47,7 +47,6 @@ const deployYourContract: DeployFunction = async function (hre: HardhatRuntimeEn
   const deployerSigner = await hre.ethers.getSigner(deployer);
 
   // Mint with explicit nonce management
-  let nonce = await deployerSigner.getNonce();
 
   // if network is undefined we should deploy a dummy usdc erc20 contract
   if (!usdcAddress) {
@@ -58,12 +57,14 @@ const deployYourContract: DeployFunction = async function (hre: HardhatRuntimeEn
       args: [deployer, 1000000000000], // 1,000,000 USDC (with 6 decimals)
       log: true,
       autoMine: true,
-      nonce: nonce++,
     });
 
     usdcAddress = usdcContract.address; // update the usdc address
     mintUsdc = true;
   }
+
+  // wait for 3 seconds to avoid nonce error
+  await new Promise(resolve => setTimeout(resolve, 3000));
 
   const finalBidContract = await deploy("FinalBidContract", {
     from: deployer,
@@ -73,15 +74,19 @@ const deployYourContract: DeployFunction = async function (hre: HardhatRuntimeEn
     // autoMine: can be passed to the deploy function to make the deployment process faster on local networks by
     // automatically mining the contract deployment transaction. There is no effect on live networks.
     autoMine: true,
-    nonce: nonce++,
   });
 
   // Get the deployed contract to interact with it after deploying.
   //const yourContract = await hre.ethers.getContract<Contract>("FinalBidContract", deployer);
   console.log("👋 FinalBidContract deployed at:", finalBidContract.address);
 
+  // wait for 3 seconds to avoid nonce error
+  await new Promise(resolve => setTimeout(resolve, 3000));
+
   if (mintUsdc) {
     // Get the USDC contract instance for minting
+    let nonce = await deployerSigner.getNonce();
+
     const usdcContractInstance = await hre.ethers.getContractAt("DummyUsdcContract", usdcAddress);
     console.log("👋 USDC Contract:", usdcAddress);
 
