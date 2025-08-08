@@ -245,7 +245,12 @@ const Home: NextPage = () => {
 
       // Send approval transaction using useTransactor
       try {
-        await writeApprovalTx(approvalTransaction, { blockConfirmations: 1, successMessage: "Allowance approved!" });
+        await writeApprovalTx(approvalTransaction, {
+          blockConfirmations: 1,
+          successMessage: "Allowance approved!",
+          awaitingConfirmationMessage: "Awaiting to approve allowance",
+          waitingForTransactionMessage: "Waiting for allowance approval to complete.",
+        });
       } catch (error: any) {
         console.log("Error placing approval transaction", error);
         setIsBidding(false);

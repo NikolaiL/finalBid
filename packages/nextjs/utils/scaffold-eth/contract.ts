@@ -215,6 +215,8 @@ type WriteVariables = WriteContractVariables<Abi, string, any[], Config, number>
 export type TransactorFuncOptions = {
   onBlockConfirmation?: (txnReceipt: TransactionReceipt) => void;
   successMessage?: string;
+  awaitingConfirmationMessage?: string;
+  waitingForTransactionMessage?: string;
   blockConfirmations?: number;
 };
 
