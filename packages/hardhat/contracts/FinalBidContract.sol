@@ -54,6 +54,16 @@ contract FinalBidContract is Ownable, Pausable {
     event BidPlaced(uint256 indexed auctionId, address indexed bidder, uint256 amount, address indexed referral);
     event AuctionEnded(uint256 indexed auctionId, address indexed winner, uint256 amount, uint256 highestBid);
 
+    // Admin update events
+    event TokenAddressUpdated(address indexed oldAddress, address indexed newAddress);
+    event AuctionAmountUpdated(uint256 oldAmount, uint256 newAmount);
+    event AuctionDurationUpdated(uint256 oldDuration, uint256 newDuration);
+    event AuctionDurationIncreaseUpdated(uint256 oldIncrease, uint256 newIncrease);
+    event StartingAmountUpdated(uint256 oldAmount, uint256 newAmount);
+    event BidIncrementUpdated(uint256 oldAmount, uint256 newAmount);
+    event ReferralFeeUpdated(uint256 oldAmount, uint256 newAmount);
+    event PlatformFeeUpdated(uint256 oldAmount, uint256 newAmount);
+
     // Constructor: Called once on contract deployment
     // Check packages/hardhat/deploy/00_deploy_your_contract.ts
     constructor(address _owner, address _tokenAddress) Ownable(_owner) {
@@ -146,8 +156,15 @@ contract FinalBidContract is Ownable, Pausable {
         uint256 _bidAmount = (auction.highestBid == 0) ? auction.startingAmount : auction.highestBid + auction.bidIncrement;
         uint256 _totalBidAmount = _bidAmount + platformFee;
         require(auction.startTime <= block.timestamp && auction.endTime > block.timestamp, "Auction not active");
-        // check for allowance, if less than required, ask for allowance
+        
         IERC20 token = IERC20(auction.tokenAddress);
+
+        // check for balance, if less than required revert
+        uint256 balance = token.balanceOf(msg.sender);
+        require(balance >= _totalBidAmount, "Insufficient balance");
+        
+        // check for allowance, if less than required, ask for allowance
+        
         uint256 allowance = token.allowance(msg.sender, address(this));
         require(allowance >= _totalBidAmount, "Insufficient allowance");
         
@@ -199,6 +216,67 @@ contract FinalBidContract is Ownable, Pausable {
 
     function unpause() public onlyOwner {
         _unpause();
+    }
+
+    // --- Admin setters ---
+    function setTokenAddress(address _tokenAddress) external onlyOwner {
+        require(_tokenAddress != address(0), "Invalid address");
+        address old = tokenAddress;
+        tokenAddress = _tokenAddress;
+        emit TokenAddressUpdated(old, _tokenAddress);
+    }
+
+    function setAuctionAmount(uint256 _auctionAmount) external onlyOwner {
+        require(_auctionAmount > 0, "auctionAmount must be > 0");
+        uint256 old = auctionAmount;
+        auctionAmount = _auctionAmount;
+        emit AuctionAmountUpdated(old, _auctionAmount);
+    }
+
+    function setAuctionDuration(uint256 _auctionDuration) external onlyOwner {
+        require(_auctionDuration > 0, "auctionDuration must be > 0");
+        uint256 old = auctionDuration;
+        auctionDuration = _auctionDuration;
+        emit AuctionDurationUpdated(old, _auctionDuration);
+    }
+
+    function setAuctionDurationIncrease(uint256 _auctionDurationIncrease) external onlyOwner {
+        uint256 old = auctionDurationIncrease;
+        auctionDurationIncrease = _auctionDurationIncrease;
+        emit AuctionDurationIncreaseUpdated(old, _auctionDurationIncrease);
+    }
+
+    function setStartingAmount(uint256 _startingAmount) external onlyOwner {
+        require(_startingAmount > 0, "startingAmount must be > 0");
+        uint256 old = startingAmount;
+        startingAmount = _startingAmount;
+        emit StartingAmountUpdated(old, _startingAmount);
+    }
+
+    function setBidIncrement(uint256 _bidIncrement) external onlyOwner {
+        require(_bidIncrement > 0, "bidIncrement must be > 0");
+        uint256 old = bidIncrement;
+        bidIncrement = _bidIncrement;
+        emit BidIncrementUpdated(old, _bidIncrement);
+    }
+
+    function setReferralFee(uint256 _referralFee) external onlyOwner {
+        require(_referralFee <= platformFee, "referralFee cannot exceed platformFee");
+        uint256 old = referralFee;
+        referralFee = _referralFee;
+        emit ReferralFeeUpdated(old, _referralFee);
+    }
+
+    function setPlatformFee(uint256 _platformFee) external onlyOwner {
+        require(_platformFee > 0, "platformFee must be > 0");
+        require(referralFee <= _platformFee, "referralFee cannot exceed platformFee");
+        uint256 old = platformFee;
+        platformFee = _platformFee;
+        // Ensure referralFee is not larger than platformFee after update
+        if (referralFee > platformFee) {
+            referralFee = platformFee;
+        }
+        emit PlatformFeeUpdated(old, _platformFee);
     }
 
     /**

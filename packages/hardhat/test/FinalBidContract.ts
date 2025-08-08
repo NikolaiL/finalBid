@@ -372,4 +372,90 @@ describe("FinalBidContract", function () {
       expect(platformFeesClaimedAfter).to.be.greaterThan(platformFeesClaimedBefore);
     });
   });
+
+  describe("Admin Setters", function () {
+    it("Only owner can set tokenAddress", async function () {
+      const newTokenFactory = await ethers.getContractFactory("DummyUsdcContract");
+      const newToken = await newTokenFactory.deploy(owner.address, 1000000000);
+      await newToken.waitForDeployment();
+      const newAddr = await newToken.getAddress();
+
+      // Non-owner should revert
+      await expect((finalBidContract.connect(user1) as any).setTokenAddress(newAddr)).to.be.reverted;
+
+      // Owner can set
+      await (finalBidContract as any).setTokenAddress(newAddr);
+      expect(await finalBidContract.tokenAddress()).to.equal(newAddr);
+
+      // Zero address should revert
+      await expect((finalBidContract as any).setTokenAddress(ethers.ZeroAddress)).to.be.revertedWith("Invalid address");
+    });
+
+    it("Only owner can set auctionAmount and validation works", async function () {
+      await expect((finalBidContract.connect(user1) as any).setAuctionAmount(123)).to.be.reverted;
+      await expect((finalBidContract as any).setAuctionAmount(0)).to.be.revertedWith("auctionAmount must be > 0");
+      await (finalBidContract as any).setAuctionAmount(123456);
+      expect(await finalBidContract.auctionAmount()).to.equal(123456);
+    });
+
+    it("Only owner can set auctionDuration and validation works", async function () {
+      await expect((finalBidContract.connect(user1) as any).setAuctionDuration(100)).to.be.reverted;
+      await expect((finalBidContract as any).setAuctionDuration(0)).to.be.revertedWith("auctionDuration must be > 0");
+      await (finalBidContract as any).setAuctionDuration(777);
+      expect(await finalBidContract.auctionDuration()).to.equal(777);
+    });
+
+    it("Only owner can set auctionDurationIncrease (zero allowed)", async function () {
+      await expect((finalBidContract.connect(user1) as any).setAuctionDurationIncrease(10)).to.be.reverted;
+      // zero should be allowed per current contract
+      await (finalBidContract as any).setAuctionDurationIncrease(0);
+      expect(await finalBidContract.auctionDurationIncrease()).to.equal(0);
+
+      await (finalBidContract as any).setAuctionDurationIncrease(42);
+      expect(await finalBidContract.auctionDurationIncrease()).to.equal(42);
+    });
+
+    it("Only owner can set startingAmount and validation works", async function () {
+      await expect((finalBidContract.connect(user1) as any).setStartingAmount(100)).to.be.reverted;
+      await expect((finalBidContract as any).setStartingAmount(0)).to.be.revertedWith("startingAmount must be > 0");
+      await (finalBidContract as any).setStartingAmount(555);
+      expect(await finalBidContract.startingAmount()).to.equal(555);
+    });
+
+    it("Only owner can set bidIncrement and validation works", async function () {
+      await expect((finalBidContract.connect(user1) as any).setBidIncrement(100)).to.be.reverted;
+      await expect((finalBidContract as any).setBidIncrement(0)).to.be.revertedWith("bidIncrement must be > 0");
+      await (finalBidContract as any).setBidIncrement(333);
+      expect(await finalBidContract.bidIncrement()).to.equal(333);
+    });
+
+    it("Referral fee must be <= platform fee; only owner can set", async function () {
+      const platformFee = await finalBidContract.platformFee();
+      await expect((finalBidContract.connect(user1) as any).setReferralFee(1)).to.be.reverted;
+      // greater than platformFee should revert
+      await expect((finalBidContract as any).setReferralFee(platformFee + 1n)).to.be.revertedWith(
+        "referralFee cannot exceed platformFee",
+      );
+      // equal should work
+      await (finalBidContract as any).setReferralFee(platformFee);
+      expect(await finalBidContract.referralFee()).to.equal(platformFee);
+      // less should work
+      await (finalBidContract as any).setReferralFee(platformFee - 1n);
+      expect(await finalBidContract.referralFee()).to.equal(platformFee - 1n);
+    });
+
+    it("Platform fee > 0 and cannot be set below current referralFee; only owner can set", async function () {
+      await expect((finalBidContract.connect(user1) as any).setPlatformFee(100)).to.be.reverted;
+      await expect((finalBidContract as any).setPlatformFee(0)).to.be.revertedWith("platformFee must be > 0");
+
+      // set referralFee to some value, then attempt lowering platformFee below it
+      await (finalBidContract as any).setReferralFee(500000); // 0.5 USDC
+      await expect((finalBidContract as any).setPlatformFee(499999)).to.be.revertedWith(
+        "referralFee cannot exceed platformFee",
+      );
+
+      await (finalBidContract as any).setPlatformFee(1500000); // 1.5 USDC
+      expect(await finalBidContract.platformFee()).to.equal(1500000);
+    });
+  });
 });
