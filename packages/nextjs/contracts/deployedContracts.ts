@@ -537,7 +537,7 @@ const deployedContracts = {
       deployedOnBlock: 1,
     },
     FinalBidContract: {
-      address: "0x0DCd1Bf9A1b36cE34237eEaFef220932846BCD82",
+      address: "0x3Aa5ebB10DC797CAC828524e59A333d0A371443c",
       abi: [
         {
           inputs: [
@@ -614,12 +614,6 @@ const deployedContracts = {
               internalType: "uint256",
               name: "auctionId",
               type: "uint256",
-            },
-            {
-              indexed: true,
-              internalType: "address",
-              name: "tokenAddress",
-              type: "address",
             },
             {
               indexed: false,
@@ -861,25 +855,6 @@ const deployedContracts = {
           anonymous: false,
           inputs: [
             {
-              indexed: true,
-              internalType: "address",
-              name: "oldAddress",
-              type: "address",
-            },
-            {
-              indexed: true,
-              internalType: "address",
-              name: "newAddress",
-              type: "address",
-            },
-          ],
-          name: "TokenAddressUpdated",
-          type: "event",
-        },
-        {
-          anonymous: false,
-          inputs: [
-            {
               indexed: false,
               internalType: "address",
               name: "account",
@@ -951,11 +926,6 @@ const deployedContracts = {
           ],
           name: "auctions",
           outputs: [
-            {
-              internalType: "address",
-              name: "tokenAddress",
-              type: "address",
-            },
             {
               internalType: "uint256",
               name: "auctionAmount",
@@ -1127,25 +1097,6 @@ const deployedContracts = {
           type: "function",
         },
         {
-          inputs: [
-            {
-              internalType: "address",
-              name: "",
-              type: "address",
-            },
-          ],
-          name: "referralRewards",
-          outputs: [
-            {
-              internalType: "uint256",
-              name: "",
-              type: "uint256",
-            },
-          ],
-          stateMutability: "view",
-          type: "function",
-        },
-        {
           inputs: [],
           name: "renounceOwnership",
           outputs: [],
@@ -1244,19 +1195,6 @@ const deployedContracts = {
           type: "function",
         },
         {
-          inputs: [
-            {
-              internalType: "address",
-              name: "_tokenAddress",
-              type: "address",
-            },
-          ],
-          name: "setTokenAddress",
-          outputs: [],
-          stateMutability: "nonpayable",
-          type: "function",
-        },
-        {
           inputs: [],
           name: "startAuction",
           outputs: [],
@@ -1284,19 +1222,6 @@ const deployedContracts = {
               internalType: "address",
               name: "",
               type: "address",
-            },
-          ],
-          stateMutability: "view",
-          type: "function",
-        },
-        {
-          inputs: [],
-          name: "totalReferralRewardsClaimed",
-          outputs: [
-            {
-              internalType: "uint256",
-              name: "",
-              type: "uint256",
             },
           ],
           stateMutability: "view",
@@ -1350,13 +1275,6 @@ const deployedContracts = {
           type: "function",
         },
         {
-          inputs: [],
-          name: "withdrawReferralRewards",
-          outputs: [],
-          stateMutability: "nonpayable",
-          type: "function",
-        },
-        {
           stateMutability: "payable",
           type: "receive",
         },
@@ -1367,7 +1285,7 @@ const deployedContracts = {
         transferOwnership: "@openzeppelin/contracts/access/Ownable.sol",
         paused: "@openzeppelin/contracts/utils/Pausable.sol",
       },
-      deployedOnBlock: 450,
+      deployedOnBlock: 530,
     },
   },
   84532: {

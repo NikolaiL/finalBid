@@ -28,11 +28,10 @@ contract FinalBidContract is Ownable, Pausable {
     uint256 public platformFeesCollected;
     uint256 public platformFeesClaimed;
     uint256 public totalReferralRewardsCollected;
-    uint256 public totalReferralRewardsClaimed;
+    //uint256 public totalReferralRewardsClaimed;
     
 
     struct Auction {
-        address tokenAddress;
         uint256 auctionAmount;
         uint256 startTime;
         uint256 endTime;
@@ -48,14 +47,13 @@ contract FinalBidContract is Ownable, Pausable {
 
     mapping(uint256 => Auction) public auctions;
 
-    mapping(address => uint256) public referralRewards;
+    // mapping(address => uint256) public referralRewards;
 
-    event AuctionCreated(uint256 indexed auctionId, address indexed tokenAddress, uint256 auctionAmount, uint256 startTime, uint256 endTime, uint256 startingAmount);
+    event AuctionCreated(uint256 indexed auctionId, uint256 auctionAmount, uint256 startTime, uint256 endTime, uint256 startingAmount);
     event BidPlaced(uint256 indexed auctionId, address indexed bidder, uint256 amount, address indexed referral);
     event AuctionEnded(uint256 indexed auctionId, address indexed winner, uint256 amount, uint256 highestBid);
 
     // Admin update events
-    event TokenAddressUpdated(address indexed oldAddress, address indexed newAddress);
     event AuctionAmountUpdated(uint256 oldAmount, uint256 newAmount);
     event AuctionDurationUpdated(uint256 oldDuration, uint256 newDuration);
     event AuctionDurationIncreaseUpdated(uint256 oldIncrease, uint256 newIncrease);
@@ -74,9 +72,9 @@ contract FinalBidContract is Ownable, Pausable {
     function _createAuction(uint256 _auctionId, address _tokenAddress, uint256 _auctionAmount, uint256 _startTime, uint256 _endTime, uint256 _startingAmount, uint256 _bidIncrement, uint256 _referralFee, uint256 _platformFee) internal {
         // check if _auctionAmount is available
         uint256 availableAmount = IERC20(_tokenAddress).balanceOf(address(this));
-        uint256 totalReferralFees = totalReferralRewardsCollected - totalReferralRewardsClaimed;
+        //uint256 totalReferralFees = totalReferralRewardsCollected - totalReferralRewardsClaimed;
         uint256 totalPlatfromFees = platformFeesCollected > platformFeesClaimed ? platformFeesCollected - platformFeesClaimed : 0;
-        require (availableAmount > totalReferralFees + _startingAmount + _bidIncrement, "Insufficient balance to start auction");
+        require (availableAmount > _startingAmount + _bidIncrement, "Insufficient balance to start auction");
         uint256 auctionAmountToUse = availableAmount > _auctionAmount ? _auctionAmount : availableAmount;
 
         
@@ -87,12 +85,13 @@ contract FinalBidContract is Ownable, Pausable {
         }
 
         // if we have more than 1.5x the auction amount, we need to withdraw the excess to deployer
-        if (availableAmount - totalReferralFees > auctionAmountToUse * 3 / 2 ) {
-            _withdrawExcess(_tokenAddress, auctionAmountToUse);
+        if (availableAmount > auctionAmountToUse * 3 / 2 ) {
+            uint256 amountToWithdraw = (availableAmount - auctionAmountToUse * 3 / 2) / 2;
+            auctionAmountToUse = auctionAmountToUse + amountToWithdraw/2;
+            _withdrawExcess(amountToWithdraw);
         }
 
         auctions[_auctionId] = Auction({
-            tokenAddress: _tokenAddress,
             auctionAmount: auctionAmountToUse,
             startTime: _startTime,
             endTime: _endTime,
@@ -106,19 +105,16 @@ contract FinalBidContract is Ownable, Pausable {
             ended: false
         });
 
-        emit AuctionCreated(auctionId, tokenAddress, auctionAmountToUse, _startTime, _endTime, _startingAmount);
+        emit AuctionCreated(auctionId, auctionAmountToUse, _startTime, _endTime, _startingAmount);
 
 
     }
 
-    function _withdrawExcess(address _tokenAddress, uint256 _amount) internal {
-        uint256 availableAmount = IERC20(_tokenAddress).balanceOf(address(this));
-        uint256 totalReferralFees = totalReferralRewardsCollected - totalReferralRewardsClaimed;
-        if (availableAmount - totalReferralFees > _amount * 3 / 2 ) {
-            uint256 amountToWithdraw = availableAmount - totalReferralFees - _amount * 3 / 2;
-            IERC20(_tokenAddress).transfer(owner(), amountToWithdraw);
-            platformFeesClaimed += amountToWithdraw;
-        }
+    function _withdrawExcess(uint256 _amount) internal {
+        uint256 availableAmount = IERC20(tokenAddress).balanceOf(address(this));
+        require(availableAmount > _amount, "Insufficient balance to withdraw");
+        IERC20(tokenAddress).transfer(owner(), _amount);
+        platformFeesClaimed += _amount;
     }
 
     function _finalizeAuction(uint256 _auctionId) internal {
@@ -130,7 +126,7 @@ contract FinalBidContract is Ownable, Pausable {
         auction.ended = true;
         if (auction.highestBidder != address(0)) {
             // pay the winner
-            IERC20 token = IERC20(auction.tokenAddress);
+            IERC20 token = IERC20(tokenAddress);
             token.transfer(auction.highestBidder, auction.auctionAmount);
         }
         emit AuctionEnded(_auctionId, auction.highestBidder, auction.auctionAmount, auction.highestBid);
@@ -157,7 +153,7 @@ contract FinalBidContract is Ownable, Pausable {
         uint256 _totalBidAmount = _bidAmount + platformFee;
         require(auction.startTime <= block.timestamp && auction.endTime > block.timestamp, "Auction not active");
         
-        IERC20 token = IERC20(auction.tokenAddress);
+        IERC20 token = IERC20(tokenAddress);
 
         // check for balance, if less than required revert
         uint256 balance = token.balanceOf(msg.sender);
@@ -188,7 +184,7 @@ contract FinalBidContract is Ownable, Pausable {
 
         // pay the referral
         if (_referral != address(0)) {
-            referralRewards[_referral] += referralFee;
+            //referralRewards[_referral] += referralFee;
             platformFeesCollected += (platformFee - referralFee);
             totalReferralRewardsCollected += referralFee;
 
@@ -219,12 +215,6 @@ contract FinalBidContract is Ownable, Pausable {
     }
 
     // --- Admin setters ---
-    function setTokenAddress(address _tokenAddress) external onlyOwner {
-        require(_tokenAddress != address(0), "Invalid address");
-        address old = tokenAddress;
-        tokenAddress = _tokenAddress;
-        emit TokenAddressUpdated(old, _tokenAddress);
-    }
 
     function setAuctionAmount(uint256 _auctionAmount) external onlyOwner {
         require(_auctionAmount > 0, "auctionAmount must be > 0");
@@ -299,14 +289,15 @@ contract FinalBidContract is Ownable, Pausable {
 
     /**
      * function that allows a referral to withdraw his referral fees
+     * removed as we will pay the referral fee to the referral directly
      */
-    function withdrawReferralRewards() public {
-        require(referralRewards[msg.sender] > 0, "No rewards to claim");
-        IERC20 token = IERC20(tokenAddress);
-        token.transfer(msg.sender, referralRewards[msg.sender]);
-        totalReferralRewardsClaimed += referralRewards[msg.sender];
-        referralRewards[msg.sender] = 0;
-    }
+    // function withdrawReferralRewards() public {
+    //     require(referralRewards[msg.sender] > 0, "No rewards to claim");
+    //     IERC20 token = IERC20(tokenAddress);
+    //     token.transfer(msg.sender, referralRewards[msg.sender]);
+    //     totalReferralRewardsClaimed += referralRewards[msg.sender];
+    //     referralRewards[msg.sender] = 0;
+    // }
 
     /**
      * Function that allows the contract to receive ETH

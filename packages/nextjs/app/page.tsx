@@ -46,20 +46,19 @@ const Home: NextPage = () => {
     watch: true, // Enable live updates
   });
 
-  // let's convert AuctioNData to named properties
+  // Map Auction tuple from contract (no tokenAddress in struct)
   const auctionData = {
-    tokenAddress: AuctionData?.[0],
-    auctionAmount: AuctionData?.[1],
-    startTime: AuctionData?.[2],
-    endTime: AuctionData?.[3],
-    startingAmount: AuctionData?.[4],
-    bidIncrement: AuctionData?.[5],
-    referralFee: AuctionData?.[6],
-    platformFee: AuctionData?.[7],
-    bidCount: AuctionData?.[8],
-    highestBidder: AuctionData?.[9],
-    highestBid: AuctionData?.[10],
-    ended: AuctionData?.[11],
+    auctionAmount: AuctionData?.[0],
+    startTime: AuctionData?.[1],
+    endTime: AuctionData?.[2],
+    startingAmount: AuctionData?.[3],
+    bidIncrement: AuctionData?.[4],
+    referralFee: AuctionData?.[5],
+    platformFee: AuctionData?.[6],
+    bidCount: AuctionData?.[7],
+    highestBidder: AuctionData?.[8],
+    highestBid: AuctionData?.[9],
+    ended: AuctionData?.[10],
     auctionId: AuctionId,
     readyToEnd: false,
   };
@@ -182,6 +181,31 @@ const Home: NextPage = () => {
     },
   ];
 
+  // Minimal ERC20 metadata ABI (symbol/name/decimals)
+  const ERC20_METADATA_ABI = [
+    {
+      inputs: [],
+      name: "symbol",
+      outputs: [{ name: "", type: "string" }],
+      stateMutability: "view",
+      type: "function",
+    },
+    {
+      inputs: [],
+      name: "name",
+      outputs: [{ name: "", type: "string" }],
+      stateMutability: "view",
+      type: "function",
+    },
+    {
+      inputs: [],
+      name: "decimals",
+      outputs: [{ name: "", type: "uint8" }],
+      stateMutability: "view",
+      type: "function",
+    },
+  ] as const;
+
   // Read allowance using useReadContract with automatic refetching
   const { refetch: refetchAllowance } = useReadContract({
     address: tokenAddress as `0x${string}`,
@@ -211,6 +235,14 @@ const Home: NextPage = () => {
 
   // Constants
   const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
+
+  // Read token symbol (for rendering)
+  const { data: tokenSymbol } = useReadContract({
+    address: tokenAddress as `0x${string}`,
+    abi: ERC20_METADATA_ABI,
+    functionName: "symbol",
+    query: { enabled: !!tokenAddress },
+  });
 
   // Compute required token amount for the next bid (includes platform fee)
   const calcRequiredAmount = () =>
@@ -271,7 +303,7 @@ const Home: NextPage = () => {
     setBidStatus("Checking allowance...");
 
     try {
-      const required = calcRequiredAmount();
+      const required = calcRequiredAmount() as bigint;
       await ensureAllowance(required);
 
       const referrer = getReferrer();
@@ -298,6 +330,8 @@ const Home: NextPage = () => {
       );
     } catch (e) {
       console.error("handlePlaceBid error:", e);
+      setIsBidding(false);
+      setBidStatus("");
     } finally {
       setIsBidding(false);
       setBidStatus("");
@@ -342,7 +376,9 @@ const Home: NextPage = () => {
                       </div>
                       <div>
                         <span className="font-bold text-blue-600">Auction Data</span>
-                        <span className="text-gray-500 ml-2">Win ${formatUSDC(auctionData.auctionAmount)}</span>
+                        <span className="text-gray-500 ml-2">
+                          Win {formatUSDC(auctionData.auctionAmount as unknown as bigint)} {String(tokenSymbol ?? "")}
+                        </span>
                       </div>
                       <div>
                         <span className="font-bold text-blue-600">Auction Ends In</span>
@@ -379,10 +415,14 @@ const Home: NextPage = () => {
                         onClick={handlePlaceBid}
                         disabled={isBidding}
                       >
-                        {isBidding ? bidStatus : `Bid ${formatUSDC(displayNextBidAmount)} USDC`}
+                        {isBidding
+                          ? bidStatus
+                          : `Bid ${formatUSDC(displayNextBidAmount as unknown as bigint)} ${String(tokenSymbol ?? "")}`}
                       </button>
                       <div className="mt-1 text-gray-500 text-xs">
-                        {isBidding ? "Please wait..." : `(${formatUSDC(auctionData.platformFee)} USDC fee applies)`}
+                        {isBidding
+                          ? "Please wait..."
+                          : `(${formatUSDC(auctionData.platformFee)} ${String(tokenSymbol ?? "")} fee applies)`}
                       </div>
                     </div>
                   )}
@@ -420,7 +460,10 @@ const Home: NextPage = () => {
                       <div className="mt-2 text-xl flex justify-center w-full items-center">
                         <Address address={event.args?.bidder} size="xl" />
                         <span className="ml-2">bids</span>
-                        <span className="ml-2 font-bold text-4xl">${formatUSDC(event.args?.amount)}</span>
+                        <span className="ml-2 font-bold text-4xl">
+                          {formatUSDC(event.args?.amount as unknown as bigint)}
+                        </span>
+                        <span className="ml-2">{String(tokenSymbol ?? "")}</span>
                       </div>
                       {event.args?.referral &&
                         event.args?.referral !== "0x0000000000000000000000000000000000000000" && (
@@ -435,16 +478,21 @@ const Home: NextPage = () => {
                   {event.eventType === "AuctionCreated" && (
                     <div className="mt-2 text-sm">
                       <span>Auction ID: {event.args?.auctionId?.toString()}</span>
-                      <span className="ml-4">Token: {event.args?.tokenAddress}</span>
-                      <span className="ml-4">Amount: {event.args?.auctionAmount?.toString()}</span>
+                      <span className="ml-4">
+                        Amount: {formatUSDC(event.args?.auctionAmount as unknown as bigint)} {String(tokenSymbol ?? "")}
+                      </span>
                     </div>
                   )}
 
                   {event.eventType === "AuctionEnded" && (
                     <div className="mt-2 text-sm">
                       <span>Auction ID: {event.args?.auctionId?.toString()}</span>
-                      <span className="ml-4">Winner: {event.args?.winner}</span>
-                      <span className="ml-4">Amount: {event.args?.amount?.toString()}</span>
+                      <span className="ml-4">
+                        Winner: <Address address={event.args?.winner} size="xs" />
+                      </span>
+                      <span className="ml-4">
+                        Amount: {formatUSDC(event.args?.amount as unknown as bigint)} {String(tokenSymbol ?? "")}
+                      </span>
                     </div>
                   )}
 

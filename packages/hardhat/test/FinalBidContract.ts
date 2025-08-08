@@ -257,22 +257,6 @@ describe("FinalBidContract", function () {
 
       expect(ownerBalanceAfterWithdraw).to.be.greaterThan(ownerBalanceBeforeWithdraw);
     });
-
-    it("Should allow the referral to withdraw the referral rewards", async function () {
-      await finalBidContract.startAuction();
-      expect(await finalBidContract.auctionId()).to.equal(1);
-
-      await finalBidContract.connect(user2).placeBid(user1.address);
-      await finalBidContract.connect(user3).placeBid(user1.address);
-
-      const user1BalanceBeforeWithdraw = await dummyUsdcContract.balanceOf(user1.address);
-
-      await finalBidContract.connect(user1).withdrawReferralRewards();
-
-      const user1BalanceAfterWithdraw = await dummyUsdcContract.balanceOf(user1.address);
-
-      expect(user1BalanceAfterWithdraw).to.be.greaterThan(user1BalanceBeforeWithdraw);
-    });
   });
   describe("Referral Rewards", function () {
     it("Should grant referral rewards to the referral address", async function () {
@@ -280,7 +264,6 @@ describe("FinalBidContract", function () {
       expect(await finalBidContract.auctionId()).to.equal(1);
 
       const bidIncrement = await finalBidContract.bidIncrement();
-      const referralFee = await finalBidContract.referralFee();
 
       const zeroAddress = "0x0000000000000000000000000000000000000000";
 
@@ -304,9 +287,6 @@ describe("FinalBidContract", function () {
       auction = await finalBidContract.auctions(1);
       expect(auction.highestBid).to.equal(1000000 + Number(bidIncrement) * 2);
 
-      // check the referral rewards
-      expect(await finalBidContract.referralRewards(user1)).to.equal(Number(referralFee) * 2);
-
       // check the user1 balance
       const user1BalanceAfter = await dummyUsdcContract.balanceOf(user1.address);
       expect(user1BalanceAfter).to.be.greaterThan(user1BalanceBefore);
@@ -316,7 +296,6 @@ describe("FinalBidContract", function () {
       await finalBidContract.startAuction();
       expect(await finalBidContract.auctionId()).to.equal(1);
 
-      const refBefore = await finalBidContract.referralRewards(user1);
       const auction = await finalBidContract.auctions(1);
 
       // calculate bid amount + platform fee
@@ -328,9 +307,6 @@ describe("FinalBidContract", function () {
       // get user1 balance
       const user1BalanceBefore = await dummyUsdcContract.balanceOf(user1.address);
       await finalBidContract.connect(user1).placeBid(user1.address);
-
-      const refAfter = await finalBidContract.referralRewards(user1);
-      expect(refAfter).to.equal(refBefore);
 
       // check the user1 balance
 
@@ -374,23 +350,6 @@ describe("FinalBidContract", function () {
   });
 
   describe("Admin Setters", function () {
-    it("Only owner can set tokenAddress", async function () {
-      const newTokenFactory = await ethers.getContractFactory("DummyUsdcContract");
-      const newToken = await newTokenFactory.deploy(owner.address, 1000000000);
-      await newToken.waitForDeployment();
-      const newAddr = await newToken.getAddress();
-
-      // Non-owner should revert
-      await expect((finalBidContract.connect(user1) as any).setTokenAddress(newAddr)).to.be.reverted;
-
-      // Owner can set
-      await (finalBidContract as any).setTokenAddress(newAddr);
-      expect(await finalBidContract.tokenAddress()).to.equal(newAddr);
-
-      // Zero address should revert
-      await expect((finalBidContract as any).setTokenAddress(ethers.ZeroAddress)).to.be.revertedWith("Invalid address");
-    });
-
     it("Only owner can set auctionAmount and validation works", async function () {
       await expect((finalBidContract.connect(user1) as any).setAuctionAmount(123)).to.be.reverted;
       await expect((finalBidContract as any).setAuctionAmount(0)).to.be.revertedWith("auctionAmount must be > 0");
