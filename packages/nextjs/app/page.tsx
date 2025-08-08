@@ -245,7 +245,7 @@ const Home: NextPage = () => {
 
       // Send approval transaction using useTransactor
       try {
-        await writeApprovalTx(approvalTransaction, { blockConfirmations: 1 });
+        await writeApprovalTx(approvalTransaction, { blockConfirmations: 1, successMessage: "Allowance approved!" });
       } catch (error: any) {
         console.log("Error placing approval transaction", error);
         setIsBidding(false);
@@ -302,6 +302,14 @@ const Home: NextPage = () => {
               setIsBidding(false);
               setBidStatus("");
             },
+            onBlockConfirmation: (receipt: any) => {
+              console.log("Bid transaction confirmed on block:", receipt.blockNumber);
+              console.log("Bid transaction:", receipt);
+              setBidStatus("Bid confirmed!");
+              // You can add additional logic here when the transaction is confirmed
+            },
+            successMessage: "Bid placed!",
+            blockConfirmations: 1,
           },
         );
       } catch (error: any) {
