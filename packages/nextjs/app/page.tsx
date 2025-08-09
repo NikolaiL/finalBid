@@ -45,13 +45,16 @@ const Home: NextPage = () => {
   }, [latestAuction?.endTime, latestAuction?.highestBid, latestAuction?.auctionAmount]);
 
   const bidEventsQuery: any = usePonderQuery(bidPlacedQueryOptions as any);
-  const BidEvents: any[] = bidEventsQuery?.data ?? [];
+  const BidEvents: any[] = useMemo(() => (bidEventsQuery?.data ?? []) as any[], [bidEventsQuery?.data]);
 
   const auctionEndedQuery: any = usePonderQuery(auctionEndedQueryOptions as any);
-  const AuctionEndedEvents: any[] = auctionEndedQuery?.data ?? [];
+  const AuctionEndedEvents: any[] = useMemo(() => (auctionEndedQuery?.data ?? []) as any[], [auctionEndedQuery?.data]);
 
   const auctionCreatedQuery: any = usePonderQuery(auctionCreatedQueryOptions as any);
-  const AuctionCreatedEvents: any[] = auctionCreatedQuery?.data ?? [];
+  const AuctionCreatedEvents: any[] = useMemo(
+    () => (auctionCreatedQuery?.data ?? []) as any[],
+    [auctionCreatedQuery?.data],
+  );
 
   // Combine all events and sort them chronologically
   const allEvents = useMemo(() => {
@@ -61,7 +64,7 @@ const Home: NextPage = () => {
     if (BidEvents) {
       BidEvents.forEach((row: any) => {
         events.push({
-          transactionHash: row.id.split("-")[0],
+          transactionHash: row.hash ?? (typeof row.id === "string" ? row.id.split("-")[0] : ""),
           logIndex: row.logIndex,
           blockNumber: row.blockNumber,
           args: { auctionId: row.auctionId, bidder: row.bidder, amount: row.amount, referral: row.referral },
