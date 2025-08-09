@@ -1,15 +1,15 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import Link from "next/link";
+import { useMemo, useState } from "react";
+import { latestAuctionQueryOptions } from "../lib/auction-queries";
+import { auctionCreatedQueryOptions, auctionEndedQueryOptions, bidPlacedQueryOptions } from "../lib/bid-events-query";
+import { usePonderQuery } from "@ponder/react";
 import type { NextPage } from "next";
-import { useAccount, useBlockNumber, useReadContract, useWriteContract } from "wagmi";
-import { BugAntIcon, MagnifyingGlassIcon } from "@heroicons/react/24/outline";
+import { useAccount, useReadContract, useWriteContract } from "wagmi";
 import { MiniappUserInfo } from "~~/components/MiniappUserInfo";
 import { Address } from "~~/components/scaffold-eth";
 import {
   useDeployedContractInfo,
-  useScaffoldEventHistory,
   useScaffoldReadContract,
   useScaffoldWriteContract,
   useTransactor,
@@ -25,64 +25,33 @@ const formatUSDC = (amount: bigint | undefined): string => {
 };
 
 const Home: NextPage = () => {
-  let isLoading = true;
   const { address: connectedAddress } = useAccount();
 
-  // get the latest block number and decrease by 500
-  const { data: latestBlock } = useBlockNumber({ watch: true });
-  const fromBlock = latestBlock ? (latestBlock > 500n ? latestBlock - 500n : 0n) : 0n;
-  // get current auction id
-  const { data: AuctionId, isLoading: isAuctionIdLoading } = useScaffoldReadContract({
-    contractName: "FinalBidContract",
-    functionName: "auctionId",
-    watch: true, // Enable live updates
-  });
+  // Latest auction summary from Ponder
+  const latestAuctionRes: any = usePonderQuery(latestAuctionQueryOptions as any);
+  const latestAuction = (latestAuctionRes?.data ?? [])[0];
 
-  // get current auction data and keep it updated
-  const { data: AuctionData, isLoading: isAuctionDataLoading } = useScaffoldReadContract({
-    contractName: "FinalBidContract",
-    functionName: "auctions",
-    args: [AuctionId],
-    watch: true, // Enable live updates
-  });
+  const isAuctionOver = useMemo(() => {
+    if (!latestAuction?.endTime) return false;
+    try {
+      const now = BigInt(Math.floor(Date.now() / 1000));
+      return (
+        BigInt(latestAuction.endTime) <= now ||
+        BigInt(latestAuction.highestBid ?? 0) >= BigInt(latestAuction.auctionAmount ?? 0)
+      );
+    } catch {
+      return false;
+    }
+  }, [latestAuction?.endTime, latestAuction?.highestBid, latestAuction?.auctionAmount]);
 
-  // Map Auction tuple from contract (no tokenAddress in struct)
-  const auctionData = {
-    auctionAmount: AuctionData?.[0],
-    startTime: AuctionData?.[1],
-    endTime: AuctionData?.[2],
-    startingAmount: AuctionData?.[3],
-    bidIncrement: AuctionData?.[4],
-    referralFee: AuctionData?.[5],
-    platformFee: AuctionData?.[6],
-    bidCount: AuctionData?.[7],
-    highestBidder: AuctionData?.[8],
-    highestBid: AuctionData?.[9],
-    ended: AuctionData?.[10],
-    auctionId: AuctionId,
-    readyToEnd: false,
-  };
+  const bidEventsQuery: any = usePonderQuery(bidPlacedQueryOptions as any);
+  const BidEvents: any[] = bidEventsQuery?.data ?? [];
 
-  const { data: BidEvents, isLoading: isBidEventsLoading } = useScaffoldEventHistory({
-    contractName: "FinalBidContract",
-    eventName: "BidPlaced",
-    fromBlock: fromBlock,
-    watch: true, // Enable live updates
-  });
+  const auctionEndedQuery: any = usePonderQuery(auctionEndedQueryOptions as any);
+  const AuctionEndedEvents: any[] = auctionEndedQuery?.data ?? [];
 
-  const { data: AuctionEndedEvents, isLoading: isAuctionEndedEventsLoading } = useScaffoldEventHistory({
-    contractName: "FinalBidContract",
-    eventName: "AuctionEnded",
-    fromBlock: fromBlock,
-    watch: true, // Enable live updates
-  });
-
-  const { data: AuctionCreatedEvents, isLoading: isAuctionCreatedEventsLoading } = useScaffoldEventHistory({
-    contractName: "FinalBidContract",
-    eventName: "AuctionCreated",
-    fromBlock: fromBlock,
-    watch: true, // Enable live updates
-  });
+  const auctionCreatedQuery: any = usePonderQuery(auctionCreatedQueryOptions as any);
+  const AuctionCreatedEvents: any[] = auctionCreatedQuery?.data ?? [];
 
   // Combine all events and sort them chronologically
   const allEvents = useMemo(() => {
@@ -90,9 +59,12 @@ const Home: NextPage = () => {
 
     // Add BidPlaced events
     if (BidEvents) {
-      BidEvents.forEach((event: any) => {
+      BidEvents.forEach((row: any) => {
         events.push({
-          ...event,
+          transactionHash: row.id.split("-")[0],
+          logIndex: row.logIndex,
+          blockNumber: row.blockNumber,
+          args: { auctionId: row.auctionId, bidder: row.bidder, amount: row.amount, referral: row.referral },
           eventType: "BidPlaced",
           displayName: "Bid Placed",
         });
@@ -101,9 +73,12 @@ const Home: NextPage = () => {
 
     // Add AuctionEnded events
     if (AuctionEndedEvents) {
-      AuctionEndedEvents.forEach((event: any) => {
+      AuctionEndedEvents.forEach((row: any) => {
         events.push({
-          ...event,
+          transactionHash: row.hash,
+          logIndex: row.logIndex,
+          blockNumber: row.blockNumber,
+          args: { auctionId: row.auctionId, winner: row.winner, amount: row.amount, highestBid: row.highestBid },
           eventType: "AuctionEnded",
           displayName: "Auction Ended",
         });
@@ -112,17 +87,32 @@ const Home: NextPage = () => {
 
     // Add AuctionCreated events
     if (AuctionCreatedEvents) {
-      AuctionCreatedEvents.forEach((event: any) => {
+      AuctionCreatedEvents.forEach((row: any) => {
         events.push({
-          ...event,
+          transactionHash: row.hash,
+          logIndex: row.logIndex,
+          blockNumber: row.blockNumber,
+          args: {
+            auctionId: row.auctionId,
+            auctionAmount: row.auctionAmount,
+            startTime: row.startTime,
+            endTime: row.endTime,
+            startingAmount: row.startingAmount,
+          },
           eventType: "AuctionCreated",
           displayName: "Auction Created",
         });
       });
     }
 
-    // Sort by block number and log index
-    return events.sort((a: any, b: any) => {
+    // Dedupe by tx hash + log index, then sort desc
+    const map = new Map<string, any>();
+    for (const e of events) {
+      const k = `${e.transactionHash}-${String(e.logIndex)}`;
+      if (!map.has(k)) map.set(k, e);
+    }
+    const deduped = Array.from(map.values());
+    return deduped.sort((a: any, b: any) => {
       if (a.blockNumber !== b.blockNumber) {
         return Number(b.blockNumber - a.blockNumber);
       }
@@ -130,19 +120,9 @@ const Home: NextPage = () => {
     });
   }, [BidEvents, AuctionEndedEvents, AuctionCreatedEvents]);
 
-  isLoading =
-    isAuctionIdLoading ||
-    isAuctionDataLoading ||
-    isBidEventsLoading ||
-    isAuctionEndedEventsLoading ||
-    isAuctionCreatedEventsLoading;
-
   const { writeContractAsync } = useScaffoldWriteContract({
     contractName: "FinalBidContract",
   });
-
-  // Get current timestamp
-  const [currentTimestamp, setCurrentTimestamp] = useState<bigint>(BigInt(Math.floor(Date.now() / 1000)));
 
   // Get FinalBidContract address from deployed contracts
   const { data: finalBidContractInfo } = useDeployedContractInfo({
@@ -220,15 +200,6 @@ const Home: NextPage = () => {
   // Initialize useTransactor for approval transactions
   const writeApprovalTx = useTransactor();
 
-  auctionData.readyToEnd =
-    auctionData.endTime &&
-    currentTimestamp &&
-    auctionData.endTime > currentTimestamp &&
-    !auctionData.ended &&
-    (auctionData.highestBid || 0n) < (auctionData.auctionAmount || 0n)
-      ? false
-      : true;
-
   // State for button and transaction status
   const [isBidding, setIsBidding] = useState(false);
   const [bidStatus, setBidStatus] = useState<string>("");
@@ -244,13 +215,27 @@ const Home: NextPage = () => {
     query: { enabled: !!tokenAddress },
   });
 
+  // Contract params used to compute next bid/required amount
+  const { data: bidIncrement } = useScaffoldReadContract({
+    contractName: "FinalBidContract",
+    functionName: "bidIncrement",
+    watch: true,
+  });
+  const { data: platformFee } = useScaffoldReadContract({
+    contractName: "FinalBidContract",
+    functionName: "platformFee",
+    watch: true,
+  });
+
   // Compute required token amount for the next bid (includes platform fee)
-  const calcRequiredAmount = () =>
-    auctionData.highestBid
-      ? auctionData.highestBid + (auctionData.bidIncrement || 0n) * 3n + (auctionData.platformFee || 0n) * 3n
-      : (auctionData.startingAmount || 0n) +
-        (auctionData.bidIncrement || 0n) * 3n +
-        (auctionData.platformFee || 0n) * 3n;
+  const calcRequiredAmount = () => {
+    const nextBid = latestAuction?.highestBid
+      ? (latestAuction.highestBid as bigint) + ((bidIncrement as bigint) || 0n)
+      : (latestAuction?.startingAmount as bigint) || 0n;
+    const required = nextBid + ((platformFee as bigint) || 0n);
+    // Buffer like before to avoid tight allowances
+    return required + (((bidIncrement as bigint) || 0n) + ((platformFee as bigint) || 0n)) * 2n;
+  };
 
   // Fetch allowance as bigint
   const fetchAllowanceBig = async (): Promise<bigint> => {
@@ -338,224 +323,88 @@ const Home: NextPage = () => {
     }
   };
 
-  //
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setCurrentTimestamp(BigInt(Math.floor(Date.now() / 1000)));
-    }, 1000);
-    return () => clearInterval(interval);
-  }, []);
-
-  const displayNextBidAmount = useMemo(
-    () =>
-      auctionData.highestBid
-        ? auctionData.highestBid + (auctionData.bidIncrement || 0n)
-        : auctionData.startingAmount || 0n,
-    [auctionData.highestBid, auctionData.bidIncrement, auctionData.startingAmount],
-  );
-
   return (
-    <>
-      <div className="flex items-center flex-col grow pt-2">
-        <div className="px-5">
-          {/* if isLoading, show a loading spinner */}
-          {isLoading ? (
-            <div className="flex justify-center items-center">
-              <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-gray-900"></div>
-            </div>
-          ) : (
-            <>
-              {!isAuctionDataLoading && (auctionData.auctionId || 0n) > 0n && (
-                <div>
-                  <h2 className="text-xl font-bold mb-4">Current Auction Data</h2>
-                  <div className="border p-3 mb-2 rounded">
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <span className="font-bold text-blue-600">Auction ID</span>
-                        <span className="text-gray-500 ml-2">#{AuctionId}</span>
-                      </div>
-                      <div>
-                        <span className="font-bold text-blue-600">Auction Data</span>
-                        <span className="text-gray-500 ml-2">
-                          Win {formatUSDC(auctionData.auctionAmount as unknown as bigint)} {String(tokenSymbol ?? "")}
-                        </span>
-                      </div>
-                      <div>
-                        <span className="font-bold text-blue-600">Auction Ends In</span>
-                        <span className="text-gray-500 ml-2">
-                          {auctionData.endTime && currentTimestamp ? Number(auctionData.endTime - currentTimestamp) : 0}{" "}
-                          seconds
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-              <div className="rounded my-4 text-center w-full">
-                {AuctionId === 0n && (
-                  <button
-                    className="btn btn-primary text-xl"
-                    onClick={async () => {
-                      console.log("Starting auction");
-                      await writeContractAsync({
-                        functionName: "startAuction",
-                      });
-                    }}
-                  >
-                    Start Auction
-                  </button>
-                )}
-                {AuctionId &&
-                  AuctionId > 0n &&
-                  !auctionData.readyToEnd &&
-                  auctionData.highestBidder != connectedAddress && (
-                    <div>
-                      <button
-                        className="btn btn-primary text-xl transition-all"
-                        onClick={handlePlaceBid}
-                        disabled={isBidding}
-                      >
-                        {isBidding
-                          ? bidStatus
-                          : `Bid ${formatUSDC(displayNextBidAmount as unknown as bigint)} ${String(tokenSymbol ?? "")}`}
-                      </button>
-                      <div className="mt-1 text-gray-500 text-xs">
-                        {isBidding
-                          ? "Please wait..."
-                          : `(${formatUSDC(auctionData.platformFee)} ${String(tokenSymbol ?? "")} fee applies)`}
-                      </div>
-                    </div>
-                  )}
-                {AuctionId &&
-                  AuctionId > 0n &&
-                  !auctionData.readyToEnd &&
-                  auctionData.highestBidder == connectedAddress && (
-                    <div className="text-gray-500 ml-2">You are the highest bidder!</div>
-                  )}
-                {AuctionId && AuctionId > 0n && auctionData.readyToEnd && (
-                  <button
-                    className="btn btn-primary text-xl"
-                    onClick={async () => {
-                      console.log("Ending auction and starting a new one");
-                      await writeContractAsync({
-                        functionName: "startAuction",
-                      });
-                    }}
-                  >
-                    {auctionData.highestBidder == connectedAddress
-                      ? "🎉 Congrats! Collect your winnings!"
-                      : "Start a New Auction"}
-                  </button>
-                )}
-              </div>
-              <h2 className="text-lg mb-4 w-full text-center">Bid Story</h2>
-              {allEvents?.map(event => (
-                <div
-                  key={`${event.transactionHash}-${event.logIndex}`}
-                  className="border mb-4 px-3 py-2 rounded-xl shadow-lg"
-                >
-                  {/* Display event-specific data */}
-                  {event.eventType === "BidPlaced" && (
-                    <>
-                      <div className="mt-2 text-xl flex justify-center w-full items-center">
-                        <Address address={event.args?.bidder} size="xl" />
-                        <span className="ml-2">bids</span>
-                        <span className="ml-2 font-bold text-4xl">
-                          {formatUSDC(event.args?.amount as unknown as bigint)}
-                        </span>
-                        <span className="ml-2">{String(tokenSymbol ?? "")}</span>
-                      </div>
-                      {event.args?.referral &&
-                        event.args?.referral !== "0x0000000000000000000000000000000000000000" && (
-                          <div className="opacity-50 mt-2 text-xs flex justify-center w-full items-center">
-                            <span className="ml-4 flex mr-2">Referred by:</span>
-                            <Address address={event.args?.referral} size="xs" />
-                          </div>
-                        )}
-                    </>
-                  )}
-
-                  {event.eventType === "AuctionCreated" && (
-                    <div className="mt-2 text-sm">
-                      <span>Auction ID: {event.args?.auctionId?.toString()}</span>
-                      <span className="ml-4">
-                        Amount: {formatUSDC(event.args?.auctionAmount as unknown as bigint)} {String(tokenSymbol ?? "")}
-                      </span>
-                    </div>
-                  )}
-
-                  {event.eventType === "AuctionEnded" && (
-                    <div className="mt-2 text-sm">
-                      <span>Auction ID: {event.args?.auctionId?.toString()}</span>
-                      <span className="ml-4">
-                        Winner: <Address address={event.args?.winner} size="xs" />
-                      </span>
-                      <span className="ml-4">
-                        Amount: {formatUSDC(event.args?.amount as unknown as bigint)} {String(tokenSymbol ?? "")}
-                      </span>
-                    </div>
-                  )}
-
-                  {event.eventType === "AuctionCancelled" && (
-                    <div className="mt-2 text-sm">
-                      <span>Auction ID: {event.args?.auctionId?.toString()}</span>
-                    </div>
-                  )}
-                </div>
-              ))}
-            </>
-          )}
-          <div className="flex justify-center items-center space-x-2 flex-col">
-            <p className="my-2 font-medium">Connected Address:</p>
-            <Address address={connectedAddress} />
+    <div className="flex flex-col gap-6 p-4">
+      <div className="border p-3 rounded">
+        <div className="flex justify-between items-center">
+          <div>
+            <div className="font-bold">Current Auction ID</div>
+            <div>#{latestAuction?.auctionId?.toString?.() ?? "-"}</div>
           </div>
-
-          {/* MiniApp User Info */}
-          <MiniappUserInfo />
-          <p className="text-center text-lg">
-            Get started by editing{" "}
-            <code className="italic bg-base-300 text-base font-bold max-w-full break-words break-all inline-block">
-              packages/nextjs/app/page.tsx
-            </code>
-          </p>
-          <p className="text-center text-lg">
-            Edit your smart contract{" "}
-            <code className="italic bg-base-300 text-base font-bold max-w-full break-words break-all inline-block">
-              YourContract.sol
-            </code>{" "}
-            in{" "}
-            <code className="italic bg-base-300 text-base font-bold max-w-full break-words break-all inline-block">
-              packages/hardhat/contracts
-            </code>
-          </p>
-        </div>
-
-        <div className="grow bg-base-300 w-full mt-16 px-8 py-12">
-          <div className="flex justify-center items-center gap-12 flex-col md:flex-row">
-            <div className="flex flex-col bg-base-100 px-10 py-10 text-center items-center max-w-xs rounded-3xl">
-              <BugAntIcon className="h-8 w-8 fill-secondary" />
-              <p>
-                Tinker with your smart contract using the{" "}
-                <Link href="/debug" passHref className="link">
-                  Debug Contracts
-                </Link>{" "}
-                tab.
-              </p>
-            </div>
-            <div className="flex flex-col bg-base-100 px-10 py-10 text-center items-center max-w-xs rounded-3xl">
-              <MagnifyingGlassIcon className="h-8 w-8 fill-secondary" />
-              <p>
-                Explore your local transactions with the{" "}
-                <Link href="/blockexplorer" passHref className="link">
-                  Block Explorer
-                </Link>{" "}
-                tab.
-              </p>
-            </div>
+          <div>
+            <div className="font-bold">Prize</div>
+            <div>{formatUSDC(latestAuction?.auctionAmount)} USDC</div>
+          </div>
+          <div>
+            <div className="font-bold">Highest Bid</div>
+            <div>{formatUSDC(latestAuction?.highestBid)} USDC</div>
           </div>
         </div>
       </div>
-    </>
+
+      {/* Bid action */}
+      <div className="rounded text-center w-full">
+        {latestAuction?.auctionId && !isAuctionOver ? (
+          <button className="btn btn-primary text-xl transition-all" onClick={handlePlaceBid} disabled={isBidding}>
+            {isBidding
+              ? bidStatus
+              : `Bid ${formatUSDC(
+                  (latestAuction?.highestBid
+                    ? (latestAuction.highestBid as bigint) + ((bidIncrement as bigint) || 0n)
+                    : (latestAuction?.startingAmount as bigint) || 0n) as unknown as bigint,
+                )} ${String(tokenSymbol ?? "")}`}
+          </button>
+        ) : null}
+        {!latestAuction?.auctionId || isAuctionOver ? (
+          <button
+            className="btn btn-primary text-xl"
+            onClick={async () => {
+              await writeContractAsync({ functionName: "startAuction" });
+            }}
+          >
+            Start a New Auction
+          </button>
+        ) : null}
+        {isBidding ? (
+          <div className="mt-1 text-gray-500 text-xs">Please wait...</div>
+        ) : platformFee ? (
+          <div className="mt-1 text-gray-500 text-xs">
+            ({formatUSDC(platformFee as unknown as bigint)} {String(tokenSymbol ?? "")} fee applies)
+          </div>
+        ) : null}
+      </div>
+
+      <div>
+        <h2 className="text-lg mb-2">Bid Story</h2>
+        <div className="flex flex-col gap-3">
+          {allEvents.map(event => (
+            <div key={`${event.transactionHash}-${String(event.logIndex)}`} className="border p-3 rounded">
+              {event.eventType === "BidPlaced" && (
+                <div className="flex items-center gap-2">
+                  <Address address={event.args?.bidder} size="xs" />
+                  <span>bids</span>
+                  <span className="font-bold">{formatUSDC(event.args?.amount as unknown as bigint)} USDC</span>
+                </div>
+              )}
+              {event.eventType === "AuctionCreated" && (
+                <div>New auction created: #{event.args?.auctionId?.toString()}</div>
+              )}
+              {event.eventType === "AuctionEnded" && (
+                <div>
+                  Auction ended. Winner: <Address address={event.args?.winner} size="xs" />
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="flex flex-col gap-2">
+        <div className="font-medium">Connected Address</div>
+        <Address address={connectedAddress} />
+        <MiniappUserInfo />
+      </div>
+    </div>
   );
 };
 

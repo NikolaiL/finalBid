@@ -91,7 +91,7 @@ export const ObjectFieldDisplay = ({
   );
 };
 
-const ArrayDisplay = ({ values, size }: { values: DisplayContent[]; size: ResultFontSize }) => {
+const ArrayDisplay = ({ values, size }: { values: ReadonlyArray<DisplayContent>; size: ResultFontSize }) => {
   return (
     <div className="flex flex-col gap-y-1">
       {values.length ? "array" : "[]"}
