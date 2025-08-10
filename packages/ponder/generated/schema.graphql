@@ -1,0 +1,337 @@
+"""
+The `JSON` scalar type represents JSON values as specified by [ECMA-404](http://www.ecma-international.org/publications/files/ECMA-ST/ECMA-404.pdf).
+"""
+scalar JSON
+
+scalar BigInt
+
+type PageInfo {
+  hasNextPage: Boolean!
+  hasPreviousPage: Boolean!
+  startCursor: String
+  endCursor: String
+}
+
+type Meta {
+  status: JSON
+}
+
+type Query {
+  bidPlaced(id: String!): bidPlaced
+  bidPlaceds(where: bidPlacedFilter, orderBy: String, orderDirection: String, before: String, after: String, limit: Int): bidPlacedPage!
+  auctionCreated(auctionId: BigInt!): auctionCreated
+  auctionCreateds(where: auctionCreatedFilter, orderBy: String, orderDirection: String, before: String, after: String, limit: Int): auctionCreatedPage!
+  auctionEnded(auctionId: BigInt!): auctionEnded
+  auctionEndeds(where: auctionEndedFilter, orderBy: String, orderDirection: String, before: String, after: String, limit: Int): auctionEndedPage!
+  _meta: Meta
+}
+
+type bidPlaced {
+  id: String!
+  hash: String!
+  auctionId: BigInt!
+  bidder: String!
+  amount: BigInt!
+  referral: String!
+  blockNumber: BigInt!
+  logIndex: Int!
+  timestamp: Int!
+}
+
+type bidPlacedPage {
+  items: [bidPlaced!]!
+  pageInfo: PageInfo!
+  totalCount: Int!
+}
+
+input bidPlacedFilter {
+  AND: [bidPlacedFilter]
+  OR: [bidPlacedFilter]
+  id: String
+  id_not: String
+  id_in: [String]
+  id_not_in: [String]
+  id_contains: String
+  id_not_contains: String
+  id_starts_with: String
+  id_ends_with: String
+  id_not_starts_with: String
+  id_not_ends_with: String
+  hash: String
+  hash_not: String
+  hash_in: [String]
+  hash_not_in: [String]
+  hash_contains: String
+  hash_not_contains: String
+  hash_starts_with: String
+  hash_ends_with: String
+  hash_not_starts_with: String
+  hash_not_ends_with: String
+  auctionId: BigInt
+  auctionId_not: BigInt
+  auctionId_in: [BigInt]
+  auctionId_not_in: [BigInt]
+  auctionId_gt: BigInt
+  auctionId_lt: BigInt
+  auctionId_gte: BigInt
+  auctionId_lte: BigInt
+  bidder: String
+  bidder_not: String
+  bidder_in: [String]
+  bidder_not_in: [String]
+  bidder_contains: String
+  bidder_not_contains: String
+  bidder_starts_with: String
+  bidder_ends_with: String
+  bidder_not_starts_with: String
+  bidder_not_ends_with: String
+  amount: BigInt
+  amount_not: BigInt
+  amount_in: [BigInt]
+  amount_not_in: [BigInt]
+  amount_gt: BigInt
+  amount_lt: BigInt
+  amount_gte: BigInt
+  amount_lte: BigInt
+  referral: String
+  referral_not: String
+  referral_in: [String]
+  referral_not_in: [String]
+  referral_contains: String
+  referral_not_contains: String
+  referral_starts_with: String
+  referral_ends_with: String
+  referral_not_starts_with: String
+  referral_not_ends_with: String
+  blockNumber: BigInt
+  blockNumber_not: BigInt
+  blockNumber_in: [BigInt]
+  blockNumber_not_in: [BigInt]
+  blockNumber_gt: BigInt
+  blockNumber_lt: BigInt
+  blockNumber_gte: BigInt
+  blockNumber_lte: BigInt
+  logIndex: Int
+  logIndex_not: Int
+  logIndex_in: [Int]
+  logIndex_not_in: [Int]
+  logIndex_gt: Int
+  logIndex_lt: Int
+  logIndex_gte: Int
+  logIndex_lte: Int
+  timestamp: Int
+  timestamp_not: Int
+  timestamp_in: [Int]
+  timestamp_not_in: [Int]
+  timestamp_gt: Int
+  timestamp_lt: Int
+  timestamp_gte: Int
+  timestamp_lte: Int
+}
+
+type auctionCreated {
+  auctionId: BigInt!
+  hash: String!
+  auctionAmount: BigInt!
+  startTime: BigInt!
+  endTime: BigInt!
+  startingAmount: BigInt!
+  highestBid: BigInt!
+  highestBidder: String!
+  blockNumber: BigInt!
+  logIndex: Int!
+  timestamp: Int!
+}
+
+type auctionCreatedPage {
+  items: [auctionCreated!]!
+  pageInfo: PageInfo!
+  totalCount: Int!
+}
+
+input auctionCreatedFilter {
+  AND: [auctionCreatedFilter]
+  OR: [auctionCreatedFilter]
+  auctionId: BigInt
+  auctionId_not: BigInt
+  auctionId_in: [BigInt]
+  auctionId_not_in: [BigInt]
+  auctionId_gt: BigInt
+  auctionId_lt: BigInt
+  auctionId_gte: BigInt
+  auctionId_lte: BigInt
+  hash: String
+  hash_not: String
+  hash_in: [String]
+  hash_not_in: [String]
+  hash_contains: String
+  hash_not_contains: String
+  hash_starts_with: String
+  hash_ends_with: String
+  hash_not_starts_with: String
+  hash_not_ends_with: String
+  auctionAmount: BigInt
+  auctionAmount_not: BigInt
+  auctionAmount_in: [BigInt]
+  auctionAmount_not_in: [BigInt]
+  auctionAmount_gt: BigInt
+  auctionAmount_lt: BigInt
+  auctionAmount_gte: BigInt
+  auctionAmount_lte: BigInt
+  startTime: BigInt
+  startTime_not: BigInt
+  startTime_in: [BigInt]
+  startTime_not_in: [BigInt]
+  startTime_gt: BigInt
+  startTime_lt: BigInt
+  startTime_gte: BigInt
+  startTime_lte: BigInt
+  endTime: BigInt
+  endTime_not: BigInt
+  endTime_in: [BigInt]
+  endTime_not_in: [BigInt]
+  endTime_gt: BigInt
+  endTime_lt: BigInt
+  endTime_gte: BigInt
+  endTime_lte: BigInt
+  startingAmount: BigInt
+  startingAmount_not: BigInt
+  startingAmount_in: [BigInt]
+  startingAmount_not_in: [BigInt]
+  startingAmount_gt: BigInt
+  startingAmount_lt: BigInt
+  startingAmount_gte: BigInt
+  startingAmount_lte: BigInt
+  highestBid: BigInt
+  highestBid_not: BigInt
+  highestBid_in: [BigInt]
+  highestBid_not_in: [BigInt]
+  highestBid_gt: BigInt
+  highestBid_lt: BigInt
+  highestBid_gte: BigInt
+  highestBid_lte: BigInt
+  highestBidder: String
+  highestBidder_not: String
+  highestBidder_in: [String]
+  highestBidder_not_in: [String]
+  highestBidder_contains: String
+  highestBidder_not_contains: String
+  highestBidder_starts_with: String
+  highestBidder_ends_with: String
+  highestBidder_not_starts_with: String
+  highestBidder_not_ends_with: String
+  blockNumber: BigInt
+  blockNumber_not: BigInt
+  blockNumber_in: [BigInt]
+  blockNumber_not_in: [BigInt]
+  blockNumber_gt: BigInt
+  blockNumber_lt: BigInt
+  blockNumber_gte: BigInt
+  blockNumber_lte: BigInt
+  logIndex: Int
+  logIndex_not: Int
+  logIndex_in: [Int]
+  logIndex_not_in: [Int]
+  logIndex_gt: Int
+  logIndex_lt: Int
+  logIndex_gte: Int
+  logIndex_lte: Int
+  timestamp: Int
+  timestamp_not: Int
+  timestamp_in: [Int]
+  timestamp_not_in: [Int]
+  timestamp_gt: Int
+  timestamp_lt: Int
+  timestamp_gte: Int
+  timestamp_lte: Int
+}
+
+type auctionEnded {
+  auctionId: BigInt!
+  hash: String!
+  winner: String!
+  amount: BigInt!
+  highestBid: BigInt!
+  blockNumber: BigInt!
+  logIndex: Int!
+  timestamp: Int!
+}
+
+type auctionEndedPage {
+  items: [auctionEnded!]!
+  pageInfo: PageInfo!
+  totalCount: Int!
+}
+
+input auctionEndedFilter {
+  AND: [auctionEndedFilter]
+  OR: [auctionEndedFilter]
+  auctionId: BigInt
+  auctionId_not: BigInt
+  auctionId_in: [BigInt]
+  auctionId_not_in: [BigInt]
+  auctionId_gt: BigInt
+  auctionId_lt: BigInt
+  auctionId_gte: BigInt
+  auctionId_lte: BigInt
+  hash: String
+  hash_not: String
+  hash_in: [String]
+  hash_not_in: [String]
+  hash_contains: String
+  hash_not_contains: String
+  hash_starts_with: String
+  hash_ends_with: String
+  hash_not_starts_with: String
+  hash_not_ends_with: String
+  winner: String
+  winner_not: String
+  winner_in: [String]
+  winner_not_in: [String]
+  winner_contains: String
+  winner_not_contains: String
+  winner_starts_with: String
+  winner_ends_with: String
+  winner_not_starts_with: String
+  winner_not_ends_with: String
+  amount: BigInt
+  amount_not: BigInt
+  amount_in: [BigInt]
+  amount_not_in: [BigInt]
+  amount_gt: BigInt
+  amount_lt: BigInt
+  amount_gte: BigInt
+  amount_lte: BigInt
+  highestBid: BigInt
+  highestBid_not: BigInt
+  highestBid_in: [BigInt]
+  highestBid_not_in: [BigInt]
+  highestBid_gt: BigInt
+  highestBid_lt: BigInt
+  highestBid_gte: BigInt
+  highestBid_lte: BigInt
+  blockNumber: BigInt
+  blockNumber_not: BigInt
+  blockNumber_in: [BigInt]
+  blockNumber_not_in: [BigInt]
+  blockNumber_gt: BigInt
+  blockNumber_lt: BigInt
+  blockNumber_gte: BigInt
+  blockNumber_lte: BigInt
+  logIndex: Int
+  logIndex_not: Int
+  logIndex_in: [Int]
+  logIndex_not_in: [Int]
+  logIndex_gt: Int
+  logIndex_lt: Int
+  logIndex_gte: Int
+  logIndex_lte: Int
+  timestamp: Int
+  timestamp_not: Int
+  timestamp_in: [Int]
+  timestamp_not_in: [Int]
+  timestamp_gt: Int
+  timestamp_lt: Int
+  timestamp_gte: Int
+  timestamp_lte: Int
+}

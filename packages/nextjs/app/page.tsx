@@ -15,13 +15,14 @@ import {
   useTransactor,
 } from "~~/hooks/scaffold-eth";
 
-// Utility function to format USDC amounts (6 decimals)
-const formatUSDC = (amount: bigint | undefined): string => {
-  if (!amount) return "0.00";
+const DISPLAY_DECIMALS = Number(process.env.NEXT_PUBLIC_DISPLAY_DECIMALS) ?? 2;
+const TOKEN_DECIMALS = Number(process.env.NEXT_PUBLIC_TOKEN_DECIMALS) ?? 6;
 
+// Utility function to format USDC amounts (6 decimals)
+const formatToken = (amount: bigint | 0n): string => {
   const amountNumber = Number(amount);
-  const usdcAmount = amountNumber / 1000000; // 6 decimals for USDC
-  return usdcAmount.toFixed(2);
+  const tokenAmount = amountNumber / 10 ** TOKEN_DECIMALS; // 6 decimals for USDC
+  return tokenAmount.toFixed(DISPLAY_DECIMALS);
 };
 
 const Home: NextPage = () => {
@@ -336,11 +337,15 @@ const Home: NextPage = () => {
           </div>
           <div>
             <div className="font-bold">Prize</div>
-            <div>{formatUSDC(latestAuction?.auctionAmount)} USDC</div>
+            <div>
+              {formatToken(latestAuction?.auctionAmount)} {tokenSymbol}
+            </div>
           </div>
           <div>
             <div className="font-bold">Highest Bid</div>
-            <div>{formatUSDC(latestAuction?.highestBid)} USDC</div>
+            <div>
+              {formatToken(latestAuction?.highestBid)} {tokenSymbol}
+            </div>
           </div>
         </div>
       </div>
@@ -351,7 +356,7 @@ const Home: NextPage = () => {
           <button className="btn btn-primary text-xl transition-all" onClick={handlePlaceBid} disabled={isBidding}>
             {isBidding
               ? bidStatus
-              : `Bid ${formatUSDC(
+              : `Bid ${formatToken(
                   (latestAuction?.highestBid
                     ? (latestAuction.highestBid as bigint) + ((bidIncrement as bigint) || 0n)
                     : (latestAuction?.startingAmount as bigint) || 0n) as unknown as bigint,
@@ -372,7 +377,7 @@ const Home: NextPage = () => {
           <div className="mt-1 text-gray-500 text-xs">Please wait...</div>
         ) : platformFee ? (
           <div className="mt-1 text-gray-500 text-xs">
-            ({formatUSDC(platformFee as unknown as bigint)} {String(tokenSymbol ?? "")} fee applies)
+            ({formatToken(platformFee as unknown as bigint)} {String(tokenSymbol ?? "")} fee applies)
           </div>
         ) : null}
       </div>
@@ -386,7 +391,9 @@ const Home: NextPage = () => {
                 <div className="flex items-center gap-2">
                   <Address address={event.args?.bidder} size="xs" />
                   <span>bids</span>
-                  <span className="font-bold">{formatUSDC(event.args?.amount as unknown as bigint)} USDC</span>
+                  <span className="font-bold">
+                    {formatToken(event.args?.amount as unknown as bigint)} {tokenSymbol}
+                  </span>
                 </div>
               )}
               {event.eventType === "AuctionCreated" && (
