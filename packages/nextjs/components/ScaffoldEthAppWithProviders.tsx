@@ -50,8 +50,8 @@ export const ScaffoldEthAppWithProviders = ({ children }: { children: React.Reac
 
   return (
     <WagmiProvider config={wagmiConfig}>
-      <QueryClientProvider client={queryClient}>
-        <PonderProvider client={ponderClient}>
+      <PonderProvider client={ponderClient}>
+        <QueryClientProvider client={queryClient}>
           <RainbowKitProvider
             avatar={BlockieAvatar}
             theme={mounted ? (isDarkMode ? darkTheme() : lightTheme()) : lightTheme()}
@@ -61,8 +61,8 @@ export const ScaffoldEthAppWithProviders = ({ children }: { children: React.Reac
               <ScaffoldEthApp>{children}</ScaffoldEthApp>
             </MiniappProvider>
           </RainbowKitProvider>
-        </PonderProvider>
-      </QueryClientProvider>
+        </QueryClientProvider>
+      </PonderProvider>
     </WagmiProvider>
   );
 };

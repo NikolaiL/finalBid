@@ -257,6 +257,7 @@ const Home: NextPage = () => {
   // Ensure allowance >= required; if not, approve then poll until updated
   const ensureAllowance = async (required: bigint) => {
     let allowance = await fetchAllowanceBig();
+    console.log("Allowance:", allowance, "Required:", required);
     if (allowance >= required) return;
     console.log("Approving allowance...", required, "Current allowance:", allowance);
     setBidStatus("Approving allowance...");

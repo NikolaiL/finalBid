@@ -3916,9 +3916,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@ponder/client@npm:^0.10.0":
-  version: 0.10.27
-  resolution: "@ponder/client@npm:0.10.27"
+"@ponder/client@npm:latest":
+  version: 0.12.3
+  resolution: "@ponder/client@npm:0.12.3"
   dependencies:
     drizzle-orm: 0.41.0
     eventsource: ^3.0.5
@@ -3928,37 +3928,37 @@ __metadata:
   peerDependenciesMeta:
     typescript:
       optional: true
-  checksum: 2da210d970e3621f423631f2b7984abbb091c974bf4cc8b089523b2a7bfcb107a36f0d73d6cc898717eb32a45d6479fe88ef86c8926edaeea7b1a120e487efbc
+  checksum: f52d1e9183037e44227a41ffab5d33b0d49bc577386e9975c12f52d93c4c256c0d1650dccda0d1fc90bbd2c68e8601c95ab3af00b566f09d9f53043a10b121d9
   languageName: node
   linkType: hard
 
-"@ponder/react@npm:^0.10.0":
-  version: 0.10.27
-  resolution: "@ponder/react@npm:0.10.27"
+"@ponder/react@npm:latest":
+  version: 0.12.3
+  resolution: "@ponder/react@npm:0.12.3"
   dependencies:
     superjson: ^2.2.2
   peerDependencies:
-    "@ponder/client": ">=0.10.27"
+    "@ponder/client": ">=0.12.3"
     "@tanstack/react-query": ">=5.0.0"
     react: ">=18"
     typescript: ">=5.0.4"
   peerDependenciesMeta:
     typescript:
       optional: true
-  checksum: f4dd7ff16c2b082b74c335166b7747254d3378c31fee25f5640f3a51bce05a5fad7456944e5ea95ead162d18cb1f9913bc099202fde70d89af2adfe7018de986
+  checksum: 899a8c4cc7edf227adfb4a30c891f81af41d5abbc52595418a7fdde35d4f0b7d1d561a8b989cd53d86ebbd31d1c9c121519d98690b1163f421c6fd63959d2580
   languageName: node
   linkType: hard
 
-"@ponder/utils@npm:0.2.7":
-  version: 0.2.7
-  resolution: "@ponder/utils@npm:0.2.7"
+"@ponder/utils@npm:0.2.10":
+  version: 0.2.10
+  resolution: "@ponder/utils@npm:0.2.10"
   peerDependencies:
     typescript: ">=5.0.4"
     viem: ">=2"
   peerDependenciesMeta:
     typescript:
       optional: true
-  checksum: 380d3c284ee1defebbb246458906cce56cdcb7f38433193eefc07e144d136dc4fd7b7fa3aff9ad7d64aa8fc2dfc34c44b66bc9733638e357ff2bce558879c19b
+  checksum: 17a9a03e29ae0d3016911dc20611ea21ef5a95db29ec337c4fed2278d79df395b6f9f7fbdc9ea0049b623790887a80586f3a29d134c53e3cf7525bb1deb6d2ee
   languageName: node
   linkType: hard
 
@@ -4526,8 +4526,8 @@ __metadata:
     "@farcaster/miniapp-sdk": ^0.1.8
     "@farcaster/miniapp-wagmi-connector": ^1.0.0
     "@heroicons/react": ~2.1.5
-    "@ponder/client": ^0.10.0
-    "@ponder/react": ^0.10.0
+    "@ponder/client": latest
+    "@ponder/react": latest
     "@rainbow-me/rainbowkit": 2.2.7
     "@tailwindcss/postcss": 4.0.15
     "@tanstack/react-query": ~5.59.15
@@ -4574,9 +4574,9 @@ __metadata:
     "@types/node": ^20.10.0
     drizzle-kit: 0.22.8
     eslint: ^8.54.0
-    eslint-config-ponder: ^0.10.0
+    eslint-config-ponder: latest
     hono: ^4.5.0
-    ponder: ^0.10.0
+    ponder: latest
     typescript: ^5.3.2
     viem: ^2.21.3
   languageName: unknown
@@ -10124,14 +10124,14 @@ __metadata:
   languageName: node
   linkType: hard
 
-"eslint-config-ponder@npm:^0.10.0":
-  version: 0.10.27
-  resolution: "eslint-config-ponder@npm:0.10.27"
+"eslint-config-ponder@npm:latest":
+  version: 0.12.3
+  resolution: "eslint-config-ponder@npm:0.12.3"
   peerDependencies:
     "@typescript-eslint/eslint-plugin": ^6.3.0
     "@typescript-eslint/parser": ^6.3.0
     eslint: ">= 3"
-  checksum: 5ff3870119e05955a106fd8dbcd1fc3059e503816e4b5db62adc0895955fa562b9b26cc09ea57807346caa0d1f6a8c250bcc9de3d16e3e3f499cbfcbbdb90bfe
+  checksum: 2e341f987c169bf365999d8ca63dbe4e77c83f92fb39f3fe2b46b14dd34462c72ebc164e2320eacc2dcb7a870dfbe89ef1c975a268a3b200ad1aac96f7d6e52b
   languageName: node
   linkType: hard
 
@@ -16225,9 +16225,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"ponder@npm:^0.10.0":
-  version: 0.10.30
-  resolution: "ponder@npm:0.10.30"
+"ponder@npm:latest":
+  version: 0.12.3
+  resolution: "ponder@npm:0.12.3"
   dependencies:
     "@babel/code-frame": ^7.23.4
     "@commander-js/extra-typings": ^12.0.1
@@ -16236,7 +16236,7 @@ __metadata:
     "@escape.tech/graphql-armor-max-depth": ^2.2.0
     "@escape.tech/graphql-armor-max-tokens": ^2.3.0
     "@hono/node-server": 1.13.3
-    "@ponder/utils": 0.2.7
+    "@ponder/utils": 0.2.10
     abitype: ^0.10.2
     ansi-escapes: ^7.0.0
     commander: ^12.0.0
@@ -16273,7 +16273,7 @@ __metadata:
       optional: true
   bin:
     ponder: dist/esm/bin/ponder.js
-  checksum: 0d8ebbe8d77c6e8166634a145557fb6ad36702dd2e1aaefcf908d49c304df6ab2b852fa217a79681d2662dbcb11bef5676072449343a08cd9d54370a3483bb08
+  checksum: e504260e2a7af41d18bbd226e535caf4a18d594c038186ab2f59f8fd0cd44428568b0aaf2ce72e516edd6cbbbf870a12200f92ec93b9ca48b49f218a5fe48bd8
   languageName: node
   linkType: hard
 
