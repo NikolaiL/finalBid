@@ -85,30 +85,38 @@ const deployYourContract: DeployFunction = async function (hre: HardhatRuntimeEn
 
   if (mintUsdc) {
     // Get the USDC contract instance for minting
-    let nonce = await deployerSigner.getNonce();
 
     const usdcContractInstance = await hre.ethers.getContractAt("DummyUsdcContract", usdcAddress);
     console.log("👋 USDC Contract:", usdcAddress);
 
-    await usdcContractInstance.connect(deployerSigner).mint(deployer, 100000000, { nonce: nonce++ });
+    // wait for 3 seconds to avoid nonce error
+    await new Promise(resolve => setTimeout(resolve, 3000));
+
+    await usdcContractInstance.connect(deployerSigner).mint(deployer, 100000000);
     console.log("👋 Minted USDC to deployer");
 
-    await usdcContractInstance.connect(deployerSigner).mint(finalBidContract.address, 100000000, { nonce: nonce++ });
+    // wait for 3 seconds to avoid nonce error
+    await new Promise(resolve => setTimeout(resolve, 3000));
+
+    await usdcContractInstance.connect(deployerSigner).mint(finalBidContract.address, 100000000);
     console.log("👋 Minted USDC to finalBidContract");
 
-    await usdcContractInstance
-      .connect(deployerSigner)
-      .mint("0x296b0874401a354aF58CAe1222ca7876601d2828", 100000000, { nonce: nonce++ });
+    // wait for 3 seconds to avoid nonce error
+    await new Promise(resolve => setTimeout(resolve, 3000));
+
+    await usdcContractInstance.connect(deployerSigner).mint("0x296b0874401a354aF58CAe1222ca7876601d2828", 100000000);
     console.log("👋 Minted USDC to 0x296b0874401a354aF58CAe1222ca7876601d2828");
 
-    await usdcContractInstance
-      .connect(deployerSigner)
-      .mint("0x4b7b07D8BAf51975eeAb0E1eb4B481A5aC691ED6", 100000000, { nonce: nonce++ });
+    // wait for 3 seconds to avoid nonce error
+    await new Promise(resolve => setTimeout(resolve, 3000));
+
+    await usdcContractInstance.connect(deployerSigner).mint("0x4b7b07D8BAf51975eeAb0E1eb4B481A5aC691ED6", 100000000);
     console.log("👋 Minted USDC to 0x4b7b07D8BAf51975eeAb0E1eb4B481A5aC691ED6");
 
-    await usdcContractInstance
-      .connect(deployerSigner)
-      .mint("0x8D6230427a37986D25Fe4D5B3d0aaEF1b924fEd6", 100000000, { nonce: nonce++ });
+    // wait for 3 seconds to avoid nonce error
+    await new Promise(resolve => setTimeout(resolve, 3000));
+
+    await usdcContractInstance.connect(deployerSigner).mint("0x8D6230427a37986D25Fe4D5B3d0aaEF1b924fEd6", 100000000);
     console.log("👋 Minted USDC to 0x8D6230427a37986D25Fe4D5B3d0aaEF1b924fEd6");
   }
 };

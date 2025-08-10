@@ -6,10 +6,15 @@ import scaffoldConfig from "../nextjs/scaffold.config";
 
 const targetNetwork = scaffoldConfig.targetNetworks[0];
 
+console.log("targetNetwork", targetNetwork.id);
+console.log("url", `PONDER_RPC_URL_${targetNetwork.id}`);
+
 const fallbackRpcUrl =
   process.env[`PONDER_RPC_URL_${targetNetwork.id}`] ||
   process.env.PONDER_RPC_URL ||
   "http://localhost:8545";
+
+console.log("fallbackRpcUrl", fallbackRpcUrl);
 
 const chains = {
   [targetNetwork.name]: {

@@ -15,5 +15,10 @@ const baseLatestAuction = getPonderQueryOptions(
 
 export const latestAuctionQueryOptions = {
   ...baseLatestAuction,
+  live: {
+    operations: ["insert", "update", "delete"],
+    // optional: batch bursts of writes
+    debounceMs: 250,
+  },
   refetchOnWindowFocus: false,
 } as const;
