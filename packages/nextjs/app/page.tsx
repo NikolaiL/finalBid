@@ -30,8 +30,6 @@ const Home: NextPage = () => {
   const bidEventsQuery: any = useDataLiveQuery(bidPlacedQueryOptions as any);
   const BidEvents: any[] = useMemo(() => (bidEventsQuery?.data ?? []) as any[], [bidEventsQuery?.data]);
 
-  console.log("BidEvents", BidEvents);
-
   // const auctionEndedQuery: any = useDataLiveQuery(auctionEndedQueryOptions as any);
   // const AuctionEndedEvents: any[] = useMemo(() => (auctionEndedQuery?.data ?? []) as any[], [auctionEndedQuery?.data]);
 
