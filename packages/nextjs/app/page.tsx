@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { auctionCreatedQueryOptions, auctionEndedQueryOptions, bidPlacedQueryOptions } from "../lib/bid-events-query";
+import { auctionCreatedQueryOptions, bidPlacedQueryOptions } from "../lib/bid-events-query";
 import type { NextPage } from "next";
 import { useAccount, useReadContract, useWriteContract } from "wagmi";
 import { MiniappUserInfo } from "~~/components/MiniappUserInfo";
@@ -32,10 +32,8 @@ const Home: NextPage = () => {
 
   console.log("BidEvents", BidEvents);
 
-  const auctionEndedQuery: any = useDataLiveQuery(auctionEndedQueryOptions as any);
-  const AuctionEndedEvents: any[] = useMemo(() => (auctionEndedQuery?.data ?? []) as any[], [auctionEndedQuery?.data]);
-
-  console.log("AuctionEndedEvents", AuctionEndedEvents);
+  // const auctionEndedQuery: any = useDataLiveQuery(auctionEndedQueryOptions as any);
+  // const AuctionEndedEvents: any[] = useMemo(() => (auctionEndedQuery?.data ?? []) as any[], [auctionEndedQuery?.data]);
 
   const auctionCreatedQuery: any = useDataLiveQuery(auctionCreatedQueryOptions as any);
   const AuctionCreatedEvents: any[] = useMemo(
@@ -374,6 +372,26 @@ const Home: NextPage = () => {
             Start a New Auction
           </button>
         ) : null}
+      </div>
+      <div className="bg-base-100 p-5 rounded-3xl shadow-md shadow-secondary border border-base-300 flex flex-col gap-3">
+        <div className="text-2xl font-bold text-center">Bid Events</div>
+        {BidEvents.length > 0 ? (
+          <div className="flex flex-col gap-2">
+            {BidEvents.map(event => (
+              <div key={event.id} className="flex items-center justify-between border border-base-300 rounded-xl p-3">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-base-content/70">Bidder</span>
+                  <Address address={event.bidder as `0x${string}`} />
+                </div>
+                <div className="text-sm">
+                  +{formatToken(event.amount as bigint)} {String(tokenSymbol ?? "USDC")}
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="text-center text-gray-500">No bid events yet</div>
+        )}
       </div>
 
       <div className="flex flex-col gap-2">
