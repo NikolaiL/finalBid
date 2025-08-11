@@ -153,6 +153,15 @@ describe("FinalBidContract", function () {
 
       // we should also expect the referralRewards to be 1000000
     });
+    it("Should not allow the same user to place a bid twice", async function () {
+      await finalBidContract.startAuction();
+      expect(await finalBidContract.auctionId()).to.equal(1);
+
+      await finalBidContract.connect(user1).placeBid(user1.address);
+      await expect(finalBidContract.connect(user1).placeBid(user1.address)).to.be.revertedWith(
+        "You are already the highest bidder",
+      );
+    });
     it("Should increase the actual bid by incresae amount after each bid", async function () {
       await finalBidContract.startAuction();
       expect(await finalBidContract.auctionId()).to.equal(1);
@@ -213,9 +222,12 @@ describe("FinalBidContract", function () {
       await ethers.provider.send("evm_increaseTime", [increaseTime]);
       await ethers.provider.send("evm_mine");
 
+      let actUser = user1;
+
       while (Number(auction.highestBid) < Number(auction.auctionAmount)) {
         endTime = Number(auction.endTime);
-        await finalBidContract.connect(user1).placeBid(zeroAddress);
+        await finalBidContract.connect(actUser).placeBid(zeroAddress);
+        actUser = actUser == user1 ? user2 : user1;
         auction = await finalBidContract.auctions(1);
       }
 

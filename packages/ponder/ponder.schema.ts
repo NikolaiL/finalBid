@@ -1,5 +1,5 @@
 // @ts-nocheck
-import { onchainTable } from "ponder";
+import { onchainTable, index } from "ponder";
 
 // Tables for FinalBidContract events
 export const bidPlaced = onchainTable("bidPlaced", (t) => ({
@@ -9,9 +9,13 @@ export const bidPlaced = onchainTable("bidPlaced", (t) => ({
   bidder: t.hex().notNull(),
   amount: t.bigint().notNull(),
   referral: t.hex().notNull(),
+  endTime: t.bigint().notNull(),
   blockNumber: t.bigint().notNull(),
   logIndex: t.integer().notNull(),
-  timestamp: t.integer().notNull(),
+  timestamp: t.bigint().notNull(),
+}), (table) => ({
+  auctionIdx: index().on(table.auctionId),
+  bidderIdx: index().on(table.bidder),
 }));
 
 export const auctionCreated = onchainTable("auctionCreated", (t) => ({
@@ -25,7 +29,10 @@ export const auctionCreated = onchainTable("auctionCreated", (t) => ({
   highestBidder: t.hex().notNull(),
   blockNumber: t.bigint().notNull(),
   logIndex: t.integer().notNull(),
-  timestamp: t.integer().notNull(),
+  timestamp: t.bigint().notNull(),
+  ended: t.boolean().notNull().default(false),
+}), (table) => ({
+  highestBidderIdx: index().on(table.highestBidder),
 }));
 
 export const auctionEnded = onchainTable("auctionEnded", (t) => ({
@@ -36,7 +43,9 @@ export const auctionEnded = onchainTable("auctionEnded", (t) => ({
   highestBid: t.bigint().notNull(),
   blockNumber: t.bigint().notNull(),
   logIndex: t.integer().notNull(),
-  timestamp: t.integer().notNull(),
+  timestamp: t.bigint().notNull(),
+}), (table) => ({
+  winnerIdx: index().on(table.winner),
 }));
 
 

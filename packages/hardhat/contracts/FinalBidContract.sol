@@ -50,7 +50,7 @@ contract FinalBidContract is Ownable, Pausable {
     // mapping(address => uint256) public referralRewards;
 
     event AuctionCreated(uint256 indexed auctionId, uint256 auctionAmount, uint256 startTime, uint256 endTime, uint256 startingAmount);
-    event BidPlaced(uint256 indexed auctionId, address indexed bidder, uint256 amount, address indexed referral);
+    event BidPlaced(uint256 indexed auctionId, address indexed bidder, uint256 amount, address indexed referral, uint256 endTime);
     event AuctionEnded(uint256 indexed auctionId, address indexed winner, uint256 amount, uint256 highestBid);
 
     // Admin update events
@@ -149,9 +149,11 @@ contract FinalBidContract is Ownable, Pausable {
     // this call must also transfer the bid amount in tokenAddress to the contract
     function placeBid(address _referral) public whenNotPaused {
         Auction storage auction = auctions[auctionId];
+        require(auction.startTime <= block.timestamp && auction.endTime > block.timestamp && auction.ended == false, "Auction not active");
+        require(auction.highestBidder != msg.sender, "You are already the highest bidder");
         uint256 _bidAmount = (auction.highestBid == 0) ? auction.startingAmount : auction.highestBid + auction.bidIncrement;
         uint256 _totalBidAmount = _bidAmount + platformFee;
-        require(auction.startTime <= block.timestamp && auction.endTime > block.timestamp, "Auction not active");
+        
         
         IERC20 token = IERC20(tokenAddress);
 
@@ -199,7 +201,7 @@ contract FinalBidContract is Ownable, Pausable {
         if (auction.endTime - block.timestamp < auctionDurationIncrease && auction.highestBid < auction.auctionAmount) {
             auction.endTime += auctionDurationIncrease;
         }
-        emit BidPlaced(auctionId, msg.sender, _bidAmount, _referral);
+        emit BidPlaced(auctionId, msg.sender, _bidAmount, _referral, auction.endTime);
 
         if (auction.highestBid >= auction.auctionAmount) {
             startAuction();

@@ -33,9 +33,10 @@ type bidPlaced {
   bidder: String!
   amount: BigInt!
   referral: String!
+  endTime: BigInt!
   blockNumber: BigInt!
   logIndex: Int!
-  timestamp: Int!
+  timestamp: BigInt!
 }
 
 type bidPlacedPage {
@@ -103,6 +104,14 @@ input bidPlacedFilter {
   referral_ends_with: String
   referral_not_starts_with: String
   referral_not_ends_with: String
+  endTime: BigInt
+  endTime_not: BigInt
+  endTime_in: [BigInt]
+  endTime_not_in: [BigInt]
+  endTime_gt: BigInt
+  endTime_lt: BigInt
+  endTime_gte: BigInt
+  endTime_lte: BigInt
   blockNumber: BigInt
   blockNumber_not: BigInt
   blockNumber_in: [BigInt]
@@ -119,14 +128,14 @@ input bidPlacedFilter {
   logIndex_lt: Int
   logIndex_gte: Int
   logIndex_lte: Int
-  timestamp: Int
-  timestamp_not: Int
-  timestamp_in: [Int]
-  timestamp_not_in: [Int]
-  timestamp_gt: Int
-  timestamp_lt: Int
-  timestamp_gte: Int
-  timestamp_lte: Int
+  timestamp: BigInt
+  timestamp_not: BigInt
+  timestamp_in: [BigInt]
+  timestamp_not_in: [BigInt]
+  timestamp_gt: BigInt
+  timestamp_lt: BigInt
+  timestamp_gte: BigInt
+  timestamp_lte: BigInt
 }
 
 type auctionCreated {
@@ -140,7 +149,8 @@ type auctionCreated {
   highestBidder: String!
   blockNumber: BigInt!
   logIndex: Int!
-  timestamp: Int!
+  timestamp: BigInt!
+  ended: Boolean!
 }
 
 type auctionCreatedPage {
@@ -236,14 +246,18 @@ input auctionCreatedFilter {
   logIndex_lt: Int
   logIndex_gte: Int
   logIndex_lte: Int
-  timestamp: Int
-  timestamp_not: Int
-  timestamp_in: [Int]
-  timestamp_not_in: [Int]
-  timestamp_gt: Int
-  timestamp_lt: Int
-  timestamp_gte: Int
-  timestamp_lte: Int
+  timestamp: BigInt
+  timestamp_not: BigInt
+  timestamp_in: [BigInt]
+  timestamp_not_in: [BigInt]
+  timestamp_gt: BigInt
+  timestamp_lt: BigInt
+  timestamp_gte: BigInt
+  timestamp_lte: BigInt
+  ended: Boolean
+  ended_not: Boolean
+  ended_in: [Boolean]
+  ended_not_in: [Boolean]
 }
 
 type auctionEnded {
@@ -254,7 +268,7 @@ type auctionEnded {
   highestBid: BigInt!
   blockNumber: BigInt!
   logIndex: Int!
-  timestamp: Int!
+  timestamp: BigInt!
 }
 
 type auctionEndedPage {
@@ -326,12 +340,12 @@ input auctionEndedFilter {
   logIndex_lt: Int
   logIndex_gte: Int
   logIndex_lte: Int
-  timestamp: Int
-  timestamp_not: Int
-  timestamp_in: [Int]
-  timestamp_not_in: [Int]
-  timestamp_gt: Int
-  timestamp_lt: Int
-  timestamp_gte: Int
-  timestamp_lte: Int
+  timestamp: BigInt
+  timestamp_not: BigInt
+  timestamp_in: [BigInt]
+  timestamp_not_in: [BigInt]
+  timestamp_gt: BigInt
+  timestamp_lt: BigInt
+  timestamp_gte: BigInt
+  timestamp_lte: BigInt
 }

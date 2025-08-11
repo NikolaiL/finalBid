@@ -3,7 +3,6 @@
 import { useMemo, useState } from "react";
 import { latestAuctionQueryOptions } from "../lib/auction-queries";
 import { auctionCreatedQueryOptions, auctionEndedQueryOptions, bidPlacedQueryOptions } from "../lib/bid-events-query";
-import { usePonderQuery } from "@ponder/react";
 import type { NextPage } from "next";
 import { useAccount, useReadContract, useWriteContract } from "wagmi";
 import { MiniappUserInfo } from "~~/components/MiniappUserInfo";
@@ -14,6 +13,7 @@ import {
   useScaffoldWriteContract,
   useTransactor,
 } from "~~/hooks/scaffold-eth";
+import { useDataLiveQuery } from "~~/lib/useDataLiveQuery";
 
 const DISPLAY_DECIMALS = Number(process.env.NEXT_PUBLIC_DISPLAY_DECIMALS) ?? 2;
 const TOKEN_DECIMALS = Number(process.env.NEXT_PUBLIC_TOKEN_DECIMALS) ?? 6;
@@ -29,7 +29,7 @@ const Home: NextPage = () => {
   const { address: connectedAddress } = useAccount();
 
   // Latest auction summary from Ponder
-  const latestAuctionRes: any = usePonderQuery(latestAuctionQueryOptions as any);
+  const latestAuctionRes: any = useDataLiveQuery(latestAuctionQueryOptions as any);
   const latestAuction = (latestAuctionRes?.data ?? [])[0];
 
   const isAuctionOver = useMemo(() => {
@@ -45,13 +45,13 @@ const Home: NextPage = () => {
     }
   }, [latestAuction?.endTime, latestAuction?.highestBid, latestAuction?.auctionAmount]);
 
-  const bidEventsQuery: any = usePonderQuery(bidPlacedQueryOptions as any);
+  const bidEventsQuery: any = useDataLiveQuery(bidPlacedQueryOptions as any);
   const BidEvents: any[] = useMemo(() => (bidEventsQuery?.data ?? []) as any[], [bidEventsQuery?.data]);
 
-  const auctionEndedQuery: any = usePonderQuery(auctionEndedQueryOptions as any);
+  const auctionEndedQuery: any = useDataLiveQuery(auctionEndedQueryOptions as any);
   const AuctionEndedEvents: any[] = useMemo(() => (auctionEndedQuery?.data ?? []) as any[], [auctionEndedQuery?.data]);
 
-  const auctionCreatedQuery: any = usePonderQuery(auctionCreatedQueryOptions as any);
+  const auctionCreatedQuery: any = useDataLiveQuery(auctionCreatedQueryOptions as any);
   const AuctionCreatedEvents: any[] = useMemo(
     () => (auctionCreatedQuery?.data ?? []) as any[],
     [auctionCreatedQuery?.data],
@@ -68,7 +68,13 @@ const Home: NextPage = () => {
           transactionHash: row.hash ?? (typeof row.id === "string" ? row.id.split("-")[0] : ""),
           logIndex: row.logIndex,
           blockNumber: row.blockNumber,
-          args: { auctionId: row.auctionId, bidder: row.bidder, amount: row.amount, referral: row.referral },
+          args: {
+            auctionId: row.auctionId,
+            bidder: row.bidder,
+            amount: row.amount,
+            referral: row.referral,
+            endTime: row.endTime,
+          },
           eventType: "BidPlaced",
           displayName: "Bid Placed",
         });

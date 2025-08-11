@@ -1,7 +1,7 @@
 // @ts-nocheck
 import { ponder } from "ponder:registry";
 import { auctionCreated, auctionEnded, bidPlaced } from "ponder:schema";
-import { eq, where } from "drizzle-orm";
+import { eq, and, gt } from "drizzle-orm";
 
 ponder.on("FinalBidContract:AuctionCreated", async ({ event, context }) => {
   await context.db.insert(auctionCreated).values({
@@ -29,11 +29,17 @@ ponder.on("FinalBidContract:BidPlaced", async ({ event, context }) => {
     bidder: event.args.bidder,
     amount: event.args.amount,
     referral: event.args.referral,
+    endTime: event.args.endTime,
     blockNumber: BigInt(event.block.number as any),
     logIndex: Number((event.log as any)?.index ?? 0),
     timestamp: Number(event.block.timestamp),
   });
-  console.log("BidPlaced", event.args.auctionId, event.args.bidder, event.args.amount, event.args.referral);
+  await context.db.update(auctionCreated, {auctionId: event.args.auctionId}).set({
+    highestBid: event.args.amount,
+    highestBidder: event.args.bidder,
+    endTime: event.args.endTime,
+  });
+  console.log("BidPlaced", event.args.auctionId, event.args.bidder, event.args.amount, event.args.referral, event.args.endTime);
 });
 
 ponder.on("FinalBidContract:AuctionEnded", async ({ event, context }) => {
@@ -46,6 +52,9 @@ ponder.on("FinalBidContract:AuctionEnded", async ({ event, context }) => {
     blockNumber: BigInt(event.block.number as any),
     logIndex: Number((event.log as any)?.index ?? 0),
     timestamp: Number(event.block.timestamp),
+  });
+  await context.db.update(auctionCreated, {auctionId: event.args.auctionId}).set({
+    ended: true,
   });
   console.log("AuctionEnded", event.args.auctionId, event.args.winner, event.args.amount, event.args.highestBid);
 });
