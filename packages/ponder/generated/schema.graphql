@@ -145,6 +145,10 @@ type auctionCreated {
   startTime: BigInt!
   endTime: BigInt!
   startingAmount: BigInt!
+  bidIncrement: BigInt!
+  referralFee: BigInt!
+  platformFee: BigInt!
+  bidCount: Int!
   highestBid: BigInt!
   highestBidder: String!
   blockNumber: BigInt!
@@ -212,6 +216,38 @@ input auctionCreatedFilter {
   startingAmount_lt: BigInt
   startingAmount_gte: BigInt
   startingAmount_lte: BigInt
+  bidIncrement: BigInt
+  bidIncrement_not: BigInt
+  bidIncrement_in: [BigInt]
+  bidIncrement_not_in: [BigInt]
+  bidIncrement_gt: BigInt
+  bidIncrement_lt: BigInt
+  bidIncrement_gte: BigInt
+  bidIncrement_lte: BigInt
+  referralFee: BigInt
+  referralFee_not: BigInt
+  referralFee_in: [BigInt]
+  referralFee_not_in: [BigInt]
+  referralFee_gt: BigInt
+  referralFee_lt: BigInt
+  referralFee_gte: BigInt
+  referralFee_lte: BigInt
+  platformFee: BigInt
+  platformFee_not: BigInt
+  platformFee_in: [BigInt]
+  platformFee_not_in: [BigInt]
+  platformFee_gt: BigInt
+  platformFee_lt: BigInt
+  platformFee_gte: BigInt
+  platformFee_lte: BigInt
+  bidCount: Int
+  bidCount_not: Int
+  bidCount_in: [Int]
+  bidCount_not_in: [Int]
+  bidCount_gt: Int
+  bidCount_lt: Int
+  bidCount_gte: Int
+  bidCount_lte: Int
   highestBid: BigInt
   highestBid_not: BigInt
   highestBid_in: [BigInt]

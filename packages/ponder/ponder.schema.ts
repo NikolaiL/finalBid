@@ -25,6 +25,10 @@ export const auctionCreated = onchainTable("auctionCreated", (t) => ({
   startTime: t.bigint().notNull(),
   endTime: t.bigint().notNull(),
   startingAmount: t.bigint().notNull(),
+  bidIncrement: t.bigint().notNull(),
+  referralFee: t.bigint().notNull(),
+  platformFee: t.bigint().notNull(),
+  bidCount: t.integer().notNull(),
   highestBid: t.bigint().notNull(),
   highestBidder: t.hex().notNull(),
   blockNumber: t.bigint().notNull(),
@@ -49,3 +53,15 @@ export const auctionEnded = onchainTable("auctionEnded", (t) => ({
 }));
 
 
+//
+// uint256 auctionAmount;
+// uint256 startTime;
+// uint256 endTime;
+// uint256 startingAmount;
+// uint256 bidIncrement;
+// uint256 referralFee;
+// uint256 platformFee;
+// uint256 bidCount;
+// address highestBidder;
+// uint256 highestBid;
+// bool ended;

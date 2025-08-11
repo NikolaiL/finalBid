@@ -49,7 +49,7 @@ contract FinalBidContract is Ownable, Pausable {
 
     // mapping(address => uint256) public referralRewards;
 
-    event AuctionCreated(uint256 indexed auctionId, uint256 auctionAmount, uint256 startTime, uint256 endTime, uint256 startingAmount);
+    event AuctionCreated(uint256 indexed auctionId, uint256 auctionAmount, uint256 startTime, uint256 endTime, uint256 startingAmount, uint256 bidIncrement, uint256 referralFee, uint256 platformFee);
     event BidPlaced(uint256 indexed auctionId, address indexed bidder, uint256 amount, address indexed referral, uint256 endTime);
     event AuctionEnded(uint256 indexed auctionId, address indexed winner, uint256 amount, uint256 highestBid);
 
@@ -105,7 +105,7 @@ contract FinalBidContract is Ownable, Pausable {
             ended: false
         });
 
-        emit AuctionCreated(auctionId, auctionAmountToUse, _startTime, _endTime, _startingAmount);
+        emit AuctionCreated(auctionId, auctionAmountToUse, _startTime, _endTime, _startingAmount, _bidIncrement, _referralFee, _platformFee);
 
 
     }
