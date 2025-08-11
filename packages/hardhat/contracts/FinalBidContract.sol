@@ -135,15 +135,19 @@ contract FinalBidContract is Ownable, Pausable {
     function startAuction() public whenNotPaused {
         // no active auction or last auction time is finished
         Auction storage auction = auctions[auctionId];
-        require(auctionId == 0 || auction.endTime < block.timestamp || auction.highestBid >= auction.auctionAmount, "Auction already active");
+        require(auctionId == 0 || auction.ended == true, "Auction already active");
         // if auctionId > 0, we need to finalize the old auction, pay the winner etc...
-        if (auctionId > 0 && auctions[auctionId].ended == false) {
-            _finalizeAuction(auctionId);
-        }
         auctionId ++;
         // create new auction
         _createAuction(auctionId, tokenAddress, auctionAmount, block.timestamp, block.timestamp + auctionDuration, startingAmount, bidIncrement, referralFee, platformFee);
         
+    }
+
+    function endAuction() public whenNotPaused {
+        Auction storage auction = auctions[auctionId];
+        require(auction.ended == false, "Auction already ended");
+        require(auction.endTime < block.timestamp || auction.highestBid >= auction.auctionAmount, "Auction not ended");
+        _finalizeAuction(auctionId);
     }
 
     // this call must also transfer the bid amount in tokenAddress to the contract
@@ -204,7 +208,7 @@ contract FinalBidContract is Ownable, Pausable {
         emit BidPlaced(auctionId, msg.sender, _bidAmount, _referral, auction.endTime);
 
         if (auction.highestBid >= auction.auctionAmount) {
-            startAuction();
+            endAuction();
         }
     }
 

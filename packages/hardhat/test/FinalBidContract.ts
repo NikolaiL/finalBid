@@ -47,25 +47,48 @@ describe("FinalBidContract", function () {
       expect(await finalBidContract.auctionId()).to.equal(1);
     });
 
-    it("Should not allow anybody to start an auction if there is an active auction", async function () {
+    it("Should not allow anybody to end an auction if it is active", async function () {
       await finalBidContract.startAuction();
       expect(await finalBidContract.auctionId()).to.equal(1);
       await expect(finalBidContract.startAuction()).to.be.revertedWith("Auction already active");
     });
 
-    it("Should allow anybody to launch a new auction if old one is over endtimestamp", async function () {
+    it("Should allow anybody to end an auction if it is over endtimestamp", async function () {
       await finalBidContract.startAuction();
       expect(await finalBidContract.auctionId()).to.equal(1);
 
       const auction = await finalBidContract.auctions(1);
 
-      const increaseTime = Number(auction.endTime - auction.startTime) + 1000;
+      const increaseTime = Number(auction.endTime) + 1000;
       await ethers.provider.send("evm_increaseTime", [increaseTime]);
       await ethers.provider.send("evm_mine");
 
-      await finalBidContract.startAuction();
-      expect(await finalBidContract.auctionId()).to.equal(2);
+      await finalBidContract.endAuction();
+      expect(await finalBidContract.auctionId()).to.equal(1);
+
+      const auctionAfter = await finalBidContract.auctions(1);
+      expect(auctionAfter.ended).to.equal(true);
     });
+
+    it("Should not allow to end auction if it is ended alrerady", async function () {
+      await finalBidContract.startAuction();
+      expect(await finalBidContract.auctionId()).to.equal(1);
+
+      const auction = await finalBidContract.auctions(1);
+
+      const increaseTime = Number(auction.endTime) + 1000;
+      await ethers.provider.send("evm_increaseTime", [increaseTime]);
+      await ethers.provider.send("evm_mine");
+
+      await finalBidContract.endAuction();
+      expect(await finalBidContract.auctionId()).to.equal(1);
+
+      const auctionAfter = await finalBidContract.auctions(1);
+      expect(auctionAfter.ended).to.equal(true);
+
+      await expect(finalBidContract.endAuction()).to.be.revertedWith("Auction already ended");
+    });
+
     it("Should reduce the auction amount if the auction amount is greater than the available balance", async function () {
       // burn everything from the contract
       const balanceBefore = await dummyUsdcContract.balanceOf(finalBidContract.target);
@@ -120,6 +143,7 @@ describe("FinalBidContract", function () {
       const platformFeesClaimedBefore = await finalBidContract.platformFeesClaimed();
 
       // now lets start the new auction
+      await finalBidContract.endAuction();
       await finalBidContract.startAuction();
       expect(await finalBidContract.auctionId()).to.equal(2);
 
@@ -351,6 +375,7 @@ describe("FinalBidContract", function () {
       const ownerBalanceBefore = await dummyUsdcContract.balanceOf(owner.address);
       const platformFeesClaimedBefore = await finalBidContract.platformFeesClaimed();
 
+      await finalBidContract.endAuction();
       await finalBidContract.startAuction();
 
       const ownerBalanceAfter = await dummyUsdcContract.balanceOf(owner.address);
