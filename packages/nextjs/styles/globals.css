@@ -18,7 +18,7 @@
 @plugin "daisyui/theme" {
   name: "light";
 
-  --color-primary: #93bbfb;
+  --color-primary: #ff7700;
   --color-primary-content: #212638;
   --color-secondary: #dae8ff;
   --color-secondary-content: #212638;
@@ -43,7 +43,7 @@
 @plugin "daisyui/theme" {
   name: "dark";
 
-  --color-primary: #212638;
+  --color-primary: #ff6600;
   --color-primary-content: #f9fbff;
   --color-secondary: #323f61;
   --color-secondary-content: #f9fbff;
@@ -113,6 +113,7 @@
 .btn.btn-ghost {
   @apply shadow-none;
 }
+
 
 .link {
   text-underline-offset: 2px;
