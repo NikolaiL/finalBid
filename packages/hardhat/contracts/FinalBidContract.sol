@@ -8,13 +8,16 @@ import "hardhat/console.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/Pausable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
 /**
  * A smart contract that allows changing a state variable of the contract and tracking the changes
  * It also allows the owner to withdraw the Ether in the contract
  * @author BuidlGuidl
  */
-contract FinalBidContract is Ownable, Pausable {
+contract FinalBidContract is Ownable, Pausable, ReentrancyGuard {
+    using SafeERC20 for IERC20;
     // State Variables
     address public tokenAddress;
     uint256 public auctionId;
@@ -113,8 +116,10 @@ contract FinalBidContract is Ownable, Pausable {
     function _withdrawExcess(uint256 _amount) internal {
         uint256 availableAmount = IERC20(tokenAddress).balanceOf(address(this));
         require(availableAmount > _amount, "Insufficient balance to withdraw");
-        IERC20(tokenAddress).transfer(owner(), _amount);
+        // Effects
         platformFeesClaimed += _amount;
+        // Interactions
+        IERC20(tokenAddress).safeTransfer(owner(), _amount);
     }
 
     function _finalizeAuction(uint256 _auctionId) internal {
@@ -127,12 +132,12 @@ contract FinalBidContract is Ownable, Pausable {
         if (auction.highestBidder != address(0)) {
             // pay the winner
             IERC20 token = IERC20(tokenAddress);
-            token.transfer(auction.highestBidder, auction.auctionAmount);
+            token.safeTransfer(auction.highestBidder, auction.auctionAmount);
         }
         emit AuctionEnded(_auctionId, auction.highestBidder, auction.auctionAmount, auction.highestBid);
     }
 
-    function startAuction() public whenNotPaused {
+    function startAuction() public whenNotPaused nonReentrant {
         // no active auction or last auction time is finished
         Auction storage auction = auctions[auctionId];
         require(auctionId == 0 || auction.ended == true, "Auction already active");
@@ -143,7 +148,7 @@ contract FinalBidContract is Ownable, Pausable {
         
     }
 
-    function endAuction() public whenNotPaused {
+    function endAuction() public whenNotPaused nonReentrant {
         Auction storage auction = auctions[auctionId];
         require(auction.ended == false, "Auction already ended");
         require(auction.endTime < block.timestamp || auction.highestBid >= auction.auctionAmount, "Auction not ended");
@@ -151,65 +156,54 @@ contract FinalBidContract is Ownable, Pausable {
     }
 
     // this call must also transfer the bid amount in tokenAddress to the contract
-    function placeBid(address _referral) public whenNotPaused {
+    function placeBid(address _referral) public whenNotPaused nonReentrant {
         Auction storage auction = auctions[auctionId];
         require(auction.startTime <= block.timestamp && auction.endTime > block.timestamp && auction.ended == false, "Auction not active");
         require(auction.highestBidder != msg.sender, "You are already the highest bidder");
         uint256 _bidAmount = (auction.highestBid == 0) ? auction.startingAmount : auction.highestBid + auction.bidIncrement;
         uint256 _totalBidAmount = _bidAmount + platformFee;
-        
-        
+
         IERC20 token = IERC20(tokenAddress);
 
-        // check for balance, if less than required revert
+        // Checks
         uint256 balance = token.balanceOf(msg.sender);
         require(balance >= _totalBidAmount, "Insufficient balance");
-        
-        // check for allowance, if less than required, ask for allowance
-        
         uint256 allowance = token.allowance(msg.sender, address(this));
         require(allowance >= _totalBidAmount, "Insufficient allowance");
-        
-        // transfer the bid amount to the contract
-        token.transferFrom(msg.sender, address(this), _totalBidAmount);
 
-        // we need to send back the previous highest bid to the previous highest bidder
-        if (auction.highestBidder != address(0)) {
-            token.transfer(auction.highestBidder, auction.highestBid);
-        }
+        // Snapshot previous highest
+        address previousHighestBidder = auction.highestBidder;
+        uint256 previousHighestBid = auction.highestBid;
 
-        // place bid
-        auction.highestBidder = msg.sender;
-        auction.highestBid = _bidAmount;
-        auction.bidCount++;
-
-        // if the referral is the same as the bidder, we need to set it to zero address
+        // Normalize referral
         if (_referral == msg.sender) {
             _referral = address(0);
         }
 
-        // pay the referral
+        // Effects
+        auction.highestBidder = msg.sender;
+        auction.highestBid = _bidAmount;
+        auction.bidCount++;
+        if (auction.endTime - block.timestamp < auctionDurationIncrease && _bidAmount < auction.auctionAmount) {
+            auction.endTime += auctionDurationIncrease;
+        }
         if (_referral != address(0)) {
-            //referralRewards[_referral] += referralFee;
             platformFeesCollected += (platformFee - referralFee);
             totalReferralRewardsCollected += referralFee;
-
-            // pay referral fee to the referral
-            token.transfer(_referral, referralFee);
-            
         } else {
             platformFeesCollected += platformFee;
         }
 
-        // check if the auction duration needs to be increased
-        if (auction.endTime - block.timestamp < auctionDurationIncrease && auction.highestBid < auction.auctionAmount) {
-            auction.endTime += auctionDurationIncrease;
+        // Interactions
+        token.safeTransferFrom(msg.sender, address(this), _totalBidAmount);
+        if (previousHighestBidder != address(0)) {
+            token.safeTransfer(previousHighestBidder, previousHighestBid);
         }
-        emit BidPlaced(auctionId, msg.sender, _bidAmount, _referral, auction.endTime);
+        if (_referral != address(0)) {
+            token.safeTransfer(_referral, referralFee);
+        }
 
-        if (auction.highestBid >= auction.auctionAmount) {
-            endAuction();
-        }
+        emit BidPlaced(auctionId, msg.sender, _bidAmount, _referral, auction.endTime);
     }
 
     function pause() public onlyOwner {
@@ -279,18 +273,20 @@ contract FinalBidContract is Ownable, Pausable {
      * Function that allows the owner to withdraw all the Ether in the contract
      * The function can only be called by the owner of the contract as defined by the onlyOwner modifier
      */
-    function withdraw() public onlyOwner {
+    function withdraw() public onlyOwner nonReentrant {
         (bool success, ) = owner().call{ value: address(this).balance }("");
         require(success, "Failed to send Ether");
     }
 
-    function withdrawPlatformFees() public onlyOwner {
+    function withdrawPlatformFees() public onlyOwner nonReentrant {
         // withdraw from token contract
         require(platformFeesCollected > platformFeesClaimed, "No fees to claim");
         IERC20 token = IERC20(tokenAddress);
         uint256 platfromFeesToClaim = platformFeesCollected - platformFeesClaimed;
-        token.transfer(owner(), platfromFeesToClaim);
+        // Effects
         platformFeesClaimed += platfromFeesToClaim;
+        // Interactions
+        token.safeTransfer(owner(), platfromFeesToClaim);
     }
 
     /**

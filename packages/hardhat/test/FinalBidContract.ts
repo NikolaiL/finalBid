@@ -232,7 +232,7 @@ describe("FinalBidContract", function () {
       auction = await finalBidContract.auctions(1);
       expect(Number(auction.endTime)).to.be.greaterThan(initialEndTime);
     });
-    it("Should not increase the auction duration and should finalize the auction if the latest bet is equal or more than the auction amount", async function () {
+    it("Should not increase the auction duration if the latest bet is equal or more than the auction amount", async function () {
       const zeroAddress = "0x0000000000000000000000000000000000000000";
 
       await finalBidContract.startAuction();
@@ -256,7 +256,6 @@ describe("FinalBidContract", function () {
       }
 
       expect(Number(auction.endTime)).to.equal(endTime);
-      expect(auction.ended).to.equal(true);
     });
     it("Should repay the previous highest bidder when new bid is placed", async function () {
       await finalBidContract.startAuction();
