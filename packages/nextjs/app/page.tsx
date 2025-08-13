@@ -40,6 +40,26 @@ const formatTimeAgoBrief = (nowMs: number, timestampSeconds: number | bigint): s
   return `${days} day${days !== 1 ? "s" : ""} ago`;
 };
 
+// Inline brand icons
+const XIcon = ({ className = "w-5 h-5" }: { className?: string }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className={className}>
+    <path d="M18.244 2H21l-7.32 8.87L22 22h-6.4l-4.7-6.8L5.6 22H2l7.2-8.86L2 2h6.4l4.3 6.2L18.244 2z" />
+  </svg>
+);
+
+const FarcasterIcon = ({ className = "w-5 h-5" }: { className?: string }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 1000 1000" className={className}>
+    <path
+      fill="currentColor"
+      d="M257.778 155.556h484.444v688.889h-71.111V528.889h-.697c-7.86-87.212-81.156-155.556-170.414-155.556-89.258 0-162.554 68.344-170.414 155.556h-.697v315.556h-71.111V155.556Z"
+    ></path>
+    <path
+      fill="currentColor"
+      d="m128.889 253.333 28.889 97.778h24.444v395.556c-12.273 0-22.222 9.949-22.222 22.222v26.667h-4.444c-12.273 0-22.223 9.949-22.223 22.222v26.667h248.889v-26.667c0-12.273-9.949-22.222-22.222-22.222h-4.444v-26.667c0-12.273-9.95-22.222-22.223-22.222h-26.666V253.333H128.889ZM675.556 746.667c-12.274 0-22.223 9.949-22.223 22.222v26.667h-4.444c-12.273 0-22.222 9.949-22.222 22.222v26.667h248.889v-26.667c0-12.273-9.95-22.222-22.223-22.222h-4.444v-26.667c0-12.273-9.949-22.222-22.222-22.222V351.111h24.444L880 253.333H702.222v493.334h-26.666Z"
+    ></path>
+  </svg>
+);
+
 const Home: NextPage = () => {
   const { address: connectedAddress, isConnecting, isReconnecting } = useAccount();
 
@@ -330,7 +350,7 @@ const Home: NextPage = () => {
 
   return (
     <div className="w-full max-w-3xl mx-auto px-2 sm:px-4 lg:px-6">
-      <div className="flex flex-col gap-6 py-4 px-2">
+      <div className="flex flex-col gap-4 py-4 px-2">
         <div className="bg-base-100 p-5 rounded-3xl shadow-md shadow-secondary border border-base-300 flex flex-col gap-3">
           <div className="text-2xl font-light text-center items-center">
             Win{" "}
@@ -465,6 +485,38 @@ const Home: NextPage = () => {
           )}
         </div>
 
+        {/* Share block */}
+        <div className="bg-base-100 p-2 pb-4 rounded-3xl shadow-md shadow-secondary border border-base-300 flex flex-col gap-3">
+          <div className="text-lg font-light text-center items-center">
+            Share and earn{" "}
+            <span className="font-black text-lg text-primary">{formatToken(latestAuction?.referralFee)}</span>{" "}
+            {String(tokenSymbol ?? "USDC")} from every bid:
+          </div>
+          <div className="flex gap-2 justify-center items-center">
+            <a
+              className="btn btn-accent btn-sm flex items-center gap-2"
+              href={`https://warpcast.com/~/compose?text=${encodeURIComponent(
+                `Bid with me on FinalBid and earn referral fees!`,
+              )}&embeds[]=${encodeURIComponent(typeof window !== "undefined" ? window.location.href : "")}`}
+              target="_blank"
+              rel="noreferrer noopener"
+            >
+              <FarcasterIcon className="w-4 h-4" /> Cast
+            </a>
+            <a
+              className="btn btn-accent btn-sm flex items-center gap-2"
+              href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(
+                `Bid with me on FinalBid and earn referral fees!`,
+              )}&url=${encodeURIComponent(typeof window !== "undefined" ? window.location.href : "")}`}
+              target="_blank"
+              rel="noreferrer noopener"
+            >
+              <XIcon className="w-4 h-4" /> Tweet
+            </a>
+          </div>
+        </div>
+
+        {/* Bid history */}
         <div className="bg-base-100 p-5 rounded-3xl shadow-md shadow-secondary border border-base-300 flex flex-col gap-3">
           <div className="flex flex-col gap-2">
             {/* if auction os nto ended yet */}
@@ -476,10 +528,12 @@ const Home: NextPage = () => {
                     className="flex items-center justify-center border border-base-300 rounded-xl p-3"
                   >
                     <div className="flex flex-col items-center gap-1">
-                      <div className="flex items-center gap-2 text-sm">
-                        <Address size="sm" address={event.bidder as `0x${string}`} /> bids{" "}
-                        <span className="font-black">{formatToken(event.amount as bigint)}</span>{" "}
-                        {String(tokenSymbol ?? "USDC")}
+                      <div className="flex flex-col sm:flex-row items-center gap-2 text-sm">
+                        <Address size="sm" address={event.bidder as `0x${string}`} />
+                        <div className="">
+                          bids <span className="font-black">{formatToken(event.amount as bigint)}</span>{" "}
+                          {String(tokenSymbol ?? "USDC")}
+                        </div>
                       </div>
                       <div className="text-xs text-base-content/50">
                         {formatTimeAgoBrief(now, event.timestamp as number)}
@@ -492,14 +546,23 @@ const Home: NextPage = () => {
             {PastAuctions.map(event => (
               <div
                 key={String(event.auctionId)}
-                className="flex items-center justify-center border border-base-300 rounded-xl p-3"
+                className="flex flex-col items-center justify-center border border-base-300 rounded-xl p-3 relative"
               >
                 <div className="flex flex-col items-center gap-1">
-                  <div className="flex items-center gap-2 text-sm">
-                    <Address size="sm" address={event.winner as `0x${string}`} /> wins{" "}
-                    <span className="font-black">{formatToken(event.amount as bigint)}</span>{" "}
-                    {String(tokenSymbol ?? "USDC")} with a{" "}
-                    <span className="font-black">{formatToken(event.highestBid as bigint)}</span> bid
+                  <div className="flex flex-col sm:flex-row items-center gap-2 text-sm">
+                    <Address size="sm" address={event.winner as `0x${string}`} />
+                    <div className="text-sm">
+                      wins <span className="font-black">{formatToken(event.amount as bigint)}</span>{" "}
+                      {String(tokenSymbol ?? "USDC")}
+                    </div>
+                    <div className="text-sm">
+                      with a <span className="font-black">{formatToken(event.highestBid as bigint)}</span> bid
+                    </div>
+                    {event.winner.toLowerCase() === connectedAddress?.toLowerCase() && (
+                      <button onClick={() => launchConfetti()} className="absolute top-2 right-2 btn btn-accent btn-sm">
+                        🎉
+                      </button>
+                    )}
                   </div>
                   <div className="text-xs text-base-content/50">
                     {formatTimeAgoBrief(now, event.timestamp as number)}
