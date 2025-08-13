@@ -1,20 +1,31 @@
 import type { Metadata } from "next";
 
-const baseUrl = process.env.VERCEL_PROJECT_PRODUCTION_URL
-  ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
-  : `http://localhost:${process.env.PORT || 3000}`;
+const baseUrl = process.env.NEXT_PUBLIC_URL ?? `http://localhost:${process.env.NEXT_PUBLIC_PORT || 3000}`;
 const titleTemplate = "%s | Scaffold-ETH 2";
 
 export const getMetadata = ({
   title,
   description,
-  imageRelativePath = "/thumbnail.jpg",
+  imageRelativePath = "/embed.png",
 }: {
   title: string;
   description: string;
   imageRelativePath?: string;
 }): Metadata => {
   const imageUrl = `${baseUrl}${imageRelativePath}`;
+  const miniAppContent = JSON.stringify({
+    version: "1",
+    imageUrl: process.env.NEXT_PUBLIC_IMAGE_URL ?? imageUrl,
+    button: {
+      title: `${process.env.NEXT_PUBLIC_APP_NAME ?? title}`,
+      action: {
+        url: `${baseUrl}/`,
+        type: "launch_miniapp",
+      },
+    },
+  });
+
+  console.log(miniAppContent);
 
   return {
     metadataBase: new URL(baseUrl),
@@ -24,6 +35,10 @@ export const getMetadata = ({
     },
     description: description,
     manifest: "/manifest.json",
+    other: {
+      "fc:miniapp": miniAppContent,
+      "fc:frame": miniAppContent,
+    },
     openGraph: {
       title: {
         default: title,

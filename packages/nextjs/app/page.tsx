@@ -486,7 +486,7 @@ const Home: NextPage = () => {
         </div>
 
         {/* Share block */}
-        <div className="bg-base-100 p-2 pb-4 rounded-3xl shadow-md shadow-secondary border border-base-300 flex flex-col gap-3">
+        <div className="bg-base-100 p-4 rounded-3xl shadow-md shadow-secondary border border-base-300 flex flex-col gap-3">
           <div className="text-lg font-light text-center items-center">
             Share and earn{" "}
             <span className="font-black text-lg text-primary">{formatToken(latestAuction?.referralFee)}</span>{" "}
@@ -496,7 +496,7 @@ const Home: NextPage = () => {
             <a
               className="btn btn-accent btn-sm flex items-center gap-2"
               href={`https://warpcast.com/~/compose?text=${encodeURIComponent(
-                `Bid with me on FinalBid and earn referral fees!`,
+                `Win on FireBid:`,
               )}&embeds[]=${encodeURIComponent(typeof window !== "undefined" ? window.location.href : "")}`}
               target="_blank"
               rel="noreferrer noopener"
@@ -506,7 +506,7 @@ const Home: NextPage = () => {
             <a
               className="btn btn-accent btn-sm flex items-center gap-2"
               href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(
-                `Bid with me on FinalBid and earn referral fees!`,
+                `Win on FireBid:`,
               )}&url=${encodeURIComponent(typeof window !== "undefined" ? window.location.href : "")}`}
               target="_blank"
               rel="noreferrer noopener"

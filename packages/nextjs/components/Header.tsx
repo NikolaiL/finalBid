@@ -64,7 +64,7 @@ export const Header = () => {
     <div className="sticky lg:static top-0 navbar bg-base-100 min-h-0 shrink-0 justify-between z-20 shadow-md shadow-secondary px-0 sm:px-2">
       <div className="navbar-start w-auto lg:w-1/2">
         <details className="dropdown" ref={burgerMenuRef}>
-          <summary className="ml-1 btn btn-ghost lg:hidden hover:bg-transparent">
+          <summary className="ml-1 px-3 btn btn-ghost lg:hidden hover:bg-transparent">
             <Bars3Icon className="h-1/2" />
           </summary>
           <ul
@@ -76,7 +76,7 @@ export const Header = () => {
             <HeaderMenuLinks />
           </ul>
         </details>
-        <Link href="/" passHref className="hidden lg:flex items-center gap-2 ml-4 mr-6 shrink-0">
+        <Link href="/" passHref className="flex items-center gap-2 ml-0 sm:ml-4 mr-6 shrink-0">
           <div className="flex relative w-10 h-10">
             <Image alt="Final Bid logo" className="cursor-pointer dark:invert" fill src="/finalBid.svg" />
           </div>

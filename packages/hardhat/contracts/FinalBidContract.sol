@@ -22,7 +22,7 @@ contract FinalBidContract is Ownable, Pausable, ReentrancyGuard {
     address public tokenAddress;
     uint256 public auctionId;
     uint256 public auctionAmount = 100000000; // 100 USDC
-    uint256 public auctionDuration = 600; // 1 minute
+    uint256 public auctionDuration = 600; // 10 minutes. TODO: make this cha1 hour (3600) or 24 hours (86400)
     uint256 public auctionDurationIncrease = 60; // 1 minute
     uint256 public startingAmount = 1000000; // 1 USDC
     uint256 public bidIncrement = 250000; // 0.25 USDC
@@ -90,7 +90,7 @@ contract FinalBidContract is Ownable, Pausable, ReentrancyGuard {
         // if we have more than 1.5x the auction amount, we need to withdraw the excess to deployer
         if (availableAmount > auctionAmountToUse * 3 / 2 ) {
             uint256 amountToWithdraw = (availableAmount - auctionAmountToUse * 3 / 2) / 2;
-            auctionAmountToUse = auctionAmountToUse + amountToWithdraw/2;
+            auctionAmountToUse = auctionAmountToUse + amountToWithdraw / 5;
             _withdrawExcess(amountToWithdraw);
         }
 

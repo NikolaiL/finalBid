@@ -6,8 +6,8 @@ import "~~/styles/globals.css";
 import { getMetadata } from "~~/utils/scaffold-eth/getMetadata";
 
 export const metadata = getMetadata({
-  title: process.env.NEXT_PUBLIC_APP_NAME || "FinalBid",
-  description: process.env.NEXT_PUBLIC_APP_DESCRIPTION || "Outbid, Outlast, Onchain",
+  title: process.env.NEXT_PUBLIC_APP_NAME || "FireBid",
+  description: process.env.NEXT_PUBLIC_APP_DESCRIPTION || "Outburn Outlast Outbid",
 });
 
 const ScaffoldEthApp = ({ children }: { children: React.ReactNode }) => {
