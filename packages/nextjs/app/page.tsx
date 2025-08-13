@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { auctionCreatedQueryOptions, bidPlacedQueryOptions } from "../lib/bid-events-query";
+import { auctionCreatedQueryOptions, auctionEndedQueryOptions, bidPlacedQueryOptions } from "../lib/bid-events-query";
 import type { NextPage } from "next";
 import { useAccount, useReadContract, useWriteContract } from "wagmi";
 import { MiniappUserInfo } from "~~/components/MiniappUserInfo";
@@ -24,14 +24,36 @@ const formatToken = (amount: bigint | 0n): string => {
   return tokenAmount.toFixed(DISPLAY_DECIMALS);
 };
 
+// Global constants
+const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
+
+// Utility to format a timestamp in seconds as a brief "time ago" (seconds/minutes)
+const formatTimeAgoBrief = (nowMs: number, timestampSeconds: number | bigint): string => {
+  const ts = typeof timestampSeconds === "bigint" ? Number(timestampSeconds) : timestampSeconds;
+  const diffSeconds = Math.max(0, Math.floor(nowMs / 1000) - ts);
+  if (diffSeconds < 60) return `${diffSeconds} seconds ago`;
+  const minutes = Math.floor(diffSeconds / 60);
+  if (minutes < 60) return `${minutes} minute${minutes !== 1 ? "s" : ""} ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours} hour${hours !== 1 ? "s" : ""} ago`;
+  const days = Math.floor(hours / 24);
+  return `${days} day${days !== 1 ? "s" : ""} ago`;
+};
+
 const Home: NextPage = () => {
-  const { address: connectedAddress } = useAccount();
+  const { address: connectedAddress, isConnecting, isReconnecting } = useAccount();
 
   const bidEventsQuery: any = useDataLiveQuery(bidPlacedQueryOptions as any);
   const BidEvents: any[] = useMemo(() => (bidEventsQuery?.data ?? []) as any[], [bidEventsQuery?.data]);
 
-  // const auctionEndedQuery: any = useDataLiveQuery(auctionEndedQueryOptions as any);
-  // const AuctionEndedEvents: any[] = useMemo(() => (auctionEndedQuery?.data ?? []) as any[], [auctionEndedQuery?.data]);
+  const auctionEndedQuery: any = useDataLiveQuery(auctionEndedQueryOptions as any);
+  const AuctionEndedEvents: any[] = useMemo(() => (auctionEndedQuery?.data ?? []) as any[], [auctionEndedQuery?.data]);
+
+  // Exclude auctions with zero-address winner
+  const PastAuctions = useMemo(() => {
+    const zero = ZERO_ADDRESS.toLowerCase();
+    return (AuctionEndedEvents || []).filter((e: any) => (e?.winner || "").toLowerCase() !== zero);
+  }, [AuctionEndedEvents]);
 
   const auctionCreatedQuery: any = useDataLiveQuery(auctionCreatedQueryOptions as any);
   const AuctionCreatedEvents: any[] = useMemo(
@@ -124,7 +146,6 @@ const Home: NextPage = () => {
   const [bidStatus, setBidStatus] = useState<string>("");
 
   // Constants
-  const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
 
   // Read token symbol (for rendering)
   const { data: tokenSymbol } = useReadContract({
@@ -161,6 +182,25 @@ const Home: NextPage = () => {
 
   const isUserHighestBidder =
     connectedAddress && latestAuction?.highestBidder?.toLowerCase() === connectedAddress?.toLowerCase();
+
+  // Lazy-load confetti on demand to avoid SSR issues
+  const launchConfetti = async () => {
+    const confetti = (await import("canvas-confetti")).default;
+    confetti({ particleCount: 250, spread: 100, origin: { y: 0.6 } });
+    if (isUserHighestBidder) {
+      await new Promise(r => setTimeout(r, 250));
+      confetti({ particleCount: 250, spread: 120, origin: { y: 0.6 } });
+      await new Promise(r => setTimeout(r, 250));
+      confetti({ particleCount: 250, spread: 140, origin: { y: 0.6 } });
+    }
+  };
+
+  // Only show bid events for current auction
+  const CurrentBidEvents = useMemo(() => {
+    if (!latestAuction?.auctionId) return [] as any[];
+    const currentId = String(latestAuction.auctionId);
+    return (BidEvents || []).filter((e: any) => String(e.auctionId) === currentId);
+  }, [BidEvents, latestAuction?.auctionId]);
 
   // Compute required token amount for the next bid (includes platform fee)
   const calcRequiredAmount = () => {
@@ -269,19 +309,39 @@ const Home: NextPage = () => {
     return endTime > nowSecBig ? Number(endTime - nowSecBig) : 0;
   })();
 
+  // Loading gate: wait for initial wallet resolution and first fetch of auction-related data
+  const isWalletInitializing = isConnecting || isReconnecting;
+  const isLoadingApp = !!(
+    bidEventsQuery?.isPending ||
+    auctionCreatedQuery?.isPending ||
+    auctionEndedQuery?.isPending ||
+    isWalletInitializing
+  );
+
+  if (isLoadingApp) {
+    return (
+      <div className="w-full max-w-3xl mx-auto px-2 sm:px-4 lg:px-6">
+        <div className="flex items-center justify-center py-24">
+          <span className="loading loading-spinner loading-xl text-primary" />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="w-full max-w-3xl mx-auto px-2 sm:px-4 lg:px-6">
       <div className="flex flex-col gap-6 py-4 px-2">
         <div className="bg-base-100 p-5 rounded-3xl shadow-md shadow-secondary border border-base-300 flex flex-col gap-3">
-          <div className="text-2xl font-bold text-center">
-            Win {formatToken(latestAuction?.auctionAmount)} {String(tokenSymbol ?? "USDC")}!
+          <div className="text-2xl font-light text-center items-center">
+            Win{" "}
+            <span className="mx-1 font-black text-6xl text-primary">{formatToken(latestAuction?.auctionAmount)}</span>{" "}
+            {String(tokenSymbol ?? "USDC")}!
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 items-center">
             <div className="text-center sm:text-left">
               <div className="text-sm text-base-content/70">Current top bid</div>
-              <div className="text-lg font-semibold">
-                {formatToken(currentBid)} {String(tokenSymbol ?? "USDC")}
-              </div>
+              <div className="text-2xl font-black">{formatToken(currentBid)}</div>
+              <div className="text-sm text-base-content/70"> {String(tokenSymbol ?? "USDC")}</div>
             </div>
             <div className="text-center">
               {topBidderAddress !== ZERO_ADDRESS && (
@@ -307,106 +367,148 @@ const Home: NextPage = () => {
               ) : (
                 <>
                   <div className="text-sm text-base-content/70">Auction ends in</div>
-                  <div className="text-lg font-semibold">{secondsRemaining} seconds</div>
+                  <div className="text-2xl font-black">{secondsRemaining}</div>
+                  <div className="text-sm text-base-content/70">seconds</div>
                 </>
               )}
             </div>
           </div>
         </div>
-
-        {/* Bid action */}
-        {/* if address is connected */}
-        {connectedAddress ? (
-          <>
-            <div className="rounded-lg text-center w-full">
-              {latestAuction?.auctionId && isAuctionActive ? (
-                <>
-                  {isUserHighestBidder ? (
-                    <>
-                      <div className="text-xl font-bold p-1">You are the highest bidder</div>
-                      <div className="mt-1 text-gray-500 text-xs">
-                        {(() => {
-                          const endTime = latestAuction?.endTime as bigint;
-                          const remaining = endTime > nowSecBig ? Number(endTime - nowSecBig) : 0;
-                          return `Auction ends in ${remaining} seconds`;
-                        })()}
-                      </div>
-                    </>
-                  ) : (
-                    <>
-                      <button
-                        className="btn btn-primary text-xl transition-all"
-                        onClick={handlePlaceBid}
-                        disabled={isBidding}
-                      >
-                        {isBidding
-                          ? bidStatus
-                          : `Bid ${formatToken(nextBid as unknown as bigint)} ${String(tokenSymbol ?? "")}`}
-                      </button>
-                      {isBidding ? (
-                        <div className="mt-1 text-gray-500 text-xs">Please wait...</div>
-                      ) : platformFee ? (
+        <div className="min-h-24 items-center justify-center flex">
+          {/* Bid action */}
+          {/* if address is connected */}
+          {connectedAddress ? (
+            <>
+              <div className="rounded-lg text-center w-full">
+                {latestAuction?.auctionId && isAuctionActive ? (
+                  <>
+                    {isUserHighestBidder ? (
+                      <>
+                        <div className="text-xl font-bold p-1">You are the highest bidder</div>
                         <div className="mt-1 text-gray-500 text-xs">
-                          ({formatToken(platformFee as unknown as bigint)} {String(tokenSymbol ?? "")} fee applies)
+                          {(() => {
+                            const endTime = latestAuction?.endTime as bigint;
+                            const remaining = endTime > nowSecBig ? Number(endTime - nowSecBig) : 0;
+                            return `Auction ends in ${remaining} seconds`;
+                          })()}
                         </div>
-                      ) : null}
-                    </>
-                  )}
-                </>
-              ) : null}
-              {latestAuction?.auctionId && isAcutionReadytoBeOver && !isAuctionOver ? (
-                <button
-                  className="btn btn-secondary text-xl"
-                  onClick={async () => {
-                    await writeContractAsync({ functionName: "endAuction" });
-                  }}
-                >
-                  End Auction
-                </button>
-              ) : null}
-              {!latestAuction?.auctionId || isAuctionOver ? (
-                <button
-                  className="btn btn-secondary text-xl"
-                  onClick={async () => {
-                    await writeContractAsync({ functionName: "startAuction" });
-                  }}
-                >
-                  Start a New Auction
-                </button>
-              ) : null}
-            </div>
+                      </>
+                    ) : (
+                      <>
+                        <button
+                          className="btn btn-primary text-xl transition-all"
+                          onClick={handlePlaceBid}
+                          disabled={isBidding}
+                        >
+                          {isBidding
+                            ? bidStatus
+                            : `Bid ${formatToken(nextBid as unknown as bigint)} ${String(tokenSymbol ?? "")}`}
+                        </button>
+                        {isBidding ? (
+                          <div className="mt-1 text-gray-500 text-xs">Please wait...</div>
+                        ) : platformFee ? (
+                          <div className="mt-1 text-gray-500 text-xs">
+                            ({formatToken(platformFee as unknown as bigint)} {String(tokenSymbol ?? "")} fee applies)
+                          </div>
+                        ) : null}
+                      </>
+                    )}
+                  </>
+                ) : null}
+                {latestAuction?.auctionId && isAcutionReadytoBeOver && !isAuctionOver ? (
+                  <button
+                    className="btn btn-primary text-xl"
+                    onClick={async () => {
+                      const receipt = await writeContractAsync(
+                        { functionName: "endAuction" },
+                        {
+                          onBlockConfirmation: () => {
+                            // no-op here; we'll launch confetti after success
+                          },
+                          successMessage: "Auction finalized!",
+                          blockConfirmations: 1,
+                        },
+                      );
+                      if (receipt) {
+                        // fire and forget
+                        launchConfetti();
+                      }
+                    }}
+                  >
+                    {isUserHighestBidder ? (
+                      <span>
+                        🎉 <span className="mx-2">Claim My Win!</span> 🎉
+                      </span>
+                    ) : (
+                      "Finalize the auction"
+                    )}
+                  </button>
+                ) : null}
+                {!latestAuction?.auctionId || isAuctionOver ? (
+                  <button
+                    className="btn btn-primary text-xl"
+                    onClick={async () => {
+                      await writeContractAsync({ functionName: "startAuction" });
+                    }}
+                  >
+                    Start a New Auction
+                  </button>
+                ) : null}
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="flex justify-center items-center">
+                <RainbowKitCustomConnectButton className="btn-lg" />
+              </div>
+            </>
+          )}
+        </div>
 
-            <div className="bg-base-100 p-5 rounded-3xl shadow-md shadow-secondary border border-base-300 flex flex-col gap-3">
-              <div className="text-2xl font-bold text-center">Bid Events</div>
-              {BidEvents.length > 0 ? (
-                <div className="flex flex-col gap-2">
-                  {BidEvents.map(event => (
-                    <div
-                      key={event.id}
-                      className="flex items-center justify-between border border-base-300 rounded-xl p-3"
-                    >
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm text-base-content/70">Bidder</span>
-                        <Address address={event.bidder as `0x${string}`} />
+        <div className="bg-base-100 p-5 rounded-3xl shadow-md shadow-secondary border border-base-300 flex flex-col gap-3">
+          <div className="flex flex-col gap-2">
+            {/* if auction os nto ended yet */}
+            {isAuctionActive && (
+              <>
+                {CurrentBidEvents.map(event => (
+                  <div
+                    key={event.id}
+                    className="flex items-center justify-center border border-base-300 rounded-xl p-3"
+                  >
+                    <div className="flex flex-col items-center gap-1">
+                      <div className="flex items-center gap-2 text-sm">
+                        <Address size="sm" address={event.bidder as `0x${string}`} /> bids{" "}
+                        <span className="font-black">{formatToken(event.amount as bigint)}</span>{" "}
+                        {String(tokenSymbol ?? "USDC")}
                       </div>
-                      <div className="text-sm">
-                        +{formatToken(event.amount as bigint)} {String(tokenSymbol ?? "USDC")}
+                      <div className="text-xs text-base-content/50">
+                        {formatTimeAgoBrief(now, event.timestamp as number)}
                       </div>
                     </div>
-                  ))}
+                  </div>
+                ))}
+              </>
+            )}
+            {PastAuctions.map(event => (
+              <div
+                key={String(event.auctionId)}
+                className="flex items-center justify-center border border-base-300 rounded-xl p-3"
+              >
+                <div className="flex flex-col items-center gap-1">
+                  <div className="flex items-center gap-2 text-sm">
+                    <Address size="sm" address={event.winner as `0x${string}`} /> wins{" "}
+                    <span className="font-black">{formatToken(event.amount as bigint)}</span>{" "}
+                    {String(tokenSymbol ?? "USDC")} with{" "}
+                    <span className="font-black">{formatToken(event.highestBid as bigint)}</span> bid
+                  </div>
+                  <div className="text-xs text-base-content/50">
+                    {formatTimeAgoBrief(now, event.timestamp as number)}
+                  </div>
                 </div>
-              ) : (
-                <div className="text-center text-gray-500">No bid events yet</div>
-              )}
-            </div>
-          </>
-        ) : (
-          <>
-            <div className="flex justify-center items-center">
-              <RainbowKitCustomConnectButton />
-            </div>
-          </>
-        )}
+              </div>
+            ))}
+          </div>
+        </div>
 
         <div className="flex flex-col gap-2">
           <div className="font-medium">Connected Address</div>
