@@ -498,7 +498,7 @@ const Home: NextPage = () => {
                   <div className="flex items-center gap-2 text-sm">
                     <Address size="sm" address={event.winner as `0x${string}`} /> wins{" "}
                     <span className="font-black">{formatToken(event.amount as bigint)}</span>{" "}
-                    {String(tokenSymbol ?? "USDC")} with{" "}
+                    {String(tokenSymbol ?? "USDC")} with a{" "}
                     <span className="font-black">{formatToken(event.highestBid as bigint)}</span> bid
                   </div>
                   <div className="text-xs text-base-content/50">
