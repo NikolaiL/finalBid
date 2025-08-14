@@ -25,8 +25,6 @@ export const getMetadata = ({
     },
   });
 
-  console.log(miniAppContent);
-
   return {
     metadataBase: new URL(baseUrl),
     title: {

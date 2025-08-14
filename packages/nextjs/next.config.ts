@@ -9,6 +9,14 @@ const nextConfig: NextConfig = {
   eslint: {
     ignoreDuringBuilds: process.env.NEXT_PUBLIC_IGNORE_BUILD_ERROR === "true",
   },
+  images: {
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "imagedelivery.net",
+      },
+    ],
+  },
   async rewrites() {
     const ponderPort = process.env.PONDER_PORT || "42069";
     const ponderHost = process.env.PONDER_HOST || "localhost";

@@ -5,8 +5,8 @@ import { auctionCreatedQueryOptions, auctionEndedQueryOptions, bidPlacedQueryOpt
 import type { NextPage } from "next";
 import { toast } from "react-hot-toast";
 import { useAccount, useReadContract, useWriteContract } from "wagmi";
-import { MiniappUserInfo } from "~~/components/MiniappUserInfo";
-import { Address, RainbowKitCustomConnectButton } from "~~/components/scaffold-eth";
+import { useMiniapp } from "~~/components/MiniappProvider";
+import { AddressFarcaster, RainbowKitCustomConnectButton } from "~~/components/scaffold-eth";
 import {
   useDeployedContractInfo,
   useScaffoldReadContract,
@@ -70,6 +70,7 @@ const UrlCopyIcon = ({ className = "w-5 h-5" }) => (
 
 const Home: NextPage = () => {
   const { address: connectedAddress, isConnecting, isReconnecting } = useAccount();
+  const { composeCast } = useMiniapp();
 
   const bidEventsQuery: any = useDataLiveQuery(bidPlacedQueryOptions as any);
   const BidEvents: any[] = useMemo(() => (bidEventsQuery?.data ?? []) as any[], [bidEventsQuery?.data]);
@@ -337,7 +338,8 @@ const Home: NextPage = () => {
     return endTime > nowSecBig ? Number(endTime - nowSecBig) : 0;
   })();
 
-  const sharingUrl = (process.env.NEXT_PUBLIC_URL ?? "http://localhost:3000") + "/?ref=" + connectedAddress;
+  const sharingUrl =
+    (process.env.NEXT_PUBLIC_URL ?? "http://localhost:3000") + (connectedAddress ? "/?ref=" + connectedAddress : "");
 
   // Loading gate: wait for initial wallet resolution and first fetch of auction-related data
   const isWalletInitializing = isConnecting || isReconnecting;
@@ -382,7 +384,7 @@ const Home: NextPage = () => {
                 <>
                   <div className="text-sm text-base-content/70">Top bid by</div>
                   <div className="flex justify-center">
-                    <Address address={topBidderAddress} />
+                    <AddressFarcaster address={topBidderAddress} />
                   </div>
                 </>
               )}
@@ -501,22 +503,23 @@ const Home: NextPage = () => {
 
         {/* Share block */}
         <div className="bg-base-100 p-4 rounded-3xl shadow-md shadow-secondary border border-base-300 flex flex-col gap-3">
-          <div className="text-lg font-light text-center items-center">
-            Share and earn{" "}
-            <span className="font-black text-lg text-primary">{formatToken(latestAuction?.referralFee)}</span>{" "}
-            {String(tokenSymbol ?? "USDC")} from every bid:
-          </div>
+          {connectedAddress ? (
+            <div className="text-lg font-light text-center items-center">
+              Share and earn{" "}
+              <span className="font-black text-lg text-primary">{formatToken(latestAuction?.referralFee)}</span>{" "}
+              {String(tokenSymbol ?? "USDC")} from every bid:
+            </div>
+          ) : (
+            <div className="text-lg font-light text-center items-center">Share FireBid:</div>
+          )}
           <div className="flex gap-2 justify-center items-center">
-            <a
+            <button
+              type="button"
               className="btn btn-accent btn-sm flex items-center gap-2"
-              href={`https://warpcast.com/~/compose?text=${encodeURIComponent(
-                `Win on FireBid:`,
-              )}&embeds[]=${encodeURIComponent(sharingUrl)}`}
-              target="_blank"
-              rel="noreferrer noopener"
+              onClick={() => composeCast({ text: "Win on FireBid:", embeds: [sharingUrl] })}
             >
               <FarcasterIcon className="w-4 h-4" /> Cast
-            </a>
+            </button>
             <a
               className="btn btn-accent btn-sm flex items-center gap-2"
               href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(
@@ -553,7 +556,7 @@ const Home: NextPage = () => {
                 >
                   <div className="flex flex-col items-center gap-1">
                     <div className="flex flex-col sm:flex-row items-center gap-2 text-sm">
-                      <Address size="sm" address={event.bidder as `0x${string}`} />
+                      <AddressFarcaster size="sm" address={event.bidder as `0x${string}`} />
                       <div className="">
                         bids <span className="font-black">{formatToken(event.amount as bigint)}</span>{" "}
                         {String(tokenSymbol ?? "USDC")}
@@ -574,7 +577,7 @@ const Home: NextPage = () => {
             >
               <div className="flex flex-col items-center gap-1">
                 <div className="flex flex-col sm:flex-row items-center gap-2 text-sm">
-                  <Address size="sm" address={event.winner as `0x${string}`} />
+                  <AddressFarcaster size="sm" address={event.winner as `0x${string}`} />
                   <div className="text-sm">
                     wins <span className="font-black">{formatToken(event.amount as bigint)}</span>{" "}
                     {String(tokenSymbol ?? "USDC")}
@@ -592,12 +595,6 @@ const Home: NextPage = () => {
               </div>
             </div>
           ))}
-        </div>
-
-        <div className="flex flex-col gap-2">
-          <div className="font-medium">Connected Address</div>
-          <Address address={connectedAddress} />
-          <MiniappUserInfo />
         </div>
       </div>
     </div>
