@@ -539,7 +539,7 @@ const Home: NextPage = () => {
               target="_blank"
               rel="noreferrer noopener"
             >
-              <UrlCopyIcon className="w-4 h-4" /> Copy Link
+              <UrlCopyIcon className="w-4 h-4" /> Copy
             </a>
           </div>
         </div>

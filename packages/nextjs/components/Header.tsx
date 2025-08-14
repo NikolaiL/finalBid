@@ -76,20 +76,22 @@ export const Header = () => {
             <HeaderMenuLinks />
           </ul>
         </details>
-        <Link href="/" passHref className="flex items-center gap-2 ml-0 sm:ml-4 mr-6 shrink-0">
+        <Link href="/" passHref className="flex items-center gap-1 ml-0 sm:ml-4 mr-6 shrink-0">
           <div className="flex relative w-10 h-10">
             <Image alt="Final Bid logo" className="cursor-pointer dark:invert" fill src="/finalBid.svg" />
           </div>
           <div className="flex flex-col">
             <span className="font-bold leading-tight">{process.env.NEXT_PUBLIC_APP_NAME}</span>
-            <span className="text-xs text-base-content/50">{process.env.NEXT_PUBLIC_APP_DESCRIPTION}</span>
+            <span className="text-[0.5rem] sm:text-xs text-base-content/50">
+              {process.env.NEXT_PUBLIC_APP_DESCRIPTION}
+            </span>
           </div>
         </Link>
         <ul className="hidden lg:flex lg:flex-nowrap menu menu-horizontal px-1 gap-2">
           <HeaderMenuLinks />
         </ul>
       </div>
-      <div className="navbar-end grow mr-4">
+      <div className="navbar-end mr-4">
         <RainbowKitCustomConnectButton />
         {isLocalNetwork && <FaucetButton />}
       </div>

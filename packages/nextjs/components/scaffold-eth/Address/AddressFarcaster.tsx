@@ -6,6 +6,7 @@ import { Address as AddressBase } from "./Address";
 import { AddressCopyIcon } from "./AddressCopyIcon";
 import type { Address as AddressType } from "viem";
 import { getAddress, isAddress } from "viem";
+import { useMiniapp } from "~~/components/MiniappProvider";
 import { BlockieAvatar } from "~~/components/scaffold-eth";
 
 type Size = "xs" | "sm" | "base" | "lg" | "xl" | "2xl" | "3xl";
@@ -39,6 +40,11 @@ type FarcasterUser = {
 
 type ApiResponse = { user: null | any };
 
+const CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
+const memoryCache = new Map<string, { user: FarcasterUser | null; expiresAt: number }>();
+const cacheKeyFor = (addr: string) => `farUser:${addr}`;
+const inFlightRequests = new Map<string, Promise<FarcasterUser | null>>();
+
 type AddressFarcasterProps = {
   address?: AddressType;
   disableAddressLink?: boolean;
@@ -59,6 +65,7 @@ export const AddressFarcaster = ({
 
   const [user, setUser] = useState<FarcasterUser | null>(null);
   const [fetched, setFetched] = useState(false);
+  const { openProfile } = useMiniapp();
 
   useEffect(() => {
     let cancelled = false;
@@ -66,20 +73,67 @@ export const AddressFarcaster = ({
     setFetched(false);
     if (!checksum || !isAddress(checksum)) return;
 
-    const url = `/api/farcaster-user?address=${checksum}`;
-    fetch(url)
-      .then(res => res.json())
-      .then((json: ApiResponse) => {
-        if (cancelled) return;
-        const u = json?.user;
-        if (u) {
-          setUser({
-            fid: u.fid,
-            username: u.username,
-            display_name: u.display_name,
-            pfp_url: u.pfp_url,
-          });
+    const now = Date.now();
+
+    // 1) Check in-memory cache
+    const mem = memoryCache.get(checksum);
+    if (mem && mem.expiresAt > now) {
+      setUser(mem.user);
+      setFetched(true);
+      return;
+    }
+
+    // 2) Check localStorage cache
+    try {
+      if (typeof window !== "undefined") {
+        const raw = window.localStorage.getItem(cacheKeyFor(checksum));
+        if (raw) {
+          const parsed = JSON.parse(raw) as { user: FarcasterUser | null; expiresAt: number };
+          if (parsed && parsed.expiresAt > now) {
+            memoryCache.set(checksum, parsed);
+            setUser(parsed.user);
+            setFetched(true);
+            return;
+          }
         }
+      }
+    } catch {
+      // ignore storage errors
+    }
+
+    // 3) Fetch and populate caches with in-flight deduplication
+    const runFetch = () => {
+      const url = `/api/farcaster-user?address=${checksum}`;
+      const p = fetch(url)
+        .then(res => res.json())
+        .then((json: ApiResponse) => {
+          const u = json?.user;
+          const fcUser: FarcasterUser | null = u
+            ? { fid: u.fid, username: u.username, display_name: u.display_name, pfp_url: u.pfp_url }
+            : null;
+          const record = { user: fcUser, expiresAt: now + CACHE_TTL_MS };
+          memoryCache.set(checksum, record);
+          try {
+            if (typeof window !== "undefined") {
+              window.localStorage.setItem(cacheKeyFor(checksum), JSON.stringify(record));
+            }
+          } catch {
+            // ignore storage errors
+          }
+          return fcUser;
+        })
+        .finally(() => {
+          inFlightRequests.delete(checksum);
+        });
+      inFlightRequests.set(checksum, p);
+      return p;
+    };
+
+    const inFlight = inFlightRequests.get(checksum) || runFetch();
+    inFlight
+      .then(fcUser => {
+        if (cancelled) return;
+        setUser(fcUser);
       })
       .catch(() => void 0)
       .finally(() => {
@@ -126,8 +180,6 @@ export const AddressFarcaster = ({
     );
   }
 
-  const profileUrl = user.username ? `https://warpcast.com/${user.username}` : `https://warpcast.com/fid/${user.fid}`;
-
   const avatarSize = avatarPxMap[size];
 
   return (
@@ -139,7 +191,8 @@ export const AddressFarcaster = ({
             alt="Farcaster avatar"
             width={avatarSize}
             height={avatarSize}
-            className="rounded-full object-cover"
+            className="rounded-full object-cover cursor-pointer"
+            onClick={() => openProfile({ fid: user.fid, username: user.username })}
           />
         ) : (
           <BlockieAvatar address={checksum} size={avatarSize} />
@@ -147,14 +200,13 @@ export const AddressFarcaster = ({
       </div>
       <div className="flex flex-col">
         {user.username ? (
-          <a
-            href={profileUrl}
-            target="_blank"
-            rel="noreferrer noopener"
-            className={`ml-1.5 ${textSizeMap[size]} font-bold`}
+          <button
+            type="button"
+            onClick={() => openProfile({ fid: user.fid, username: user.username })}
+            className={`ml-1.5 ${textSizeMap[size]} font-bold text-left cursor-pointer`}
           >
             @{user.username}
-          </a>
+          </button>
         ) : null}
         <div className="flex">
           {disableAddressLink ? (
@@ -162,14 +214,13 @@ export const AddressFarcaster = ({
               {format === "long" ? checksum : shortAddress}
             </span>
           ) : (
-            <a
-              href={profileUrl}
-              target="_blank"
-              rel="noreferrer noopener"
-              className={`ml-1.5 ${textSizeMap[size]} font-normal`}
+            <button
+              type="button"
+              onClick={() => openProfile({ fid: user.fid, username: user.username })}
+              className={`ml-1.5 ${textSizeMap[size]} font-normal text-left`}
             >
               {format === "long" ? checksum : shortAddress}
-            </a>
+            </button>
           )}
           <AddressCopyIcon className={`ml-1 h-4 w-4 cursor-pointer`} address={checksum} />
         </div>
