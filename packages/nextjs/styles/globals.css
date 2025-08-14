@@ -107,7 +107,7 @@
 }
 
 .btn {
-  @apply shadow-md;
+  @apply shadow-md transition-all;
 }
 
 .btn.btn-ghost {

@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { auctionCreatedQueryOptions, auctionEndedQueryOptions, bidPlacedQueryOptions } from "../lib/bid-events-query";
 import type { NextPage } from "next";
+import { toast } from "react-hot-toast";
 import { useAccount, useReadContract, useWriteContract } from "wagmi";
 import { MiniappUserInfo } from "~~/components/MiniappUserInfo";
 import { Address, RainbowKitCustomConnectButton } from "~~/components/scaffold-eth";
@@ -57,6 +58,13 @@ const FarcasterIcon = ({ className = "w-5 h-5" }: { className?: string }) => (
       fill="currentColor"
       d="m128.889 253.333 28.889 97.778h24.444v395.556c-12.273 0-22.222 9.949-22.222 22.222v26.667h-4.444c-12.273 0-22.223 9.949-22.223 22.222v26.667h248.889v-26.667c0-12.273-9.949-22.222-22.222-22.222h-4.444v-26.667c0-12.273-9.95-22.222-22.223-22.222h-26.666V253.333H128.889ZM675.556 746.667c-12.274 0-22.223 9.949-22.223 22.222v26.667h-4.444c-12.273 0-22.222 9.949-22.222 22.222v26.667h248.889v-26.667c0-12.273-9.95-22.222-22.223-22.222h-4.444v-26.667c0-12.273-9.949-22.222-22.222-22.222V351.111h24.444L880 253.333H702.222v493.334h-26.666Z"
     ></path>
+  </svg>
+);
+
+const UrlCopyIcon = ({ className = "w-5 h-5" }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000" fill="currentColor" className={className}>
+    <path d="M128.889 253.333h484.444v688.889h-71.111V528.889h-.697c-7.86-87.212-81.156-155.556-170.414-155.556-89.258 0-162.554 68.344-170.414 155.556h-.697v315.556h-71.111V155.556Z" />
+    <path d="m128.889 253.333 28.889 97.778h24.444v395.556c-12.273 0-22.222 9.949-22.222 22.222v26.667h-4.444c-12.273 0-22.223 9.949-22.223 22.222v26.667h248.889v-26.667c0-12.273-9.949-22.222-22.222-22.222h-4.444v-26.667c0-12.273-9.95-22.222-22.223-22.222h-26.666V253.333H128.889ZM675.556 746.667c-12.274 0-22.223 9.949-22.223 22.222v26.667h-4.444c-12.273 0-22.222 9.949-22.222 22.222v26.667h248.889v-26.667c0-12.273-9.95-22.222-22.223-22.222h-4.444v-26.667c0-12.273-9.949-22.222-22.222-22.222V351.111h24.444L880 253.333H702.222v493.334h-26.666Z" />
   </svg>
 );
 
@@ -329,6 +337,8 @@ const Home: NextPage = () => {
     return endTime > nowSecBig ? Number(endTime - nowSecBig) : 0;
   })();
 
+  const sharingUrl = (process.env.NEXT_PUBLIC_URL ?? "http://localhost:3000") + "/?ref=" + connectedAddress;
+
   // Loading gate: wait for initial wallet resolution and first fetch of auction-related data
   const isWalletInitializing = isConnecting || isReconnecting;
   const isLoadingApp = !!(
@@ -350,12 +360,16 @@ const Home: NextPage = () => {
 
   return (
     <div className="w-full max-w-3xl mx-auto px-2 sm:px-4 lg:px-6">
-      <div className="flex flex-col gap-4 py-4 px-2">
+      <div className="flex flex-col gap-1 py-4 px-2">
         <div className="bg-base-100 p-5 rounded-3xl shadow-md shadow-secondary border border-base-300 flex flex-col gap-3">
-          <div className="text-2xl font-light text-center items-center">
-            Win{" "}
-            <span className="mx-1 font-black text-6xl text-primary">{formatToken(latestAuction?.auctionAmount)}</span>{" "}
-            {String(tokenSymbol ?? "USDC")}!
+          <div className="flex flex-col sm:flex-row flex-wrap gap-0 sm:gap-4 items-center">
+            <div className="text-center sm:text-right flex-1 text-2xl font-light items-end">Win</div>
+            <div className="flex-none items-center font-black text-6xl text-primary">
+              {formatToken(latestAuction?.auctionAmount)}
+            </div>
+            <div className="text-center sm:text-left flex-1 text-2xl font-light items-start">
+              {String(tokenSymbol ?? "USDC")}!
+            </div>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 items-center">
             <div className="text-center sm:text-left">
@@ -404,7 +418,7 @@ const Home: NextPage = () => {
                   <>
                     {isUserHighestBidder ? (
                       <>
-                        <div className="text-xl font-bold p-1">You are the highest bidder</div>
+                        <div className="text-xl font-bold p-1">✅ You are the highest bidder</div>
                         <div className="mt-1 text-gray-500 text-xs">
                           {(() => {
                             const endTime = latestAuction?.endTime as bigint;
@@ -416,7 +430,7 @@ const Home: NextPage = () => {
                     ) : (
                       <>
                         <button
-                          className="btn btn-primary text-xl transition-all"
+                          className="btn btn-primary text-xl transition-all h-14 px-6"
                           onClick={handlePlaceBid}
                           disabled={isBidding}
                         >
@@ -437,7 +451,7 @@ const Home: NextPage = () => {
                 ) : null}
                 {latestAuction?.auctionId && isAcutionReadytoBeOver && !isAuctionOver ? (
                   <button
-                    className="btn btn-primary text-xl"
+                    className="btn btn-primary text-xl transition-all h-14 px-6"
                     onClick={async () => {
                       const receipt = await writeContractAsync(
                         { functionName: "endAuction" },
@@ -466,7 +480,7 @@ const Home: NextPage = () => {
                 ) : null}
                 {!latestAuction?.auctionId || isAuctionOver ? (
                   <button
-                    className="btn btn-primary text-xl"
+                    className="btn btn-primary text-xl transition-all h-14 px-6 "
                     onClick={async () => {
                       await writeContractAsync({ functionName: "startAuction" });
                     }}
@@ -497,7 +511,7 @@ const Home: NextPage = () => {
               className="btn btn-accent btn-sm flex items-center gap-2"
               href={`https://warpcast.com/~/compose?text=${encodeURIComponent(
                 `Win on FireBid:`,
-              )}&embeds[]=${encodeURIComponent(typeof window !== "undefined" ? window.location.href : "")}`}
+              )}&embeds[]=${encodeURIComponent(sharingUrl)}`}
               target="_blank"
               rel="noreferrer noopener"
             >
@@ -507,70 +521,77 @@ const Home: NextPage = () => {
               className="btn btn-accent btn-sm flex items-center gap-2"
               href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(
                 `Win on FireBid:`,
-              )}&url=${encodeURIComponent(typeof window !== "undefined" ? window.location.href : "")}`}
+              )}&url=${encodeURIComponent(sharingUrl)}`}
               target="_blank"
               rel="noreferrer noopener"
             >
               <XIcon className="w-4 h-4" /> Tweet
             </a>
+            <a
+              className="btn btn-accent btn-sm flex items-center gap-2"
+              onClick={() => {
+                navigator.clipboard.writeText(sharingUrl);
+                toast.success("Link copied to clipboard");
+              }}
+              target="_blank"
+              rel="noreferrer noopener"
+            >
+              <UrlCopyIcon className="w-4 h-4" /> Copy Link
+            </a>
           </div>
         </div>
 
         {/* Bid history */}
-        <div className="bg-base-100 p-5 rounded-3xl shadow-md shadow-secondary border border-base-300 flex flex-col gap-3">
-          <div className="flex flex-col gap-2">
-            {/* if auction os nto ended yet */}
-            {isAuctionActive && (
-              <>
-                {CurrentBidEvents.map(event => (
-                  <div
-                    key={event.id}
-                    className="flex items-center justify-center border border-base-300 rounded-xl p-3"
-                  >
-                    <div className="flex flex-col items-center gap-1">
-                      <div className="flex flex-col sm:flex-row items-center gap-2 text-sm">
-                        <Address size="sm" address={event.bidder as `0x${string}`} />
-                        <div className="">
-                          bids <span className="font-black">{formatToken(event.amount as bigint)}</span>{" "}
-                          {String(tokenSymbol ?? "USDC")}
-                        </div>
-                      </div>
-                      <div className="text-xs text-base-content/50">
-                        {formatTimeAgoBrief(now, event.timestamp as number)}
+        <div className="flex flex-col gap-4 mt-4">
+          {/* if auction os nto ended yet */}
+          {isAuctionActive && (
+            <>
+              {CurrentBidEvents.map(event => (
+                <div
+                  key={event.id}
+                  className="flex items-center justify-center border border-base-300 rounded-3xl bg-base-100 p-4 shadow-md shadow-secondary"
+                >
+                  <div className="flex flex-col items-center gap-1">
+                    <div className="flex flex-col sm:flex-row items-center gap-2 text-sm">
+                      <Address size="sm" address={event.bidder as `0x${string}`} />
+                      <div className="">
+                        bids <span className="font-black">{formatToken(event.amount as bigint)}</span>{" "}
+                        {String(tokenSymbol ?? "USDC")}
                       </div>
                     </div>
-                  </div>
-                ))}
-              </>
-            )}
-            {PastAuctions.map(event => (
-              <div
-                key={String(event.auctionId)}
-                className="flex flex-col items-center justify-center border border-base-300 rounded-xl p-3 relative"
-              >
-                <div className="flex flex-col items-center gap-1">
-                  <div className="flex flex-col sm:flex-row items-center gap-2 text-sm">
-                    <Address size="sm" address={event.winner as `0x${string}`} />
-                    <div className="text-sm">
-                      wins <span className="font-black">{formatToken(event.amount as bigint)}</span>{" "}
-                      {String(tokenSymbol ?? "USDC")}
+                    <div className="text-xs text-base-content/50">
+                      {formatTimeAgoBrief(now, event.timestamp as number)}
                     </div>
-                    <div className="text-sm">
-                      with a <span className="font-black">{formatToken(event.highestBid as bigint)}</span> bid
-                    </div>
-                    {event.winner.toLowerCase() === connectedAddress?.toLowerCase() && (
-                      <button onClick={() => launchConfetti()} className="absolute top-2 right-2 btn btn-accent btn-sm">
-                        🎉
-                      </button>
-                    )}
-                  </div>
-                  <div className="text-xs text-base-content/50">
-                    {formatTimeAgoBrief(now, event.timestamp as number)}
                   </div>
                 </div>
+              ))}
+            </>
+          )}
+          {PastAuctions.map(event => (
+            <div
+              key={String(event.auctionId)}
+              className="relative flex flex-col items-center justify-center border border-base-300 rounded-3xl bg-base-100 p-4 shadow-md shadow-secondary"
+            >
+              <div className="flex flex-col items-center gap-1">
+                <div className="flex flex-col sm:flex-row items-center gap-2 text-sm">
+                  <Address size="sm" address={event.winner as `0x${string}`} />
+                  <div className="text-sm">
+                    wins <span className="font-black">{formatToken(event.amount as bigint)}</span>{" "}
+                    {String(tokenSymbol ?? "USDC")}
+                  </div>
+                  <div className="text-sm">
+                    with a <span className="font-black">{formatToken(event.highestBid as bigint)}</span> bid
+                  </div>
+                  {event.winner.toLowerCase() === connectedAddress?.toLowerCase() && (
+                    <button onClick={() => launchConfetti()} className="absolute top-2 right-2 btn btn-accent btn-sm">
+                      🎉
+                    </button>
+                  )}
+                </div>
+                <div className="text-xs text-base-content/50">{formatTimeAgoBrief(now, event.timestamp as number)}</div>
               </div>
-            ))}
-          </div>
+            </div>
+          ))}
         </div>
 
         <div className="flex flex-col gap-2">
