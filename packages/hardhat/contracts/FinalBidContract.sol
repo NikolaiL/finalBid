@@ -21,16 +21,17 @@ contract FinalBidContract is Ownable, Pausable, ReentrancyGuard {
     // State Variables
     address public tokenAddress;
     uint256 public auctionId;
-    uint256 public auctionAmount = 100000000; // 100 USDC
-    uint256 public auctionDuration = 600; // 10 minutes. TODO: make this cha1 hour (3600) or 24 hours (86400)
+    uint256 public auctionAmount = 100_000_000; // 100 USDC
+    uint256 public auctionDuration = 3_600; // 1 hour
     uint256 public auctionDurationIncrease = 60; // 1 minute
-    uint256 public startingAmount = 1000000; // 1 USDC
-    uint256 public bidIncrement = 250000; // 0.25 USDC
-    uint256 public referralFee = 250000; // 0.25 USDC
-    uint256 public platformFee = 1000000; // 1 USDC
+    uint256 public startingAmount = 1_000_000; // 1 USDC
+    uint256 public bidIncrement = 250_000; // 0.25 USDC
+    uint256 public referralFee = 250_000; // 0.25 USDC
+    uint256 public platformFee = 1_000_000; // 1 USDC
     uint256 public platformFeesCollected;
     uint256 public platformFeesClaimed;
     uint256 public totalReferralRewardsCollected;
+    bool public newAuctionIsAllowed = true;
     //uint256 public totalReferralRewardsClaimed;
     
 
@@ -139,6 +140,7 @@ contract FinalBidContract is Ownable, Pausable, ReentrancyGuard {
 
     function startAuction() public whenNotPaused nonReentrant {
         // no active auction or last auction time is finished
+        require(newAuctionIsAllowed == true, "New auction not allowed");
         Auction storage auction = auctions[auctionId];
         require(auctionId == 0 || auction.ended == true, "Auction already active");
         // if auctionId > 0, we need to finalize the old auction, pay the winner etc...
@@ -267,6 +269,14 @@ contract FinalBidContract is Ownable, Pausable, ReentrancyGuard {
             referralFee = platformFee;
         }
         emit PlatformFeeUpdated(old, _platformFee);
+    }
+
+    function setNewAuctionIsAllowed() external onlyOwner {
+        newAuctionIsAllowed =true;
+    }
+
+    function setNewAuctionIsNotAllowed() external onlyOwner {
+        newAuctionIsAllowed = false;
     }
 
     /**

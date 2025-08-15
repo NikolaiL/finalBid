@@ -1820,7 +1820,7 @@ const deployedContracts = {
       deployedOnBlock: 29372828,
     },
     FinalBidContract: {
-      address: "0xB22bCFcFC96fc0787b07d92D468A2da8ee841Fb2",
+      address: "0xBF5647cc5F757De9Cc37cE3eBEA8F740D33F7997",
       abi: [
         {
           inputs: [
@@ -2357,6 +2357,19 @@ const deployedContracts = {
         },
         {
           inputs: [],
+          name: "newAuctionIsAllowed",
+          outputs: [
+            {
+              internalType: "bool",
+              name: "",
+              type: "bool",
+            },
+          ],
+          stateMutability: "view",
+          type: "function",
+        },
+        {
+          inputs: [],
           name: "owner",
           outputs: [
             {
@@ -2513,6 +2526,20 @@ const deployedContracts = {
           type: "function",
         },
         {
+          inputs: [],
+          name: "setNewAuctionIsAllowed",
+          outputs: [],
+          stateMutability: "nonpayable",
+          type: "function",
+        },
+        {
+          inputs: [],
+          name: "setNewAuctionIsNotAllowed",
+          outputs: [],
+          stateMutability: "nonpayable",
+          type: "function",
+        },
+        {
           inputs: [
             {
               internalType: "uint256",
@@ -2642,7 +2669,7 @@ const deployedContracts = {
         transferOwnership: "@openzeppelin/contracts/access/Ownable.sol",
         paused: "@openzeppelin/contracts/utils/Pausable.sol",
       },
-      deployedOnBlock: 29608169,
+      deployedOnBlock: 29719683,
     },
   },
   421614: {

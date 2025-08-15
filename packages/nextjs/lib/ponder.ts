@@ -1,9 +1,7 @@
 import * as schema from "../../../packages/ponder/ponder.schema";
 import { createClient } from "@ponder/client";
+import { sqlEndpoint } from "~~/lib/ponderLight";
 
-// Prefer same-origin + Next.js rewrites for dev; allow override via env when needed
-const baseUrl = (process.env.NEXT_PUBLIC_PONDER_URL ?? "http://localhost:42069").replace(/\/$/, "");
-const sqlEndpoint = `${baseUrl}/sql`.replace(/^\//, "/");
-
+// Typed Ponder client (Drizzle/query builder) reusing endpoint from ponderLight
 export const client = createClient(sqlEndpoint, { schema });
 export { schema };

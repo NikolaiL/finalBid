@@ -41,3 +41,16 @@ const baseAuctionEnded = getPonderQueryOptions(
 export const auctionEndedQueryOptions = {
   ...baseAuctionEnded,
 } as const;
+
+const latestAuctionCreated = getPonderQueryOptions(
+  client,
+  db =>
+    db
+      .select()
+      .from((schema as any).auctionCreated)
+      .orderBy(desc((schema as any).auctionCreated.auctionId))
+      .limit(1) as any,
+);
+export const latestAuctionCreatedQueryOptions = {
+  ...latestAuctionCreated,
+} as const;

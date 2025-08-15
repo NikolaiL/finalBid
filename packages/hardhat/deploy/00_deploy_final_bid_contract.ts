@@ -119,6 +119,42 @@ const deployYourContract: DeployFunction = async function (hre: HardhatRuntimeEn
     await usdcContractInstance.connect(deployerSigner).mint("0x8D6230427a37986D25Fe4D5B3d0aaEF1b924fEd6", 100000000);
     console.log("👋 Minted USDC to 0x8D6230427a37986D25Fe4D5B3d0aaEF1b924fEd6");
   }
+
+  // ------------------------------------------------------------
+  // Persist token metadata for the Next.js app (symbol/decimals)
+  // ------------------------------------------------------------
+  try {
+    const network = await hre.ethers.provider.getNetwork();
+    const chainId = Number(network.chainId);
+
+    // Read the token address from the FinalBidContract to ensure accuracy
+    const finalBid = await hre.ethers.getContractAt("FinalBidContract", finalBidContract.address);
+    const resolvedTokenAddress: string = await finalBid.tokenAddress();
+
+    // Minimal ERC20 ABI for symbol/decimals (works for both Dummy and real USDC)
+    const erc20Abi = ["function symbol() view returns (string)", "function decimals() view returns (uint8)"];
+    const erc20 = await hre.ethers.getContractAt(erc20Abi, resolvedTokenAddress);
+    const [symbol, decimals] = await Promise.all([erc20.symbol(), erc20.decimals()]);
+
+    const out = {
+      chainId,
+      finalBidAddress: finalBidContract.address,
+      tokenAddress: resolvedTokenAddress,
+      symbol,
+      decimals: Number(decimals),
+    };
+
+    const fs = await import("fs/promises");
+    const path = await import("path");
+    // Hardhat process.cwd() is packages/hardhat, so go up one level into nextjs/public
+    const targetDir = path.join(process.cwd(), "../nextjs/public");
+    const target = path.join(targetDir, "token-meta.json");
+    await fs.mkdir(targetDir, { recursive: true });
+    await fs.writeFile(target, JSON.stringify(out, null, 2), "utf8");
+    console.log("📝 Wrote token meta:", target, out);
+  } catch (err) {
+    console.log("⚠️  Failed to write token-meta.json:", err);
+  }
 };
 
 export default deployYourContract;

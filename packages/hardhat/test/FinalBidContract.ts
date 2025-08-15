@@ -151,6 +151,15 @@ describe("FinalBidContract", function () {
 
       expect(platformFeesClaimedAfter).to.be.greaterThan(platformFeesClaimedBefore);
     });
+    it("Should not allow to start a new auction if newAuctionIsAllowed is false", async function () {
+      await finalBidContract.setNewAuctionIsNotAllowed();
+      await expect(finalBidContract.startAuction()).to.be.revertedWith("New auction not allowed");
+    });
+    it("Should allow to start a new auction if newAuctionIsAllowed is true", async function () {
+      await finalBidContract.setNewAuctionIsAllowed();
+      await finalBidContract.startAuction();
+      expect(await finalBidContract.auctionId()).to.equal(1);
+    });
   });
 
   describe("Place Bid", function () {

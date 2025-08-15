@@ -363,54 +363,65 @@ const Home: NextPage = () => {
   return (
     <div className="w-full max-w-3xl mx-auto px-2 sm:px-4 lg:px-6">
       <div className="flex flex-col gap-1 py-4 px-2">
+        {/* Auction info */}
         <div className="bg-base-100 p-5 rounded-3xl shadow-md shadow-secondary border border-base-300 flex flex-col gap-3">
-          <div className="flex flex-col sm:flex-row flex-wrap gap-0 sm:gap-4 items-center">
-            <div className="text-center sm:text-right flex-1 text-2xl font-light items-end">Win</div>
-            <div className="flex-none items-center font-black text-6xl text-primary">
-              {formatToken(latestAuction?.auctionAmount)}
-            </div>
-            <div className="text-center sm:text-left flex-1 text-2xl font-light items-start">
-              {String(tokenSymbol ?? "USDC")}!
-            </div>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 items-center">
-            <div className="text-center sm:text-left">
-              <div className="text-sm text-base-content/70">Current top bid</div>
-              <div className="text-2xl font-black">{formatToken(currentBid)}</div>
-              <div className="text-sm text-base-content/70"> {String(tokenSymbol ?? "USDC")}</div>
-            </div>
-            <div className="text-center">
-              {topBidderAddress !== ZERO_ADDRESS && (
-                <>
-                  <div className="text-sm text-base-content/70">Top bid by</div>
-                  <div className="flex justify-center">
-                    <AddressFarcaster address={topBidderAddress} />
+          {latestAuction ? (
+            <>
+              <div className="flex flex-col sm:flex-row flex-wrap gap-0 sm:gap-4 items-center">
+                <div className="text-center sm:text-right flex-1 text-2xl font-light items-end">Win</div>
+                <div className="flex-none items-center font-black text-6xl text-primary">
+                  {formatToken(latestAuction?.auctionAmount)}
+                </div>
+                <div className="text-center sm:text-left flex-1 text-2xl font-light items-start">
+                  {String(tokenSymbol ?? "USDC")}
+                </div>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 items-center">
+                <div className="text-center sm:text-left">
+                  <div className="text-sm text-base-content/70">
+                    {topBidderAddress !== ZERO_ADDRESS ? "Current top bid" : "Be the first to bid"}
                   </div>
-                </>
-              )}
+                  <div className="text-2xl font-black">{formatToken(currentBid)}</div>
+                  <div className="text-sm text-base-content/70"> {String(tokenSymbol ?? "USDC")}</div>
+                </div>
+                <div className="text-center">
+                  {topBidderAddress !== ZERO_ADDRESS && (
+                    <>
+                      <div className="text-sm text-base-content/70">Top bid by</div>
+                      <div className="flex justify-center">
+                        <AddressFarcaster address={topBidderAddress} />
+                      </div>
+                    </>
+                  )}
+                </div>
+                <div className="text-center sm:text-right">
+                  {isAcutionReadytoBeOver ? (
+                    <>
+                      <div className="text-sm text-base-content/70">&nbsp;</div>
+                      <div className="text-lg font-semibold">Auction Ended</div>
+                    </>
+                  ) : isAuctionOver ? (
+                    <>
+                      <div className="text-sm text-base-content/70">&nbsp;</div>
+                      <div className="text-lg font-semibold">Auction Ended</div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="text-sm text-base-content/70">Auction ends in</div>
+                      <div className="text-2xl font-black">{secondsRemaining}</div>
+                      <div className="text-sm text-base-content/70">seconds</div>
+                    </>
+                  )}
+                </div>
+              </div>
+            </>
+          ) : (
+            <div className="flex flex-col items-center justify-center">
+              <div className="my-8 text-6xl font-black">LFG 🚀🚀🚀</div>
             </div>
-            <div className="text-center sm:text-right">
-              {isAcutionReadytoBeOver ? (
-                <>
-                  <div className="text-sm text-base-content/70">&nbsp;</div>
-                  <div className="text-lg font-semibold">Auction Ended</div>
-                </>
-              ) : isAuctionOver ? (
-                <>
-                  <div className="text-sm text-base-content/70">&nbsp;</div>
-                  <div className="text-lg font-semibold">Auction Ended</div>
-                </>
-              ) : (
-                <>
-                  <div className="text-sm text-base-content/70">Auction ends in</div>
-                  <div className="text-2xl font-black">{secondsRemaining}</div>
-                  <div className="text-sm text-base-content/70">seconds</div>
-                </>
-              )}
-            </div>
-          </div>
+          )}
         </div>
-        <div className="min-h-24 items-center justify-center flex">
+        <div className="min-h-36 items-center justify-center flex">
           {/* Bid action */}
           {/* if address is connected */}
           {connectedAddress ? (
@@ -506,7 +517,9 @@ const Home: NextPage = () => {
           {connectedAddress ? (
             <div className="text-lg font-light text-center items-center">
               Share and earn{" "}
-              <span className="font-black text-lg text-primary">{formatToken(latestAuction?.referralFee)}</span>{" "}
+              <span className="font-black text-lg text-primary">
+                {formatToken(latestAuction?.referralFee ?? 250000)}
+              </span>{" "}
               {String(tokenSymbol ?? "USDC")} from every bid:
             </div>
           ) : (
