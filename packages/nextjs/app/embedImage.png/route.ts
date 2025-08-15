@@ -171,7 +171,7 @@ export async function GET(req: NextRequest) {
       const now = Math.floor(Date.now() / 1000);
       isActive =
         !auction.ended && Number(auction.endTime) > now && Number(auction.highestBid) < Number(auction.auctionAmount);
-      isActive = false;
+      //isActive = false;
       isWinner = auction.highestBidder && auction.highestBidder !== "0x0000000000000000000000000000000000000000";
       //isWinner = false;
 
@@ -190,6 +190,7 @@ export async function GET(req: NextRequest) {
           };
         }
       }
+
       // Calculate time remaining
       const timeRemaining = Math.max(0, Number(auction.endTime) - now);
       timeRemainingFormatted = formatTimeRemaining(timeRemaining);
@@ -253,6 +254,7 @@ export async function GET(req: NextRequest) {
               justifyContent: "center",
               padding: "40px",
               boxShadow: "0 20px 20px #DAE8FF",
+              position: "relative",
             },
           },
           // Prize information
@@ -263,7 +265,8 @@ export async function GET(req: NextRequest) {
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                marginBottom: "0px",
+                position: "absolute",
+                top: "30px",
               },
             },
             React.createElement(
@@ -312,20 +315,20 @@ export async function GET(req: NextRequest) {
                 {
                   style: {
                     textAlign: "center",
-                    marginBottom: "20px",
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
-                    height: "33px",
+                    position: "absolute",
+                    top: "130px",
                   },
                 },
                 React.createElement(
                   "span",
                   {
                     style: {
-                      fontSize: "30px",
+                      fontSize: "24px",
                       fontWeight: "400",
-                      color: "#666666",
+                      color: "#00000080",
                       marginRight: "8px",
                     },
                   },
@@ -335,10 +338,10 @@ export async function GET(req: NextRequest) {
                   "span",
                   {
                     style: {
-                      fontSize: "50px",
+                      fontSize: "36px",
                       fontWeight: "800",
                       fontFamily: "RubikBlack",
-                      color: "#666666",
+                      color: "#00000080",
                       paddingLeft: "10px",
                       paddingRight: "10px",
                     },
@@ -349,9 +352,9 @@ export async function GET(req: NextRequest) {
                   "span",
                   {
                     style: {
-                      fontSize: "30px",
+                      fontSize: "24px",
                       fontWeight: "400",
-                      color: "#666666",
+                      color: "#00000080",
                       marginRight: "8px",
                     },
                   },
@@ -363,8 +366,8 @@ export async function GET(req: NextRequest) {
                   "div",
                   {
                     style: {
-                      marginBottom: "20px",
-                      height: "85px",
+                      top: "180px",
+                      position: "absolute",
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
@@ -375,7 +378,7 @@ export async function GET(req: NextRequest) {
                     "span",
                     {
                       style: {
-                        fontSize: "26px",
+                        fontSize: "24px",
                         fontWeight: "400",
                         color: "#666666",
                         fontFamily: "Rubik",
@@ -393,7 +396,7 @@ export async function GET(req: NextRequest) {
                   }),
                   React.createElement(
                     "span",
-                    { style: { fontSize: "26px", fontWeight: "700", color: "#666666", fontFamily: "RubikBold" } },
+                    { style: { fontSize: "24px", fontWeight: "700", color: "#666666", fontFamily: "RubikBold" } },
                     `${winnerData.username}`,
                   ),
                 )
@@ -408,8 +411,8 @@ export async function GET(req: NextRequest) {
                   "div",
                   {
                     style: {
-                      marginBottom: "20px",
-                      height: "32px",
+                      position: "absolute",
+                      top: "200px",
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
@@ -420,7 +423,7 @@ export async function GET(req: NextRequest) {
                     "span",
                     {
                       style: {
-                        fontSize: "22px",
+                        fontSize: "24px",
                         fontWeight: "400",
                         color: "#666666",
                         fontFamily: "Rubik",
@@ -438,11 +441,11 @@ export async function GET(req: NextRequest) {
                   }),
                   React.createElement(
                     "span",
-                    { style: { fontSize: "22px", fontWeight: "700", color: "#666666", fontFamily: "RubikBold" } },
+                    { style: { fontSize: "24px", fontWeight: "700", color: "#666666", fontFamily: "RubikBold" } },
                     `${winnerData.username}`,
                   ),
                 )
-              : React.createElement("div", { style: { marginBottom: "52px", height: "22px" } }, "  ")
+              : null
             : null,
 
           // Bid button
@@ -457,8 +460,8 @@ export async function GET(req: NextRequest) {
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                marginBottom: "35px",
-                marginTop: "20px",
+                position: "absolute",
+                bottom: "120px",
                 boxShadow: "0 8px 24px rgba(255, 107, 53, 0.3)",
               },
             },
@@ -484,8 +487,8 @@ export async function GET(req: NextRequest) {
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                marginBottom: "0px",
-                marginTop: "14px",
+                position: "absolute",
+                bottom: "30px",
               },
             },
             React.createElement("img", {
@@ -520,7 +523,11 @@ export async function GET(req: NextRequest) {
                 color: "#AAAAAA",
                 textTransform: "uppercase",
                 letterSpacing: "5px",
-                marginTop: "4px",
+                position: "absolute",
+                bottom: "5px",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
               },
             },
             "OUTBURN · OUTLAST · OUTBID",

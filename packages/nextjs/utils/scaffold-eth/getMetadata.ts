@@ -21,6 +21,7 @@ export const getMetadata = ({
       action: {
         url: `${baseUrl}/`,
         type: "launch_miniapp",
+        name: `${process.env.NEXT_PUBLIC_APP_NAME ?? title}`,
       },
     },
   });
