@@ -22,6 +22,8 @@ export const getMetadata = ({
         url: `${baseUrl}/`,
         type: "launch_miniapp",
         name: `${process.env.NEXT_PUBLIC_APP_NAME ?? title}`,
+        splashImageUrl: `${process.env.NEXT_PUBLIC_APP_SPLASH_IMAGE ?? `${baseUrl}/fireBidOrange.png`}`,
+        splashBackgroundColor: `${process.env.NEXT_PUBLIC_SPLASH_BACKGROUND_COLOR ?? "#ffffff"}`,
       },
     },
   });

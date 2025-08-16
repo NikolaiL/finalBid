@@ -3,7 +3,8 @@ import { db } from "ponder:api";
 import schema from "ponder:schema";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
-import { client, graphql } from "ponder";
+import { client, graphql, desc } from "ponder";
+import { replaceBigInts } from "@ponder/utils";
 import { streamSSE } from "hono/streaming";
 
 const app = new Hono();
@@ -208,5 +209,23 @@ app.get("/live/data", c => {
 app.get("/hello", (c) => {
   return c.text("Hello, world!"); 
 }); 
+
+// Return latest auctionCreated row in plain JSON (safe for server-to-server fetches)
+app.get("/latest-auction", async (c) => {
+  try {
+    const rows = await db
+      .select()
+      .from((schema as any).auctionCreated)
+      .orderBy(
+        desc((schema as any).auctionCreated.auctionId),
+      )
+      .limit(1);
+    const row = rows?.[0] ?? null;
+    const safe = replaceBigInts(row, (v) => v.toString());
+    return c.json(safe);
+  } catch (e) {
+    return c.json({ error: e.message }, 500);
+  }
+});
 
 export default app;

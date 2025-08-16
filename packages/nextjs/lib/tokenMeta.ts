@@ -12,7 +12,6 @@ export type TokenMeta = {
 // Reads token meta from static file or /tmp; if missing, fetches from chain and caches to /tmp
 export async function readTokenMeta(): Promise<TokenMeta | null> {
   const staticPath = path.join(process.cwd(), "public/token-meta.json");
-  console.log("staticPath", staticPath);
   const tmpPath = "/tmp/token-meta.json";
 
   const tryRead = async (p: string) => {

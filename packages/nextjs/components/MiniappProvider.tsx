@@ -126,6 +126,18 @@ export const MiniappProvider = ({ children }: MiniappProviderProps) => {
         setIsMiniApp(isMiniApp);
         setIsReady(true);
 
+        //check if user has addd the miniapp, if not force it
+        const ctx = await sdk.context;
+        const added = ctx?.client?.added ?? false;
+        console.log("added:", added);
+        if (!added) {
+          try {
+            await sdk.actions.addMiniApp();
+          } catch (e) {
+            console.log("Error adding mini app:", e);
+          }
+        }
+
         // Expose miniapp data globally for templating systems
         if (typeof window !== "undefined") {
           (window as any).__MINIAPP_DATA__ = {

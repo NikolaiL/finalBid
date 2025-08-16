@@ -1,7 +1,7 @@
 {
   "chainId": 84532,
-  "finalBidAddress": "0xBF5647cc5F757De9Cc37cE3eBEA8F740D33F7997",
-  "tokenAddress": "0xcE295748B9CaCAE371b860E57C58A61F310ebD0F",
-  "symbol": "dUSDC",
+  "finalBidAddress": "0xca580Cbc23347Dc309AaF3c44a13B57472Db10A5",
+  "tokenAddress": "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
+  "symbol": "USDC",
   "decimals": 6
 }
