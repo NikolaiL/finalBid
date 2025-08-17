@@ -45,6 +45,7 @@ const DATA_CHANNEL = `${viewsSchema}_data_changes_channel`;
 
 // Ensure function + triggers exist (idempotent) for our three app tables
 async function ensureDataChangeObjects() {
+  console.log("creating triggers started");
   const driver = (globalThis as any).PONDER_DATABASE.driver;
 
   // Helper to run a statement on admin connection (or pglite instance)
