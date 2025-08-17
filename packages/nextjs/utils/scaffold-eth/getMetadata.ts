@@ -15,7 +15,9 @@ export const getMetadata = ({
   const imageUrl = `${baseUrl}${imageRelativePath}`;
   const miniAppContent = JSON.stringify({
     version: "1",
-    imageUrl: process.env.NEXT_PUBLIC_IMAGE_URL ?? imageUrl,
+    imageUrl: process.env.NEXT_PUBLIC_IMAGE_URL
+      ? process.env.NEXT_PUBLIC_IMAGE_URL + "?t=" + new Date().getTime()
+      : imageUrl + "?t=" + new Date().getTime(),
     button: {
       title: `${process.env.NEXT_PUBLIC_APP_NAME ?? title}`,
       action: {
