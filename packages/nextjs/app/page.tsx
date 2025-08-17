@@ -298,6 +298,7 @@ const Home: NextPage = () => {
 
       const referrer = getReferrer();
       setBidStatus("Placing bid...");
+      console.log("Placing bid... referrer is:", referrer);
 
       await writeContractAsync(
         {
@@ -339,7 +340,10 @@ const Home: NextPage = () => {
   })();
 
   const sharingUrl =
-    (process.env.NEXT_PUBLIC_URL ?? "http://localhost:3000") + (connectedAddress ? "/?ref=" + connectedAddress : "");
+    (process.env.NEXT_PUBLIC_URL ?? "http://localhost:3000") +
+    "/?t=" +
+    new Date().getTime() +
+    (connectedAddress ? "&ref=" + connectedAddress : "");
 
   // Loading gate: wait for initial wallet resolution and first fetch of auction-related data
   const isWalletInitializing = isConnecting || isReconnecting;
