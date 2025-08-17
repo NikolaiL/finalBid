@@ -6,6 +6,7 @@ export default function RefSessionHandler() {
   useEffect(() => {
     if (typeof window !== "undefined") {
       const url = new URL(window.location.href);
+      console.log("url", url);
       // Support both ?ref=... and &ref=... (legacy)
       let ref = url.searchParams.get("ref");
       // Also support clean URLs like /0xabc...[/timestamp]
