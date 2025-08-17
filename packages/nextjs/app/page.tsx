@@ -341,7 +341,7 @@ const Home: NextPage = () => {
 
   const sharingUrl =
     (process.env.NEXT_PUBLIC_URL ?? "http://localhost:3000") +
-    "/?t=" +
+    "?t=" +
     new Date().getTime() +
     (connectedAddress ? "&ref=" + connectedAddress : "");
 
