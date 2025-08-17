@@ -15,6 +15,10 @@ const nextConfig: NextConfig = {
         protocol: "https",
         hostname: "imagedelivery.net",
       },
+      {
+        protocol: "https",
+        hostname: "warpcast.com",
+      },
     ],
   },
   async rewrites() {
