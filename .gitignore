@@ -30,5 +30,4 @@ dist
 .env.local
 .env
 
-
 yarn.lock
