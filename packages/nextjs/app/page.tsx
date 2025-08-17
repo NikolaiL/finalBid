@@ -360,6 +360,10 @@ const Home: NextPage = () => {
     );
   }
 
+  const sharingText = isAuctionActive
+    ? `Bid ${formatToken(nextBid as unknown as bigint)} and win ${formatToken(latestAuction?.auctionAmount)} ${String(tokenSymbol ?? "")} on FireBid: `
+    : `Win on FireBid:`;
+
   return (
     <div className="w-full max-w-3xl mx-auto px-2 sm:px-4 lg:px-6">
       <div className="flex flex-col gap-1 py-4 px-2">
@@ -529,14 +533,14 @@ const Home: NextPage = () => {
             <button
               type="button"
               className="btn btn-accent btn-sm flex items-center gap-2"
-              onClick={() => composeCast({ text: "Win on FireBid:", embeds: [sharingUrl] })}
+              onClick={() => composeCast({ text: sharingText, embeds: [sharingUrl] })}
             >
               <FarcasterIcon className="w-4 h-4" /> Cast
             </button>
             <a
               className="btn btn-accent btn-sm flex items-center gap-2"
               href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(
-                `Win on FireBid:`,
+                sharingText,
               )}&url=${encodeURIComponent(sharingUrl)}`}
               target="_blank"
               rel="noreferrer noopener"
