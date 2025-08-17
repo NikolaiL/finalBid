@@ -341,9 +341,7 @@ const Home: NextPage = () => {
 
   const sharingUrl =
     (process.env.NEXT_PUBLIC_URL ?? "http://localhost:3000") +
-    "?t=" +
-    new Date().getTime() +
-    (connectedAddress ? "&ref=" + connectedAddress : "");
+    (connectedAddress ? "/" + connectedAddress + "/" + new Date().getTime() : "");
 
   // Loading gate: wait for initial wallet resolution and first fetch of auction-related data
   const isWalletInitializing = isConnecting || isReconnecting;

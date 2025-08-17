@@ -21,6 +21,15 @@ const nextConfig: NextConfig = {
     const ponderPort = process.env.PONDER_PORT || "42069";
     const ponderHost = process.env.PONDER_HOST || "localhost";
     return [
+      // Pretty referral URLs like /0xabc.../1699999999999 or /0xabc...
+      {
+        source: "/:ref(0x[a-fA-F0-9]{40})/:ts(\\d+)",
+        destination: "/?ref=:ref&t=:ts",
+      },
+      {
+        source: "/:ref(0x[a-fA-F0-9]{40})",
+        destination: "/?ref=:ref",
+      },
       {
         source: "/ponder/:path*",
         destination: `http://${ponderHost}:${ponderPort}/:path*`,
