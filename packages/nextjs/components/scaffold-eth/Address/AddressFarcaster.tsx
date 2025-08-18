@@ -65,12 +65,14 @@ export const AddressFarcaster = ({
 
   const [user, setUser] = useState<FarcasterUser | null>(null);
   const [fetched, setFetched] = useState(false);
+  const [imageFailed, setImageFailed] = useState(false);
   const { openProfile } = useMiniapp();
 
   useEffect(() => {
     let cancelled = false;
     setUser(null);
     setFetched(false);
+    setImageFailed(false);
     if (!checksum || !isAddress(checksum)) return;
 
     const now = Date.now();
@@ -185,7 +187,7 @@ export const AddressFarcaster = ({
   return (
     <div className="flex items-center shrink-0">
       <div className="shrink-0">
-        {user.pfp_url ? (
+        {user.pfp_url && !imageFailed ? (
           <Image
             src={user.pfp_url}
             alt="Farcaster avatar"
@@ -193,6 +195,7 @@ export const AddressFarcaster = ({
             height={avatarSize}
             className="rounded-full object-cover cursor-pointer"
             onClick={() => openProfile({ fid: user.fid, username: user.username })}
+            onError={() => setImageFailed(true)}
           />
         ) : (
           <BlockieAvatar address={checksum} size={avatarSize} />
