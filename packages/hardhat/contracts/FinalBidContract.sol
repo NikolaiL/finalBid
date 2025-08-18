@@ -122,6 +122,10 @@ contract FinalBidContract is Ownable, Pausable, ReentrancyGuard {
         IERC20(tokenAddress).safeTransfer(owner(), _amount);
     }
 
+    function withdrawExcess(uint256 _amount) public onlyOwner {
+        _withdrawExcess(_amount);
+    }
+
     function _finalizeAuction(uint256 _auctionId) internal {
         Auction storage auction = auctions[_auctionId];
         require (_auctionId > 0 && _auctionId <= auctionId, "Auction not found");

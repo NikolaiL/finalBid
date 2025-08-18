@@ -7,7 +7,7 @@ import { GenericContractsDeclaration } from "~~/utils/scaffold-eth/contract";
 const deployedContracts = {
   8453: {
     FinalBidContract: {
-      address: "0x4c5cDb4570Af596ACC287D1B00D7a6C89C0aaa86",
+      address: "0xf80001bE790ff61089FCd1deD66c161B7e272680",
       abi: [
         {
           inputs: [
@@ -839,6 +839,19 @@ const deployedContracts = {
           type: "function",
         },
         {
+          inputs: [
+            {
+              internalType: "uint256",
+              name: "_amount",
+              type: "uint256",
+            },
+          ],
+          name: "withdrawExcess",
+          outputs: [],
+          stateMutability: "nonpayable",
+          type: "function",
+        },
+        {
           inputs: [],
           name: "withdrawPlatformFees",
           outputs: [],
@@ -856,7 +869,7 @@ const deployedContracts = {
         transferOwnership: "@openzeppelin/contracts/access/Ownable.sol",
         paused: "@openzeppelin/contracts/utils/Pausable.sol",
       },
-      deployedOnBlock: 34365404,
+      deployedOnBlock: 34365686,
     },
   },
   31337: {
