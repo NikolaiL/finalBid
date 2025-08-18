@@ -263,7 +263,7 @@ export default function HomeClient() {
         address: tokenAddress as `0x${string}`,
         abi: ERC20_ABI,
         functionName: "approve",
-        args: [finalBidContractInfo?.address, required * 2n], // buffer
+        args: [finalBidContractInfo?.address, required], // buffer
       });
 
     await writeApprovalTx(approvalTx, {
