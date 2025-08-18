@@ -91,6 +91,7 @@ export default function AboutPage() {
               things exciting.
             </li>
           </ul>
+          <p className="text-base mt-8 text-center mt-6">🔑 Please play responsibly!</p>
           <p className="text-base mt-8 text-center">Have fun! 🚀🚀🚀</p>
         </div>
       </div>
