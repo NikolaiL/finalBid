@@ -61,8 +61,8 @@ export default function AboutPage() {
         <div className="bg-base-100 p-6 rounded-3xl shadow-md shadow-secondary border border-base-300">
           <h2 className="text-2xl font-extrabold mb-2 text-primary">About FireBid</h2>
           <p className="text-base leading-relaxed mb-3">
-            FireBid is a modern take on a penny auction, powered by a smart contract on the Base network. It’s built
-            with Scaffold-ETH 2 and designed to run as a Farcaster Mini App.
+            FireBid is an experiment miniApp, an implementation of penny auction, powered by a smart contract on the
+            Base network. It’s built with Scaffold-ETH 2 and designed to run as a Farcaster Mini App.
           </p>
           <h3 className="text-xl font-bold mt-8 mb-4 text-primary">How it works</h3>
           <ul className="list-disc ml-6 space-y-2">
