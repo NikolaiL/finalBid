@@ -77,16 +77,15 @@ contract FinalBidContract is Ownable, Pausable, ReentrancyGuard {
         // check if _auctionAmount is available
         uint256 availableAmount = IERC20(_tokenAddress).balanceOf(address(this));
         //uint256 totalReferralFees = totalReferralRewardsCollected - totalReferralRewardsClaimed;
-        uint256 totalPlatfromFees = platformFeesCollected > platformFeesClaimed ? platformFeesCollected - platformFeesClaimed : 0;
         require (availableAmount > _startingAmount + _bidIncrement, "Insufficient balance to start auction");
         uint256 auctionAmountToUse = availableAmount > _auctionAmount ? _auctionAmount : availableAmount;
 
         
 
         // if we have less than availableAmount - totalPlatfromFees, we need to use some of the platform fees
-        if (auctionAmountToUse > availableAmount - totalPlatfromFees) {
-            platformFeesClaimed += (auctionAmountToUse - (availableAmount - totalPlatfromFees));
-        }
+        // if (auctionAmountToUse > availableAmount - totalPlatfromFees) {
+        //     platformFeesClaimed += (auctionAmountToUse - (availableAmount - totalPlatfromFees));
+        // }
 
         // if we have more than 1.5x the auction amount, we need to withdraw the excess to deployer
         if (availableAmount > auctionAmountToUse * 3 / 2 ) {
@@ -292,7 +291,12 @@ contract FinalBidContract is Ownable, Pausable, ReentrancyGuard {
         // withdraw from token contract
         require(platformFeesCollected > platformFeesClaimed, "No fees to claim");
         IERC20 token = IERC20(tokenAddress);
+        //get balance of token
+        uint256 tokenBalance = token.balanceOf(address(this));
         uint256 platfromFeesToClaim = platformFeesCollected - platformFeesClaimed;
+        if (platfromFeesToClaim > tokenBalance) {
+            platfromFeesToClaim = tokenBalance;
+        }
         // Effects
         platformFeesClaimed += platfromFeesToClaim;
         // Interactions
