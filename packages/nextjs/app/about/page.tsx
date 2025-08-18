@@ -2,7 +2,7 @@
 
 import { useMemo } from "react";
 import { useReadContract } from "wagmi";
-import { useDeployedContractInfo, useScaffoldReadContract } from "~~/hooks/scaffold-eth";
+import { useScaffoldReadContract } from "~~/hooks/scaffold-eth";
 import { latestAuctionCreatedQueryOptions } from "~~/lib/bid-events-query";
 import { useDataLiveQuery } from "~~/lib/useDataLiveQuery";
 
@@ -20,9 +20,6 @@ function formatToken(amount: bigint | 0n, decimals: number): string {
 }
 
 export default function AboutPage() {
-  // Contract info
-  const { data: finalBidContractInfo } = useDeployedContractInfo({ contractName: "FinalBidContract" });
-
   // Read token address from contract
   const { data: tokenAddress } = useScaffoldReadContract({
     contractName: "FinalBidContract",
@@ -95,11 +92,6 @@ export default function AboutPage() {
           </ul>
           <p className="text-base mt-8 text-center">Have fun! 🚀🚀🚀</p>
         </div>
-        {finalBidContractInfo?.address ? (
-          <div className="text-xs text-base-content/60 text-center">
-            Contract: <span className="font-mono">{finalBidContractInfo.address}</span>
-          </div>
-        ) : null}
       </div>
     </div>
   );
