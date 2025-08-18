@@ -87,7 +87,8 @@ export default function AboutPage() {
             <li>
               If the remaining time is below
               <span className="font-bold mx-1">{Number(auctionDurationIncrease ?? 0)} seconds</span>
-              when a new bid arrives, the auction extends by the same amount to keep things exciting.
+              when a new bid arrives, the auction extends by {Number(auctionDurationIncrease ?? 0)} seconds to keep
+              things exciting.
             </li>
           </ul>
           <p className="text-base mt-8 text-center">Have fun! 🚀🚀🚀</p>
