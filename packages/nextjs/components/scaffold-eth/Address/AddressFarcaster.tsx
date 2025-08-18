@@ -193,7 +193,7 @@ export const AddressFarcaster = ({
             alt="Farcaster avatar"
             width={avatarSize}
             height={avatarSize}
-            className="rounded-full object-cover cursor-pointer"
+            className="rounded-full object-cover cursor-pointer w-6 h-6"
             onClick={() => openProfile({ fid: user.fid, username: user.username })}
             onError={() => setImageFailed(true)}
           />
