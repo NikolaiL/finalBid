@@ -234,7 +234,8 @@ export default function HomeClient() {
       : (latestAuction?.startingAmount as bigint) || 0n;
     const required = nextBid + ((platformFee as bigint) || 0n);
     // Buffer like before to avoid tight allowances
-    return required + (((bidIncrement as bigint) || 0n) + ((platformFee as bigint) || 0n));
+    //return required + (((bidIncrement as bigint) || 0n) + ((platformFee as bigint) || 0n));
+    return required + ((platformFee as bigint) || 0n);
   };
 
   // Fetch allowance as bigint
