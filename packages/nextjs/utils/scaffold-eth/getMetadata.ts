@@ -7,12 +7,21 @@ export const getMetadata = ({
   title,
   description,
   imageRelativePath = "/embedImage.png",
+  ref,
+  t,
+  baseUrlOverride,
 }: {
   title: string;
   description: string;
   imageRelativePath?: string;
+  ref?: string;
+  t?: string | number;
+  baseUrlOverride?: string;
 }): Metadata => {
-  const imageUrl = `${baseUrl}${imageRelativePath}`;
+  const effectiveBase = baseUrlOverride || baseUrl;
+  const imageUrl = `${effectiveBase}${imageRelativePath}`;
+  const cleanPath = ref ? `/${ref}${t ? `/${t}` : ""}` : "/";
+  const actionUrl = `${effectiveBase}${cleanPath}`;
   const miniAppContent = JSON.stringify({
     version: "1",
     imageUrl: process.env.NEXT_PUBLIC_IMAGE_URL
@@ -21,17 +30,17 @@ export const getMetadata = ({
     button: {
       title: `${process.env.NEXT_PUBLIC_APP_NAME ?? title}`,
       action: {
-        url: `${baseUrl}/`,
+        url: actionUrl,
         type: "launch_miniapp",
         name: `${process.env.NEXT_PUBLIC_APP_NAME ?? title}`,
-        splashImageUrl: `${process.env.NEXT_PUBLIC_APP_SPLASH_IMAGE ?? `${baseUrl}/fireBidOrange.png`}`,
+        splashImageUrl: `${process.env.NEXT_PUBLIC_APP_SPLASH_IMAGE ?? `${effectiveBase}/fireBidOrange.png`}`,
         splashBackgroundColor: `${process.env.NEXT_PUBLIC_SPLASH_BACKGROUND_COLOR ?? "#ffffff"}`,
       },
     },
   });
 
   return {
-    metadataBase: new URL(baseUrl),
+    metadataBase: new URL(effectiveBase),
     title: {
       default: title,
       template: titleTemplate,
