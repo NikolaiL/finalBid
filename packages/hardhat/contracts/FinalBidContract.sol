@@ -22,12 +22,13 @@ contract FinalBidContract is Ownable, Pausable, ReentrancyGuard {
     address public tokenAddress;
     uint256 public auctionId;
     uint256 public auctionAmount = 100_000_000; // 100 USDC
-    uint256 public auctionDuration = 3_600; // 1 hour
+    uint256 public auctionDuration = 600; // 10 minutes
     uint256 public auctionDurationIncrease = 60; // 1 minute
     uint256 public startingAmount = 1_000_000; // 1 USDC
     uint256 public bidIncrement = 250_000; // 0.25 USDC
     uint256 public referralFee = 250_000; // 0.25 USDC
     uint256 public platformFee = 1_000_000; // 1 USDC
+    uint256 public deployerFee = 100_000; // 0.1 UCDC
     uint256 public platformFeesCollected;
     uint256 public platformFeesClaimed;
     uint256 public totalReferralRewardsCollected;
@@ -65,6 +66,7 @@ contract FinalBidContract is Ownable, Pausable, ReentrancyGuard {
     event BidIncrementUpdated(uint256 oldAmount, uint256 newAmount);
     event ReferralFeeUpdated(uint256 oldAmount, uint256 newAmount);
     event PlatformFeeUpdated(uint256 oldAmount, uint256 newAmount);
+    event DeployerFeeUpdated(uint256 oldAmount, uint256 newAmount);
 
     // Constructor: Called once on contract deployment
     // Check packages/hardhat/deploy/00_deploy_your_contract.ts
@@ -82,14 +84,11 @@ contract FinalBidContract is Ownable, Pausable, ReentrancyGuard {
 
         
 
-        // if we have less than availableAmount - totalPlatfromFees, we need to use some of the platform fees
-        // if (auctionAmountToUse > availableAmount - totalPlatfromFees) {
-        //     platformFeesClaimed += (auctionAmountToUse - (availableAmount - totalPlatfromFees));
-        // }
-
-        // if we have more than 1.5x the auction amount, we need to withdraw the excess to deployer
-        if (availableAmount > auctionAmountToUse * 3 / 2 ) {
-            uint256 amountToWithdraw = (availableAmount - auctionAmountToUse * 3 / 2) / 2;
+        // if we have more than the auction amount, we will withdraw 50% of that excess 
+        // 20% will be used to increase the pot
+        // 30% will remain in the wallet for the future auctions
+        if (availableAmount > auctionAmountToUse ) {
+            uint256 amountToWithdraw = (availableAmount - auctionAmountToUse ) / 2;
             auctionAmountToUse = auctionAmountToUse + amountToWithdraw / 5;
             _withdrawExcess(amountToWithdraw);
         }
@@ -117,7 +116,7 @@ contract FinalBidContract is Ownable, Pausable, ReentrancyGuard {
         uint256 availableAmount = IERC20(tokenAddress).balanceOf(address(this));
         require(availableAmount > _amount, "Insufficient balance to withdraw");
         // Effects
-        platformFeesClaimed += _amount;
+        
         // Interactions
         IERC20(tokenAddress).safeTransfer(owner(), _amount);
     }
@@ -180,6 +179,9 @@ contract FinalBidContract is Ownable, Pausable, ReentrancyGuard {
         address previousHighestBidder = auction.highestBidder;
         uint256 previousHighestBid = auction.highestBid;
 
+        // Interactions
+        token.safeTransferFrom(msg.sender, address(this), _totalBidAmount);
+
         // Normalize referral
         if (_referral == msg.sender) {
             _referral = address(0);
@@ -192,21 +194,22 @@ contract FinalBidContract is Ownable, Pausable, ReentrancyGuard {
         if (auction.endTime - block.timestamp < auctionDurationIncrease && _bidAmount < auction.auctionAmount) {
             auction.endTime += auctionDurationIncrease;
         }
-        if (_referral != address(0)) {
-            platformFeesCollected += (platformFee - referralFee);
-            totalReferralRewardsCollected += referralFee;
-        } else {
-            platformFeesCollected += platformFee;
-        }
 
-        // Interactions
-        token.safeTransferFrom(msg.sender, address(this), _totalBidAmount);
+        // send previous highest bidder their bid back
         if (previousHighestBidder != address(0)) {
             token.safeTransfer(previousHighestBidder, previousHighestBid);
         }
         if (_referral != address(0)) {
             token.safeTransfer(_referral, referralFee);
+            token.safeTransfer(owner(), deployerFee);
+            totalReferralRewardsCollected += referralFee;
+        } else {
+            token.safeTransfer(owner(), referralFee+deployerFee);
         }
+
+        // send deployer fee to owner
+
+        platformFeesCollected += (platformFee - referralFee - deployerFee);
 
         emit BidPlaced(auctionId, msg.sender, _bidAmount, _referral, auction.endTime);
     }
@@ -256,15 +259,22 @@ contract FinalBidContract is Ownable, Pausable, ReentrancyGuard {
     }
 
     function setReferralFee(uint256 _referralFee) external onlyOwner {
-        require(_referralFee <= platformFee, "referralFee cannot exceed platformFee");
+        require(_referralFee <= platformFee-deployerFee, "referralFee + deployerFee cannot exceed platformFee");
         uint256 old = referralFee;
         referralFee = _referralFee;
         emit ReferralFeeUpdated(old, _referralFee);
     }
 
+    function setDeployerFee(uint256 _deployerFee) external onlyOwner {
+        require(_deployerFee <= platformFee-referralFee, "referralFee + deployerFee cannot exceed platformFee");
+        uint256 old = deployerFee;
+        deployerFee = _deployerFee;
+        emit DeployerFeeUpdated(old, _deployerFee);
+    }
+
     function setPlatformFee(uint256 _platformFee) external onlyOwner {
         require(_platformFee > 0, "platformFee must be > 0");
-        require(referralFee <= _platformFee, "referralFee cannot exceed platformFee");
+        require(referralFee + deployerFee <= _platformFee, "referralFee + deployerFee cannot exceed platformFee");
         uint256 old = platformFee;
         platformFee = _platformFee;
         // Ensure referralFee is not larger than platformFee after update

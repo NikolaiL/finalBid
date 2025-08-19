@@ -7,7 +7,7 @@ import { GenericContractsDeclaration } from "~~/utils/scaffold-eth/contract";
 const deployedContracts = {
   8453: {
     FinalBidContract: {
-      address: "0xf80001bE790ff61089FCd1deD66c161B7e272680",
+      address: "0x2fC0bb5C383C6Bb20f617Fd4F12C3D4fe8A8771E",
       abi: [
         {
           inputs: [
@@ -303,6 +303,25 @@ const deployedContracts = {
           anonymous: false,
           inputs: [
             {
+              indexed: false,
+              internalType: "uint256",
+              name: "oldAmount",
+              type: "uint256",
+            },
+            {
+              indexed: false,
+              internalType: "uint256",
+              name: "newAmount",
+              type: "uint256",
+            },
+          ],
+          name: "DeployerFeeUpdated",
+          type: "event",
+        },
+        {
+          anonymous: false,
+          inputs: [
+            {
               indexed: true,
               internalType: "address",
               name: "previousOwner",
@@ -537,6 +556,19 @@ const deployedContracts = {
         },
         {
           inputs: [],
+          name: "deployerFee",
+          outputs: [
+            {
+              internalType: "uint256",
+              name: "",
+              type: "uint256",
+            },
+          ],
+          stateMutability: "view",
+          type: "function",
+        },
+        {
+          inputs: [],
           name: "endAuction",
           outputs: [],
           stateMutability: "nonpayable",
@@ -713,6 +745,19 @@ const deployedContracts = {
           type: "function",
         },
         {
+          inputs: [
+            {
+              internalType: "uint256",
+              name: "_deployerFee",
+              type: "uint256",
+            },
+          ],
+          name: "setDeployerFee",
+          outputs: [],
+          stateMutability: "nonpayable",
+          type: "function",
+        },
+        {
           inputs: [],
           name: "setNewAuctionIsAllowed",
           outputs: [],
@@ -869,7 +914,7 @@ const deployedContracts = {
         transferOwnership: "@openzeppelin/contracts/access/Ownable.sol",
         paused: "@openzeppelin/contracts/utils/Pausable.sol",
       },
-      deployedOnBlock: 34365686,
+      deployedOnBlock: 34403037,
     },
   },
   31337: {

@@ -143,10 +143,10 @@ describe("FinalBidContract", function () {
       expect(auction.highestBid).to.equal(1000000); // 1 USD
       expect(auction.bidCount).to.equal(1);
 
-      expect((await dummyUsdcContract.balanceOf(finalBidContract.target)) - balanceBefore).to.equal(2000000);
+      expect((await dummyUsdcContract.balanceOf(finalBidContract.target)) - balanceBefore).to.equal(1650000);
 
       // we should also expect the platformFeesCollected to be 1000000
-      expect(await finalBidContract.platformFeesCollected()).to.equal(1000000);
+      expect(await finalBidContract.platformFeesCollected()).to.equal(650000);
 
       // we should also expect the referralRewards to be 1000000
     });
@@ -345,16 +345,13 @@ describe("FinalBidContract", function () {
       await ethers.provider.send("evm_mine");
 
       const ownerBalanceBefore = await dummyUsdcContract.balanceOf(owner.address);
-      const platformFeesClaimedBefore = await finalBidContract.platformFeesClaimed();
 
       await finalBidContract.endAuction();
       await finalBidContract.startAuction();
 
       const ownerBalanceAfter = await dummyUsdcContract.balanceOf(owner.address);
-      const platformFeesClaimedAfter = await finalBidContract.platformFeesClaimed();
 
       expect(ownerBalanceAfter).to.be.greaterThan(ownerBalanceBefore);
-      expect(platformFeesClaimedAfter).to.be.greaterThan(platformFeesClaimedBefore);
     });
   });
 
@@ -399,17 +396,18 @@ describe("FinalBidContract", function () {
 
     it("Referral fee must be <= platform fee; only owner can set", async function () {
       const platformFee = await finalBidContract.platformFee();
+      const deployerFee = await finalBidContract.deployerFee();
       await expect((finalBidContract.connect(user1) as any).setReferralFee(1)).to.be.reverted;
       // greater than platformFee should revert
       await expect((finalBidContract as any).setReferralFee(platformFee + 1n)).to.be.revertedWith(
-        "referralFee cannot exceed platformFee",
+        "referralFee + deployerFee cannot exceed platformFee",
       );
       // equal should work
-      await (finalBidContract as any).setReferralFee(platformFee);
-      expect(await finalBidContract.referralFee()).to.equal(platformFee);
+      await (finalBidContract as any).setReferralFee(platformFee - deployerFee);
+      expect(await finalBidContract.referralFee()).to.equal(platformFee - deployerFee);
       // less should work
-      await (finalBidContract as any).setReferralFee(platformFee - 1n);
-      expect(await finalBidContract.referralFee()).to.equal(platformFee - 1n);
+      await (finalBidContract as any).setReferralFee(platformFee - deployerFee - 1n);
+      expect(await finalBidContract.referralFee()).to.equal(platformFee - deployerFee - 1n);
     });
 
     it("Platform fee > 0 and cannot be set below current referralFee; only owner can set", async function () {
@@ -419,11 +417,24 @@ describe("FinalBidContract", function () {
       // set referralFee to some value, then attempt lowering platformFee below it
       await (finalBidContract as any).setReferralFee(500000); // 0.5 USDC
       await expect((finalBidContract as any).setPlatformFee(499999)).to.be.revertedWith(
-        "referralFee cannot exceed platformFee",
+        "referralFee + deployerFee cannot exceed platformFee",
       );
 
       await (finalBidContract as any).setPlatformFee(1500000); // 1.5 USDC
       expect(await finalBidContract.platformFee()).to.equal(1500000);
+    });
+
+    it("Deployer fee must be <= platform fee - referral fee; only owner can set", async function () {
+      const platformFee = await finalBidContract.platformFee();
+      const referralFee = await finalBidContract.referralFee();
+      await expect((finalBidContract.connect(user1) as any).setDeployerFee(100)).to.be.reverted;
+      await expect((finalBidContract as any).setDeployerFee(platformFee + 1n)).to.be.revertedWith(
+        "referralFee + deployerFee cannot exceed platformFee",
+      );
+      await (finalBidContract as any).setDeployerFee(platformFee - referralFee);
+      expect(await finalBidContract.deployerFee()).to.equal(platformFee - referralFee);
+      await (finalBidContract as any).setDeployerFee(platformFee - referralFee - 1n);
+      expect(await finalBidContract.deployerFee()).to.equal(platformFee - referralFee - 1n);
     });
   });
 });
