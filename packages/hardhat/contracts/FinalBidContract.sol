@@ -32,6 +32,8 @@ contract FinalBidContract is Ownable, Pausable, ReentrancyGuard {
     uint256 public platformFeesCollected;
     uint256 public platformFeesClaimed;
     uint256 public totalReferralRewardsCollected;
+    uint256 public percentageToWithdraw = 10;
+    uint256 public percentageToUse = 40;
     bool public newAuctionIsAllowed = true;
     //uint256 public totalReferralRewardsClaimed;
     
@@ -79,8 +81,8 @@ contract FinalBidContract is Ownable, Pausable, ReentrancyGuard {
         // check if _auctionAmount is available
         uint256 availableAmount = IERC20(_tokenAddress).balanceOf(address(this));
         //uint256 totalReferralFees = totalReferralRewardsCollected - totalReferralRewardsClaimed;
-        require (availableAmount > _startingAmount + _bidIncrement, "Insufficient balance to start auction");
-        uint256 auctionAmountToUse = availableAmount > _auctionAmount ? _auctionAmount : availableAmount;
+        require (availableAmount * percentageToUse / 100 > _startingAmount + _bidIncrement, "Insufficient balance to start auction");
+        uint256 auctionAmountToUse = availableAmount * percentageToUse / 100;
 
         
 
@@ -88,8 +90,7 @@ contract FinalBidContract is Ownable, Pausable, ReentrancyGuard {
         // 20% will be used to increase the pot
         // 30% will remain in the wallet for the future auctions
         if (availableAmount > auctionAmountToUse ) {
-            uint256 amountToWithdraw = (availableAmount - auctionAmountToUse ) / 2;
-            auctionAmountToUse = auctionAmountToUse + amountToWithdraw / 5;
+            uint256 amountToWithdraw = availableAmount * percentageToWithdraw / 100;
             _withdrawExcess(amountToWithdraw);
         }
 
@@ -282,6 +283,20 @@ contract FinalBidContract is Ownable, Pausable, ReentrancyGuard {
             referralFee = platformFee;
         }
         emit PlatformFeeUpdated(old, _platformFee);
+    }
+
+    function setPercentageToWithdraw(uint256 _percentageToWithdraw) external onlyOwner {
+        require(_percentageToWithdraw > 0, "percentageToWithdraw must be > 0");
+        require(_percentageToWithdraw <= 100, "percentageToWithdraw must be <= 100");
+        require(_percentageToWithdraw + percentageToUse <= 100, "percentageToWithdraw + percentageToUse cannot exceed 100");
+        percentageToWithdraw = _percentageToWithdraw;
+    }
+
+    function setPercentageToUse(uint256 _percentageToUse) external onlyOwner {
+        require(_percentageToUse > 0, "percentageToUse must be > 0");
+        require(_percentageToUse <= 100, "percentageToUse must be <= 100");
+        require(_percentageToUse + percentageToWithdraw <= 100, "percentageToUse + percentageToWithdraw cannot exceed 100");
+        percentageToUse = _percentageToUse;
     }
 
     function setNewAuctionIsAllowed() external onlyOwner {

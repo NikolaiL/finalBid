@@ -102,7 +102,8 @@ describe("FinalBidContract", function () {
       expect(await finalBidContract.auctionId()).to.equal(1);
 
       const auction = await finalBidContract.auctions(1);
-      expect(auction.auctionAmount).to.equal(balance);
+      const percentageToUse = await finalBidContract.percentageToUse();
+      expect(auction.auctionAmount).to.equal((BigInt(balance) * percentageToUse) / 100n);
     });
     it("Should revert if the balance is below the minimum amount", async function () {
       // burn everything from the contract

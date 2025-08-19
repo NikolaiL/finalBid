@@ -7,7 +7,7 @@ import { GenericContractsDeclaration } from "~~/utils/scaffold-eth/contract";
 const deployedContracts = {
   8453: {
     FinalBidContract: {
-      address: "0x2fC0bb5C383C6Bb20f617Fd4F12C3D4fe8A8771E",
+      address: "0x32E2cCf46A15b1De442D779073743a8f4586d499",
       abi: [
         {
           inputs: [
@@ -621,6 +621,32 @@ const deployedContracts = {
           type: "function",
         },
         {
+          inputs: [],
+          name: "percentageToUse",
+          outputs: [
+            {
+              internalType: "uint256",
+              name: "",
+              type: "uint256",
+            },
+          ],
+          stateMutability: "view",
+          type: "function",
+        },
+        {
+          inputs: [],
+          name: "percentageToWithdraw",
+          outputs: [
+            {
+              internalType: "uint256",
+              name: "",
+              type: "uint256",
+            },
+          ],
+          stateMutability: "view",
+          type: "function",
+        },
+        {
           inputs: [
             {
               internalType: "address",
@@ -775,6 +801,32 @@ const deployedContracts = {
           inputs: [
             {
               internalType: "uint256",
+              name: "_percentageToUse",
+              type: "uint256",
+            },
+          ],
+          name: "setPercentageToUse",
+          outputs: [],
+          stateMutability: "nonpayable",
+          type: "function",
+        },
+        {
+          inputs: [
+            {
+              internalType: "uint256",
+              name: "_percentageToWithdraw",
+              type: "uint256",
+            },
+          ],
+          name: "setPercentageToWithdraw",
+          outputs: [],
+          stateMutability: "nonpayable",
+          type: "function",
+        },
+        {
+          inputs: [
+            {
+              internalType: "uint256",
               name: "_platformFee",
               type: "uint256",
             },
@@ -914,7 +966,7 @@ const deployedContracts = {
         transferOwnership: "@openzeppelin/contracts/access/Ownable.sol",
         paused: "@openzeppelin/contracts/utils/Pausable.sol",
       },
-      deployedOnBlock: 34403037,
+      deployedOnBlock: 34409836,
     },
   },
   31337: {
