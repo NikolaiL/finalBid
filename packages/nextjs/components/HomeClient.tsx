@@ -12,6 +12,7 @@ import {
   useTransactor,
 } from "~~/hooks/scaffold-eth";
 import { auctionCreatedQueryOptions, auctionEndedQueryOptions, bidPlacedQueryOptions } from "~~/lib/bid-events-query";
+import { getAddressDisplayName } from "~~/lib/farcaster";
 import { useDataLiveQuery } from "~~/lib/useDataLiveQuery";
 
 const DISPLAY_DECIMALS = Number(process.env.NEXT_PUBLIC_DISPLAY_DECIMALS) ?? 2;
@@ -169,6 +170,7 @@ export default function HomeClient() {
   // State for button and transaction status
   const [isBidding, setIsBidding] = useState(false);
   const [bidStatus, setBidStatus] = useState<string>("");
+  const [latestResults, setLatestResults] = useState<string>("");
 
   // Constants
 
@@ -198,6 +200,30 @@ export default function HomeClient() {
     const id = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(id);
   }, []);
+
+  // Fetch latest auction results when PastAuctions changes
+  useEffect(() => {
+    const fetchResults = async () => {
+      const latestResults = PastAuctions.slice(0, 5); // Get latest 5 auctions
+      if (latestResults.length === 0) {
+        setLatestResults("");
+        return;
+      }
+
+      const resultsPromises = latestResults.map(async event => {
+        const winner = event.winner as string;
+        const displayName = await getAddressDisplayName(winner);
+        const amount = formatToken(event.amount as bigint);
+        const bid = formatToken(event.highestBid as bigint);
+        const token = String(tokenSymbol ?? "USDC");
+        return `${displayName} wins ${amount} ${token} with a ${bid} bid`;
+      });
+
+      const results = await Promise.all(resultsPromises);
+      setLatestResults("Here are the latest winners:\n" + results.join("\n"));
+    };
+    fetchResults();
+  }, [PastAuctions, tokenSymbol]);
 
   const nowSecBig = BigInt(Math.floor(now / 1000));
   const isAcutionReadytoBeOver =
@@ -359,9 +385,13 @@ export default function HomeClient() {
     );
   }
 
-  const sharingText = isAuctionActive
-    ? `Bid ${formatToken(nextBid as unknown as bigint)} and win ${formatToken(latestAuction?.auctionAmount)} ${String(tokenSymbol ?? "")} on FireBid: `
-    : `Win on FireBid:`;
+  const signature = "@FireBid by @nikoalii.eth";
+
+  const baseText = isAuctionActive
+    ? `Bid ${formatToken(nextBid as unknown as bigint)} and win ${formatToken(latestAuction?.auctionAmount)} ${String(tokenSymbol ?? "")} on FireBid`
+    : `Win on FireBid`;
+
+  const sharingText = latestResults ? `${baseText}\n\n${latestResults}\n\n${signature}` : `${baseText}\n${signature}`;
 
   return (
     <div className="w-full max-w-3xl mx-auto px-2 sm:px-4 lg:px-6">

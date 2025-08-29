@@ -8,6 +8,7 @@ import type { Address as AddressType } from "viem";
 import { getAddress, isAddress } from "viem";
 import { useMiniapp } from "~~/components/MiniappProvider";
 import { BlockieAvatar } from "~~/components/scaffold-eth";
+import { getFarcasterUser } from "~~/lib/farcaster";
 
 type Size = "xs" | "sm" | "base" | "lg" | "xl" | "2xl" | "3xl";
 
@@ -37,13 +38,6 @@ type FarcasterUser = {
   display_name?: string;
   pfp_url?: string;
 };
-
-type ApiResponse = { user: null | any };
-
-const CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
-const memoryCache = new Map<string, { user: FarcasterUser | null; expiresAt: number }>();
-const cacheKeyFor = (addr: string) => `farUser:${addr}`;
-const inFlightRequests = new Map<string, Promise<FarcasterUser | null>>();
 
 type AddressFarcasterProps = {
   address?: AddressType;
@@ -75,64 +69,7 @@ export const AddressFarcaster = ({
     setImageFailed(false);
     if (!checksum || !isAddress(checksum)) return;
 
-    const now = Date.now();
-
-    // 1) Check in-memory cache
-    const mem = memoryCache.get(checksum);
-    if (mem && mem.expiresAt > now) {
-      setUser(mem.user);
-      setFetched(true);
-      return;
-    }
-
-    // 2) Check localStorage cache
-    try {
-      if (typeof window !== "undefined") {
-        const raw = window.localStorage.getItem(cacheKeyFor(checksum));
-        if (raw) {
-          const parsed = JSON.parse(raw) as { user: FarcasterUser | null; expiresAt: number };
-          if (parsed && parsed.expiresAt > now) {
-            memoryCache.set(checksum, parsed);
-            setUser(parsed.user);
-            setFetched(true);
-            return;
-          }
-        }
-      }
-    } catch {
-      // ignore storage errors
-    }
-
-    // 3) Fetch and populate caches with in-flight deduplication
-    const runFetch = () => {
-      const url = `/api/farcaster-user?address=${checksum}`;
-      const p = fetch(url)
-        .then(res => res.json())
-        .then((json: ApiResponse) => {
-          const u = json?.user;
-          const fcUser: FarcasterUser | null = u
-            ? { fid: u.fid, username: u.username, display_name: u.display_name, pfp_url: u.pfp_url }
-            : null;
-          const record = { user: fcUser, expiresAt: now + CACHE_TTL_MS };
-          memoryCache.set(checksum, record);
-          try {
-            if (typeof window !== "undefined") {
-              window.localStorage.setItem(cacheKeyFor(checksum), JSON.stringify(record));
-            }
-          } catch {
-            // ignore storage errors
-          }
-          return fcUser;
-        })
-        .finally(() => {
-          inFlightRequests.delete(checksum);
-        });
-      inFlightRequests.set(checksum, p);
-      return p;
-    };
-
-    const inFlight = inFlightRequests.get(checksum) || runFetch();
-    inFlight
+    getFarcasterUser(checksum)
       .then(fcUser => {
         if (cancelled) return;
         setUser(fcUser);
@@ -141,6 +78,7 @@ export const AddressFarcaster = ({
       .finally(() => {
         if (!cancelled) setFetched(true);
       });
+
     return () => {
       cancelled = true;
     };
