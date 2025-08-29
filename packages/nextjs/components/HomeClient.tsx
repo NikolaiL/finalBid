@@ -154,7 +154,7 @@ export default function HomeClient() {
   ] as const;
 
   // Read allowance using useReadContract with automatic refetching
-  const { refetch: refetchAllowance } = useReadContract({
+  const { data: allowance, refetch: refetchAllowance } = useReadContract({
     address: tokenAddress as `0x${string}`,
     abi: ERC20_ABI,
     functionName: "allowance",
@@ -171,6 +171,9 @@ export default function HomeClient() {
   const [isBidding, setIsBidding] = useState(false);
   const [bidStatus, setBidStatus] = useState<string>("");
   const [latestResults, setLatestResults] = useState<string>("");
+  const [isApproving20, setIsApproving20] = useState(false);
+  const [isApproving100, setIsApproving100] = useState(false);
+  const [isRevoking, setIsRevoking] = useState(false);
 
   // Constants
 
@@ -337,6 +340,8 @@ export default function HomeClient() {
           },
           onBlockConfirmation: (receipt: any) => {
             console.log("Bid confirmed in block:", receipt.blockNumber);
+            // Refresh allowance after block confirmation with delay to ensure blockchain state is updated
+            setTimeout(() => refetchAllowance(), 3000);
           },
           successMessage: "Bid placed!",
           blockConfirmations: 1,
@@ -348,9 +353,99 @@ export default function HomeClient() {
       setBidStatus("");
     } finally {
       setBidStatus("Bid placed!");
+      // Refresh allowance after bid to show updated amount with delay to ensure blockchain state is updated
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      await refetchAllowance();
       await new Promise(r => setTimeout(r, 3000));
       setIsBidding(false);
       setBidStatus("");
+    }
+  };
+
+  // Handle pre-approval for specific amounts
+  const handlePreApprove = async (amount: number) => {
+    if (!tokenAddress || !finalBidContractInfo?.address) return;
+
+    // Set the appropriate approval state based on amount
+    if (amount === 20) {
+      setIsApproving20(true);
+    } else if (amount === 100) {
+      setIsApproving100(true);
+    }
+
+    try {
+      const amountInWei = BigInt(amount * 10 ** TOKEN_DECIMALS);
+
+      const approvalTx = () =>
+        writeTokenContractAsync({
+          address: tokenAddress as `0x${string}`,
+          abi: ERC20_ABI,
+          functionName: "approve",
+          args: [finalBidContractInfo.address, amountInWei],
+        });
+
+      await writeApprovalTx(approvalTx, {
+        blockConfirmations: 1,
+        successMessage: `${amount} ${String(tokenSymbol ?? "USDC")} approved!`,
+        awaitingConfirmationMessage: "Awaiting approval confirmation",
+        waitingForTransactionMessage: "Waiting for approval to complete.",
+        onBlockConfirmation: (receipt: any) => {
+          console.log("Approval confirmed in block:", receipt.blockNumber);
+          // Refresh allowance after block confirmation with delay to ensure blockchain state is updated
+          setTimeout(() => refetchAllowance(), 3000);
+        },
+      });
+
+      // Refresh allowance after approval with delay to ensure blockchain state is updated
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      await refetchAllowance();
+    } catch (error) {
+      console.error("Pre-approval error:", error);
+      toast.error("Failed to approve allowance");
+    } finally {
+      // Reset the appropriate approval state based on amount
+      if (amount === 20) {
+        setIsApproving20(false);
+      } else if (amount === 100) {
+        setIsApproving100(false);
+      }
+    }
+  };
+
+  // Handle allowance revocation
+  const handleRevoke = async () => {
+    if (!tokenAddress || !finalBidContractInfo?.address) return;
+
+    setIsRevoking(true);
+    try {
+      const approvalTx = () =>
+        writeTokenContractAsync({
+          address: tokenAddress as `0x${string}`,
+          abi: ERC20_ABI,
+          functionName: "approve",
+          args: [finalBidContractInfo.address, 0n],
+        });
+
+      await writeApprovalTx(approvalTx, {
+        blockConfirmations: 1,
+        successMessage: "Allowance revoked!",
+        awaitingConfirmationMessage: "Awaiting revocation confirmation",
+        waitingForTransactionMessage: "Waiting for revocation to complete.",
+        onBlockConfirmation: (receipt: any) => {
+          console.log("Revocation confirmed in block:", receipt.blockNumber);
+          // Refresh allowance after block confirmation with delay to ensure blockchain state is updated
+          setTimeout(() => refetchAllowance(), 3000);
+        },
+      });
+
+      // Refresh allowance after revocation with delay to ensure blockchain state is updated
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      await refetchAllowance();
+    } catch (error) {
+      console.error("Revocation error:", error);
+      toast.error("Failed to revoke allowance");
+    } finally {
+      setIsRevoking(false);
     }
   };
 
@@ -589,6 +684,41 @@ export default function HomeClient() {
             </a>
           </div>
         </div>
+
+        {/* preapprove block */}
+        {/* only show if wallet is connected */}
+        {connectedAddress && (
+          <div className="bg-base-100 p-4 rounded-3xl shadow-md shadow-secondary border border-base-300 flex flex-col gap-1 mt-4">
+            <div className="text-lg font-light text-center items-center">Pre-Approve for faster bidding</div>
+            <div className="text-center items-center text-gray-500 text-xs mb-2">
+              Your current allowance is {allowance ? formatToken(allowance as bigint) : "0"}{" "}
+              {String(tokenSymbol ?? "USDC")}.{" "}
+            </div>
+            <div className="flex gap-2 justify-center items-center">
+              <button
+                className="btn btn-accent btn-sm flex items-center gap-2"
+                onClick={() => handlePreApprove(20)}
+                disabled={isApproving20 || isApproving100}
+              >
+                {isApproving20 ? "Approving..." : "20 USDC"}
+              </button>
+              <button
+                className="btn btn-accent btn-sm flex items-center gap-2"
+                onClick={() => handlePreApprove(100)}
+                disabled={isApproving20 || isApproving100}
+              >
+                {isApproving100 ? "Approving..." : "100 USDC"}
+              </button>
+              <button
+                className="btn btn-secondary btn-sm flex items-center gap-2"
+                onClick={handleRevoke}
+                disabled={isRevoking}
+              >
+                {isRevoking ? "Revoking..." : "Revoke"}
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Bid history */}
         <div className="flex flex-col gap-4 mt-4">
