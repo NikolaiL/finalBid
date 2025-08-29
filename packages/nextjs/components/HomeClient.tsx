@@ -480,7 +480,7 @@ export default function HomeClient() {
     );
   }
 
-  const signature = "🔥 @FireBid by @nikoalii.eth";
+  const signature = "🔥 @firebid by @nikolaii.eth";
 
   const baseText = isAuctionActive
     ? `Bid ${formatToken(nextBid as unknown as bigint)} and win ${formatToken(latestAuction?.auctionAmount)} ${String(tokenSymbol ?? "")} on FireBid`
