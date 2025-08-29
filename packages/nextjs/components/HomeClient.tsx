@@ -223,7 +223,7 @@ export default function HomeClient() {
       });
 
       const results = await Promise.all(resultsPromises);
-      setLatestResults("Here are the latest winners:\n" + results.join("\n"));
+      setLatestResults("🎉 Congrats to the latest winners:\n" + results.join("\n") + "\n\nCould You be next?");
     };
     fetchResults();
   }, [PastAuctions, tokenSymbol]);
@@ -480,7 +480,7 @@ export default function HomeClient() {
     );
   }
 
-  const signature = "@FireBid by @nikoalii.eth";
+  const signature = "🔥 @FireBid by @nikoalii.eth";
 
   const baseText = isAuctionActive
     ? `Bid ${formatToken(nextBid as unknown as bigint)} and win ${formatToken(latestAuction?.auctionAmount)} ${String(tokenSymbol ?? "")} on FireBid`
