@@ -219,7 +219,7 @@ export default function HomeClient() {
         const amount = formatToken(event.amount as bigint);
         const bid = formatToken(event.highestBid as bigint);
         const token = String(tokenSymbol ?? "USDC");
-        return `${displayName} wins ${amount} ${token} with a ${bid} bid`;
+        return `${displayName} bids ${bid} wins  ${amount} ${token}`;
       });
 
       const results = await Promise.all(resultsPromises);
