@@ -523,7 +523,7 @@ export default function HomeClient() {
     return stats.sort((a, b) => {
       return Number(b.lastBidAmount) - Number(a.lastBidAmount);
     });
-  }, [BidEvents, latestAuction, connectedAddress, topBidderAddress, nextBid]);
+  }, [BidEvents, latestAuction, connectedAddress, topBidderAddress, nextBid, platformFee]);
 
   const sharingUrl =
     (process.env.NEXT_PUBLIC_URL ?? "http://localhost:3000") +
