@@ -36,7 +36,44 @@ async function verifyRecaptcha(token: string): Promise<boolean> {
     });
 
     const data = await response.json();
-    return data.success === true;
+
+    // Log the full reCAPTCHA response for debugging
+    console.log("reCAPTCHA response:", {
+      success: data.success,
+      score: data.score,
+      action: data.action,
+      hostname: data.hostname,
+      challenge_ts: data.challenge_ts,
+      error_codes: data["error-codes"],
+    });
+
+    // Check if the request was successful
+    if (!data.success) {
+      console.log("reCAPTCHA verification failed - success: false");
+      return false;
+    }
+
+    // Check the score (0.0 = bot, 1.0 = human)
+    // Using 0.5 as the default threshold as recommended by Google
+    const scoreThreshold = 0.5;
+    const score = data.score || 0;
+
+    console.log(`reCAPTCHA score: ${score} (threshold: ${scoreThreshold})`);
+
+    if (score < scoreThreshold) {
+      console.log(`reCAPTCHA score too low: ${score} < ${scoreThreshold}`);
+      return false;
+    }
+
+    // Verify the action matches what we expect
+    const expectedAction = "bid";
+    if (data.action !== expectedAction) {
+      console.log(`reCAPTCHA action mismatch: expected '${expectedAction}', got '${data.action}'`);
+      return false;
+    }
+
+    console.log("reCAPTCHA verification successful");
+    return true;
   } catch (error) {
     console.error("reCAPTCHA verification failed:", error);
     return false;
@@ -98,7 +135,6 @@ export async function POST(request: NextRequest) {
       console.log("reCAPTCHA verification failed for token:", humanProof);
       return NextResponse.json({ error: "Human verification failed" }, { status: 400 });
     }
-    console.log("Human verification successful");
 
     // Step 2: Generate signed message
     console.log("Generating signed message...");
