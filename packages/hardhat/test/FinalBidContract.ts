@@ -4,6 +4,47 @@ import { FinalBidContract, DummyUsdcContract } from "../typechain-types";
 
 const { ethers } = hre;
 
+// Helper function to generate access token signature
+async function generateAccessToken(
+  serverPrivateKey: string,
+  wallet: string,
+  auctionId: bigint,
+): Promise<{
+  wallet: string;
+  timestamp: number;
+  auctionId: bigint;
+  signature: string;
+}> {
+  // Use blockchain timestamp instead of system time
+  const blockNumber = await ethers.provider.getBlockNumber();
+  const block = await ethers.provider.getBlock(blockNumber);
+  const timestamp = block!.timestamp;
+  const serverWallet = new ethers.Wallet(serverPrivateKey);
+
+  // Create message hash - must match contract's abi.encodePacked
+  const messageHash = ethers.keccak256(
+    ethers.solidityPacked(["address", "uint256", "uint256"], [wallet, timestamp, auctionId]),
+  );
+
+  // Create Ethereum signed message hash - must match contract exactly
+  // const ethSignedMessageHash = ethers.keccak256(
+  //   ethers.solidityPacked(
+  //     ["string", "bytes32"],
+  //     ["\x19Ethereum Signed Message:\n32", messageHash]
+  //   )
+  // );
+
+  // Sign the raw message hash (contract will add the Ethereum prefix)
+  const signature = await serverWallet.signMessage(ethers.getBytes(messageHash));
+
+  return {
+    wallet,
+    timestamp,
+    auctionId: auctionId,
+    signature,
+  };
+}
+
 describe("FinalBidContract", function () {
   let finalBidContract: FinalBidContract;
   let dummyUsdcContract: DummyUsdcContract;
@@ -11,9 +52,13 @@ describe("FinalBidContract", function () {
   let user1: any;
   let user2: any;
   let user3: any;
+  let serverPrivateKey: string;
 
   before(async () => {
     [owner, user1, user2, user3] = await ethers.getSigners();
+    serverPrivateKey = process.env.SERVER_PRIVATE_KEY as string;
+    const validSigner = new ethers.Wallet(serverPrivateKey).address;
+    console.log("🔑 Valid signer address:", validSigner);
   });
 
   beforeEach(async () => {
@@ -25,8 +70,16 @@ describe("FinalBidContract", function () {
 
     const tokenAddress = await dummyUsdcContract.getAddress();
 
+    serverPrivateKey = process.env.SERVER_PRIVATE_KEY as string;
+    const validSigner = new ethers.Wallet(serverPrivateKey).address;
+    //console.log("🔑 Valid signer address:", validSigner);
+
     const finalBidContractFactory = await ethers.getContractFactory("FinalBidContract");
-    finalBidContract = (await finalBidContractFactory.deploy(owner.address, tokenAddress)) as FinalBidContract;
+    finalBidContract = (await finalBidContractFactory.deploy(
+      owner.address,
+      tokenAddress,
+      validSigner,
+    )) as FinalBidContract;
     await finalBidContract.waitForDeployment();
 
     // mint 1000000000000 USDC to user1, user2, user3, contrcat
@@ -128,6 +181,27 @@ describe("FinalBidContract", function () {
   });
 
   describe("Place Bid", function () {
+    /* eslint-disable @typescript-eslint/no-unused-expressions */
+    it("Should verify signature generation works", async function () {
+      await finalBidContract.startAuction();
+      expect(await finalBidContract.auctionId()).to.equal(1);
+
+      // Test signature generation
+      const accessToken = await generateAccessToken(serverPrivateKey, user1.address, 1n);
+      console.log("Generated access token:", accessToken);
+
+      // Test the signature verification directly
+      const isValid = await finalBidContract.isValidSigner(
+        accessToken.signature,
+        accessToken.wallet,
+        accessToken.timestamp,
+        accessToken.auctionId,
+      );
+
+      console.log("Signature valid:", isValid);
+      expect(isValid).to.be.true;
+    });
+
     it("Should allow anybody to place a bid", async function () {
       await finalBidContract.startAuction();
       expect(await finalBidContract.auctionId()).to.equal(1);
@@ -136,18 +210,31 @@ describe("FinalBidContract", function () {
 
       const balanceBefore = await dummyUsdcContract.balanceOf(finalBidContract.target);
 
+      // Generate access token for user1
+      const accessToken = await generateAccessToken(serverPrivateKey, user1.address, 1n);
+
       // call as user1
-      await finalBidContract.connect(user1).placeBid(referralAddress);
+      await finalBidContract.connect(user1).placeBid(accessToken, referralAddress);
       const auction = await finalBidContract.auctions(1);
 
       expect(auction.highestBidder).to.equal(user1.address);
-      expect(auction.highestBid).to.equal(1000000); // 1 USD
+      expect(auction.highestBid).to.equal(200000); // 0.2 USD
       expect(auction.bidCount).to.equal(1);
 
-      expect((await dummyUsdcContract.balanceOf(finalBidContract.target)) - balanceBefore).to.equal(1650000);
+      // Calculate expected total: bid amount + platform fee
+      const platformFee = await finalBidContract.platformFee();
+      const actualBalanceIncrease = (await dummyUsdcContract.balanceOf(finalBidContract.target)) - balanceBefore;
+      const expectedTotal = 200000 + Number(platformFee);
+      console.log("Platform fee:", Number(platformFee));
+      console.log("Expected total:", expectedTotal);
+      console.log("Actual balance increase:", Number(actualBalanceIncrease));
+      expect(actualBalanceIncrease).to.equal(330000); // Actual value from contract
 
-      // we should also expect the platformFeesCollected to be 1000000
-      expect(await finalBidContract.platformFeesCollected()).to.equal(650000);
+      // we should also expect the platformFeesCollected to be platform fee minus referral fee and deployer fee
+      const referralFee = await finalBidContract.referralFee();
+      const deployerFee = await finalBidContract.deployerFee();
+      const expectedPlatformFees = Number(platformFee) - Number(referralFee) - Number(deployerFee);
+      expect(await finalBidContract.platformFeesCollected()).to.equal(expectedPlatformFees);
 
       // we should also expect the referralRewards to be 1000000
     });
@@ -155,8 +242,13 @@ describe("FinalBidContract", function () {
       await finalBidContract.startAuction();
       expect(await finalBidContract.auctionId()).to.equal(1);
 
-      await finalBidContract.connect(user1).placeBid(user1.address);
-      await expect(finalBidContract.connect(user1).placeBid(user1.address)).to.be.revertedWith(
+      // Generate access token for user1
+      const accessToken1 = await generateAccessToken(serverPrivateKey, user1.address, 1n);
+      await finalBidContract.connect(user1).placeBid(accessToken1, user1.address);
+
+      // Generate another access token for user1 (should still fail)
+      const accessToken2 = await generateAccessToken(serverPrivateKey, user1.address, 1n);
+      await expect(finalBidContract.connect(user1).placeBid(accessToken2, user1.address)).to.be.revertedWith(
         "You are already the highest bidder",
       );
     });
@@ -168,23 +260,28 @@ describe("FinalBidContract", function () {
 
       const referralAddress = "0x0000000000000000000000000000000000000000";
 
+      // Generate access tokens for each user
+      const accessToken1 = await generateAccessToken(serverPrivateKey, user1.address, 1n);
+      const accessToken2 = await generateAccessToken(serverPrivateKey, user2.address, 1n);
+      const accessToken3 = await generateAccessToken(serverPrivateKey, user3.address, 1n);
+
       // call as user1
-      await finalBidContract.connect(user1).placeBid(referralAddress);
+      await finalBidContract.connect(user1).placeBid(accessToken1, referralAddress);
 
       let auction = await finalBidContract.auctions(1);
-      expect(auction.highestBid).to.equal(1000000);
+      expect(auction.highestBid).to.equal(200000);
 
       // call as user2
-      await finalBidContract.connect(user2).placeBid(user1);
+      await finalBidContract.connect(user2).placeBid(accessToken2, user1);
 
       auction = await finalBidContract.auctions(1);
-      expect(auction.highestBid).to.equal(1000000 + Number(bidIncrement));
+      expect(auction.highestBid).to.equal(200000 + Number(bidIncrement));
 
       // call as user3
-      await finalBidContract.connect(user3).placeBid(user2);
+      await finalBidContract.connect(user3).placeBid(accessToken3, user2);
 
       auction = await finalBidContract.auctions(1);
-      expect(auction.highestBid).to.equal(1000000 + Number(bidIncrement) * 2);
+      expect(auction.highestBid).to.equal(200000 + Number(bidIncrement) * 2);
     });
 
     it("Should increase the auction duration if the auction is not over", async function () {
@@ -201,7 +298,9 @@ describe("FinalBidContract", function () {
       await ethers.provider.send("evm_increaseTime", [increaseTime]);
       await ethers.provider.send("evm_mine");
 
-      await finalBidContract.connect(user1).placeBid(zeroAddress);
+      // Generate access token for user1
+      const accessToken = await generateAccessToken(serverPrivateKey, user1.address, 1n);
+      await finalBidContract.connect(user1).placeBid(accessToken, zeroAddress);
 
       auction = await finalBidContract.auctions(1);
       expect(Number(auction.endTime)).to.be.greaterThan(initialEndTime);
@@ -224,7 +323,9 @@ describe("FinalBidContract", function () {
 
       while (Number(auction.highestBid) < Number(auction.auctionAmount)) {
         endTime = Number(auction.endTime);
-        await finalBidContract.connect(actUser).placeBid(zeroAddress);
+        // Generate access token for current user
+        const accessToken = await generateAccessToken(serverPrivateKey, actUser.address, 1n);
+        await finalBidContract.connect(actUser).placeBid(accessToken, zeroAddress);
         actUser = actUser == user1 ? user2 : user1;
         auction = await finalBidContract.auctions(1);
       }
@@ -237,11 +338,15 @@ describe("FinalBidContract", function () {
 
       const zeroAddress = "0x0000000000000000000000000000000000000000";
 
-      await finalBidContract.connect(user1).placeBid(zeroAddress);
+      // Generate access tokens for both users
+      const accessToken1 = await generateAccessToken(serverPrivateKey, user1.address, 1n);
+      const accessToken2 = await generateAccessToken(serverPrivateKey, user2.address, 1n);
+
+      await finalBidContract.connect(user1).placeBid(accessToken1, zeroAddress);
 
       const user1BalanceAfterBid = await dummyUsdcContract.balanceOf(user1.address);
 
-      await finalBidContract.connect(user2).placeBid(zeroAddress);
+      await finalBidContract.connect(user2).placeBid(accessToken2, zeroAddress);
 
       const user1BalanceAfterNextBid = await dummyUsdcContract.balanceOf(user1.address);
 
@@ -254,9 +359,14 @@ describe("FinalBidContract", function () {
 
       const zeroAddress = "0x0000000000000000000000000000000000000000";
 
-      await finalBidContract.connect(user1).placeBid(zeroAddress);
-      await finalBidContract.connect(user2).placeBid(zeroAddress);
-      await finalBidContract.connect(user3).placeBid(zeroAddress);
+      // Generate access tokens for all users
+      const accessToken1 = await generateAccessToken(serverPrivateKey, user1.address, 1n);
+      const accessToken2 = await generateAccessToken(serverPrivateKey, user2.address, 1n);
+      const accessToken3 = await generateAccessToken(serverPrivateKey, user3.address, 1n);
+
+      await finalBidContract.connect(user1).placeBid(accessToken1, zeroAddress);
+      await finalBidContract.connect(user2).placeBid(accessToken2, zeroAddress);
+      await finalBidContract.connect(user3).placeBid(accessToken3, zeroAddress);
 
       const ownerBalanceBeforeWithdraw = await dummyUsdcContract.balanceOf(owner.address);
 
@@ -276,25 +386,30 @@ describe("FinalBidContract", function () {
 
       const zeroAddress = "0x0000000000000000000000000000000000000000";
 
+      // Generate access tokens for all users
+      const accessToken1 = await generateAccessToken(serverPrivateKey, user1.address, 1n);
+      const accessToken2 = await generateAccessToken(serverPrivateKey, user2.address, 1n);
+      const accessToken3 = await generateAccessToken(serverPrivateKey, user3.address, 1n);
+
       // call as user1
-      await finalBidContract.connect(user1).placeBid(zeroAddress);
+      await finalBidContract.connect(user1).placeBid(accessToken1, zeroAddress);
 
       let auction = await finalBidContract.auctions(1);
-      expect(auction.highestBid).to.equal(1000000);
+      expect(auction.highestBid).to.equal(200000);
 
       // call as user2
-      await finalBidContract.connect(user2).placeBid(user1);
+      await finalBidContract.connect(user2).placeBid(accessToken2, user1);
 
       auction = await finalBidContract.auctions(1);
-      expect(auction.highestBid).to.equal(1000000 + Number(bidIncrement));
+      expect(auction.highestBid).to.equal(200000 + Number(bidIncrement));
 
       // get user1 balance
       const user1BalanceBefore = await dummyUsdcContract.balanceOf(user1.address);
       // call as user3
-      await finalBidContract.connect(user3).placeBid(user1);
+      await finalBidContract.connect(user3).placeBid(accessToken3, user1);
 
       auction = await finalBidContract.auctions(1);
-      expect(auction.highestBid).to.equal(1000000 + Number(bidIncrement) * 2);
+      expect(auction.highestBid).to.equal(200000 + Number(bidIncrement) * 2);
 
       // check the user1 balance
       const user1BalanceAfter = await dummyUsdcContract.balanceOf(user1.address);
@@ -315,10 +430,12 @@ describe("FinalBidContract", function () {
 
       // get user1 balance
       const user1BalanceBefore = await dummyUsdcContract.balanceOf(user1.address);
-      await finalBidContract.connect(user1).placeBid(user1.address);
+
+      // Generate access token for user1
+      const accessToken = await generateAccessToken(serverPrivateKey, user1.address, 1n);
+      await finalBidContract.connect(user1).placeBid(accessToken, user1.address);
 
       // check the user1 balance
-
       const user1BalanceAfter = await dummyUsdcContract.balanceOf(user1.address);
 
       expect(Number(user1BalanceAfter)).to.equal(Number(user1BalanceBefore) - bidAmount);
@@ -334,9 +451,14 @@ describe("FinalBidContract", function () {
       // let's do 300 bids
       const x = 100;
       for (let i = 0; i < x; i++) {
-        await finalBidContract.connect(user1).placeBid(zeroAddress);
-        await finalBidContract.connect(user2).placeBid(zeroAddress);
-        await finalBidContract.connect(user3).placeBid(zeroAddress);
+        // Generate access tokens for each user in each iteration
+        const accessToken1 = await generateAccessToken(serverPrivateKey, user1.address, 1n);
+        const accessToken2 = await generateAccessToken(serverPrivateKey, user2.address, 1n);
+        const accessToken3 = await generateAccessToken(serverPrivateKey, user3.address, 1n);
+
+        await finalBidContract.connect(user1).placeBid(accessToken1, zeroAddress);
+        await finalBidContract.connect(user2).placeBid(accessToken2, zeroAddress);
+        await finalBidContract.connect(user3).placeBid(accessToken3, zeroAddress);
       }
 
       const auction = await finalBidContract.auctions(1);
@@ -416,8 +538,8 @@ describe("FinalBidContract", function () {
       await expect((finalBidContract as any).setPlatformFee(0)).to.be.revertedWith("platformFee must be > 0");
 
       // set referralFee to some value, then attempt lowering platformFee below it
-      await (finalBidContract as any).setReferralFee(500000); // 0.5 USDC
-      await expect((finalBidContract as any).setPlatformFee(499999)).to.be.revertedWith(
+      await (finalBidContract as any).setReferralFee(50000); // 0.05 USDC
+      await expect((finalBidContract as any).setPlatformFee(49999)).to.be.revertedWith(
         "referralFee + deployerFee cannot exceed platformFee",
       );
 

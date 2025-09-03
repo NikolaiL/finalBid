@@ -21,6 +21,13 @@ const rubik = Rubik({
 const ScaffoldEthApp = ({ children }: { children: React.ReactNode }) => {
   return (
     <html suppressHydrationWarning className={`${rubik.variable}`}>
+      <head>
+        <script
+          src="https://www.google.com/recaptcha/api.js?render=6LdtW7wrAAAAAIK-Zvxja48Nl0NdLy5qnoEft4h8"
+          async
+          defer
+        ></script>
+      </head>
       <body>
         <ThemeProvider enableSystem>
           <ScaffoldEthAppWithProviders>

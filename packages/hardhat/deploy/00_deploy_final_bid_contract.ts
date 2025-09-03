@@ -1,5 +1,6 @@
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 import { DeployFunction } from "hardhat-deploy/types";
+import { getSignerAddress } from "../../nextjs/lib/getSignerAddress";
 
 /**
  * Deploys a contract named "YourContract" using the deployer account and
@@ -66,10 +67,14 @@ const deployYourContract: DeployFunction = async function (hre: HardhatRuntimeEn
   // wait for 3 seconds to avoid nonce error
   await new Promise(resolve => setTimeout(resolve, 3000));
 
+  // For now, use deployer as valid signer. In production, this should be a separate server key
+  const validSigner = getSignerAddress();
+  console.log("🔑 Valid signer address:", validSigner);
+
   const finalBidContract = await deploy("FinalBidContract", {
     from: deployer,
     // Contract constructor arguments
-    args: [deployer, usdcAddress],
+    args: [deployer, usdcAddress, validSigner],
     log: true,
     // autoMine: can be passed to the deploy function to make the deployment process faster on local networks by
     // automatically mining the contract deployment transaction. There is no effect on live networks.

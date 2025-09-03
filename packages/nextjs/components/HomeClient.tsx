@@ -326,16 +326,74 @@ export default function HomeClient() {
     console.log("Updated allowance:", allowance);
   };
 
+  // Helper function to verify human (reCAPTCHA)
+  const verifyHuman = async (): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      if (typeof window !== "undefined" && (window as any).grecaptcha) {
+        (window as any).grecaptcha.ready(() => {
+          const siteKey = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY;
+          if (!siteKey) {
+            reject(new Error("reCAPTCHA site key not configured"));
+            return;
+          }
+
+          (window as any).grecaptcha
+            .execute(siteKey, { action: "bid" })
+            .then((token: string) => resolve(token))
+            .catch(reject);
+        });
+      } else {
+        reject(new Error("reCAPTCHA not loaded"));
+      }
+    });
+  };
+
+  // Helper function to get access token from backend
+  const getAccessToken = async (params: { address: string; humanProof: string; auctionId: bigint }) => {
+    const response = await fetch("/api/verify-and-sign", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        ...params,
+        auctionId: params.auctionId.toString(),
+      }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || "Failed to get access token");
+    }
+
+    return response.json();
+  };
+
   const handlePlaceBid = async () => {
     if (!connectedAddress) return;
 
     setIsBidding(true);
-    setBidStatus("Checking allowance...");
+    setBidStatus("Placing Bid...");
 
     try {
+      // Step 1: Check allowance
+      setBidStatus("Checking allowance...");
       const required = calcRequiredAmount() as bigint;
       await ensureAllowance(required);
 
+      // Step 2: Human verification (reCAPTCHA)
+      const humanProof = await verifyHuman();
+      if (!humanProof) {
+        throw new Error("Human verification failed");
+      }
+
+      // Step 3: Get signed access token from backend
+      //setBidStatus("Getting access token...");
+      const { accessToken } = await getAccessToken({
+        address: connectedAddress,
+        humanProof,
+        auctionId: latestAuction?.auctionId || 0n,
+      });
+
+      // Step 4: Place bid with access token
       const referrer = getReferrer();
       setBidStatus("Placing bid...");
       console.log("Placing bid... referrer is:", referrer);
@@ -343,7 +401,15 @@ export default function HomeClient() {
       await writeContractAsync(
         {
           functionName: "placeBid",
-          args: [referrer],
+          args: [
+            {
+              wallet: accessToken.message.wallet,
+              timestamp: accessToken.message.timestamp,
+              auctionId: accessToken.message.auctionId,
+              signature: accessToken.signature,
+            },
+            referrer,
+          ] as any,
         },
         {
           onError: (error: any) => {

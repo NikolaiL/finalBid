@@ -10,6 +10,7 @@ import "@openzeppelin/contracts/utils/Pausable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 
 /**
  * A smart contract that allows changing a state variable of the contract and tracking the changes
@@ -21,22 +22,32 @@ contract FinalBidContract is Ownable, Pausable, ReentrancyGuard {
     // State Variables
     address public tokenAddress;
     uint256 public auctionId;
-    uint256 public auctionAmount = 100_000_000; // 100 USDC
-    uint256 public auctionDuration = 600; // 10 minutes
-    uint256 public auctionDurationIncrease = 60; // 1 minute
-    uint256 public startingAmount = 1_000_000; // 1 USDC
-    uint256 public bidIncrement = 250_000; // 0.25 USDC
-    uint256 public referralFee = 250_000; // 0.25 USDC
-    uint256 public platformFee = 1_000_000; // 1 USDC
-    uint256 public deployerFee = 100_000; // 0.1 UCDC
+    uint256 public auctionAmount = 20_000_000; // 20 USDC
+    uint256 public auctionDuration = 3_600; // 1 hour
+    uint256 public auctionDurationIncrease = 45; // 1 minute
+    uint256 public startingAmount = 200_000; // 0.2 USDC
+    uint256 public bidIncrement = 10_000; // 0.01 USDC
+    uint256 public referralFee = 50_000; // 0.05 USDC
+    uint256 public platformFee = 200_000; // 0.2 USDC
+    uint256 public deployerFee = 20_000; // 0.02 UCDC
     uint256 public platformFeesCollected;
     uint256 public platformFeesClaimed;
     uint256 public totalReferralRewardsCollected;
-    uint256 public percentageToWithdraw = 10;
-    uint256 public percentageToUse = 40;
+    uint256 public percentageToWithdraw = 1;
+    uint256 public percentageToUse = 10;
     bool public newAuctionIsAllowed = true;
     //uint256 public totalReferralRewardsClaimed;
     
+    // Signature verification for bot prevention
+    address public validSigner;
+    uint256 public accessTokenValidity = 30; // 30 seconds
+
+    struct AccessToken {
+        address wallet;
+        uint256 timestamp;
+        uint256 auctionId;
+        bytes signature;
+    }
 
     struct Auction {
         uint256 auctionAmount;
@@ -72,12 +83,13 @@ contract FinalBidContract is Ownable, Pausable, ReentrancyGuard {
 
     // Constructor: Called once on contract deployment
     // Check packages/hardhat/deploy/00_deploy_your_contract.ts
-    constructor(address _owner, address _tokenAddress) Ownable(_owner) {
+    constructor(address _owner, address _tokenAddress, address _validSigner) Ownable(_owner) {
         // Owner is set in the Ownable constructor
         tokenAddress = _tokenAddress;
+        validSigner = _validSigner;
     }
 
-    function _createAuction(uint256 _auctionId, address _tokenAddress, uint256 _auctionAmount, uint256 _startTime, uint256 _endTime, uint256 _startingAmount, uint256 _bidIncrement, uint256 _referralFee, uint256 _platformFee) internal {
+    function _createAuction(uint256 _auctionId, address _tokenAddress, uint256 _startTime, uint256 _endTime, uint256 _startingAmount, uint256 _bidIncrement, uint256 _referralFee, uint256 _platformFee) internal {
         // check if _auctionAmount is available
         uint256 availableAmount = IERC20(_tokenAddress).balanceOf(address(this));
         //uint256 totalReferralFees = totalReferralRewardsCollected - totalReferralRewardsClaimed;
@@ -149,7 +161,7 @@ contract FinalBidContract is Ownable, Pausable, ReentrancyGuard {
         // if auctionId > 0, we need to finalize the old auction, pay the winner etc...
         auctionId ++;
         // create new auction
-        _createAuction(auctionId, tokenAddress, auctionAmount, block.timestamp, block.timestamp + auctionDuration, startingAmount, bidIncrement, referralFee, platformFee);
+        _createAuction(auctionId, tokenAddress, block.timestamp, block.timestamp + auctionDuration, startingAmount, bidIncrement, referralFee, platformFee);
         
     }
 
@@ -161,7 +173,9 @@ contract FinalBidContract is Ownable, Pausable, ReentrancyGuard {
     }
 
     // this call must also transfer the bid amount in tokenAddress to the contract
-    function placeBid(address _referral) public whenNotPaused nonReentrant {
+    function placeBid(AccessToken calldata accessToken, address _referral) public whenNotPaused nonReentrant {
+        // Verify access token
+        require(verifyAccessToken(accessToken, msg.sender), "Invalid access token");
         Auction storage auction = auctions[auctionId];
         require(auction.startTime <= block.timestamp && auction.endTime > block.timestamp && auction.ended == false, "Auction not active");
         require(auction.highestBidder != msg.sender, "You are already the highest bidder");
@@ -349,6 +363,58 @@ contract FinalBidContract is Ownable, Pausable, ReentrancyGuard {
      */
     receive() external payable {}
     
+    // Signature verification functions for bot prevention
+    
+    function verifyAccessToken(
+        AccessToken calldata token,
+        address sender
+    ) internal view returns (bool) {
+        // Check if signer is valid
+        if (!isValidSigner(token.signature, token.wallet, token.timestamp, token.auctionId)) {
+            return false;
+        }
+
+        // Check if wallet matches sender
+        if (token.wallet != sender) {
+            return false;
+        }
+
+        // Check if timestamp is within allowed time
+        if (block.timestamp > token.timestamp + accessTokenValidity) {
+            return false;
+        }
+
+        // Check if auction ID matches current auction
+        if (token.auctionId != auctionId) {
+            return false;
+        }
+
+        return true;
+    }
+
+    function isValidSigner(
+        bytes calldata signature,
+        address wallet,
+        uint256 timestamp,
+        uint256 _auctionId
+    ) public view returns (bool) {
+        bytes32 messageHash = keccak256(abi.encodePacked(wallet, timestamp, _auctionId));
+        bytes32 ethSignedMessageHash = keccak256(abi.encodePacked("\x19Ethereum Signed Message:\n32", messageHash));
+        
+        address recoveredSigner = ECDSA.recover(ethSignedMessageHash, signature);
+        return recoveredSigner == validSigner;
+    }
+
+    // Admin function to update valid signer
+    function setValidSigner(address _validSigner) external onlyOwner {
+        validSigner = _validSigner;
+    }
+
+    // Admin function to update access token validity
+    function setAccessTokenValidity(uint256 _accessTokenValidity) external onlyOwner {
+        require(_accessTokenValidity > 0, "Access token validity must be greater than 0");
+        accessTokenValidity = _accessTokenValidity;
+    }
 
 
 }
