@@ -818,11 +818,11 @@ export default function HomeClient() {
                         </div>
                       </td>
                       <td className="p-1 text-right font-mono text-sm">
-                        <div className="text-base-content/70">{stat.numBids}</div>
-                        <div>{stat.lastBidAmount > 0n ? formatToken(stat.lastBidAmount) : "0.00"}</div>
+                        <div className="text-base-content/70">{stat.numBids > 0 ? stat.numBids : ""}</div>
+                        <div>{stat.lastBidAmount > 0n ? formatToken(stat.lastBidAmount) : ""}</div>
                       </td>
                       <td className="p-1 text-right font-mono text-sm">
-                        <div className={stat.potentialLoss > 0n ? "text-error" : "text-base-content"}>
+                        <div className={stat.potentialLoss > 0n ? "text-error" : "text-base-content/50"}>
                           {stat.potentialLoss > 0n ? `-${formatToken(BigInt(stat.potentialLoss))}` : "0.00"}
                         </div>
                         <div className={stat.potentialProfit > 0n ? "font-bold text-success" : "font-bold text-error"}>
