@@ -11,7 +11,11 @@ import {
   useScaffoldWriteContract,
   useTransactor,
 } from "~~/hooks/scaffold-eth";
-import { auctionCreatedQueryOptions, auctionEndedQueryOptions, bidPlacedQueryOptions } from "~~/lib/bid-events-query";
+import {
+  auctionCreatedQueryOptions,
+  auctionEndedQueryOptions,
+  createBidPlacedQueryOptions,
+} from "~~/lib/bid-events-query";
 import { getAddressDisplayName } from "~~/lib/farcaster";
 import { useDataLiveQuery } from "~~/lib/useDataLiveQuery";
 
@@ -69,6 +73,22 @@ export default function HomeClient() {
   const { address: connectedAddress, isConnecting, isReconnecting } = useAccount();
   const { composeCast } = useMiniapp();
 
+  // First, fetch auction created events to get the latest auction
+  const auctionCreatedQuery: any = useDataLiveQuery(auctionCreatedQueryOptions as any);
+  const AuctionCreatedEvents: any[] = useMemo(
+    () => (auctionCreatedQuery?.data ?? []) as any[],
+    [auctionCreatedQuery?.data],
+  );
+
+  // Get the latest auction ID
+  const latestAuctionId = useMemo(() => {
+    if (AuctionCreatedEvents.length === 0) return null;
+    return AuctionCreatedEvents[0]?.auctionId;
+  }, [AuctionCreatedEvents]);
+
+  // Only fetch bids after we have the latest auction ID
+  const bidPlacedQueryOptions = useMemo(() => createBidPlacedQueryOptions(latestAuctionId), [latestAuctionId]);
+
   const bidEventsQuery: any = useDataLiveQuery(bidPlacedQueryOptions as any);
   const BidEvents: any[] = useMemo(() => (bidEventsQuery?.data ?? []) as any[], [bidEventsQuery?.data]);
 
@@ -80,12 +100,6 @@ export default function HomeClient() {
     const zero = ZERO_ADDRESS.toLowerCase();
     return (AuctionEndedEvents || []).filter((e: any) => (e?.winner || "").toLowerCase() !== zero);
   }, [AuctionEndedEvents]);
-
-  const auctionCreatedQuery: any = useDataLiveQuery(auctionCreatedQueryOptions as any);
-  const AuctionCreatedEvents: any[] = useMemo(
-    () => (auctionCreatedQuery?.data ?? []) as any[],
-    [auctionCreatedQuery?.data],
-  );
 
   const { writeContractAsync } = useScaffoldWriteContract({
     contractName: "FinalBidContract",
@@ -457,6 +471,60 @@ export default function HomeClient() {
     return endTime > nowSecBig ? Number(endTime - nowSecBig) : 0;
   })();
 
+  // Calculate user statistics for the current auction
+  const userStats = useMemo(() => {
+    if (!BidEvents || !latestAuction) return [];
+
+    // Group bids by user
+    const userBidMap = new Map<string, any[]>();
+    BidEvents.forEach((bid: any) => {
+      const bidder = bid.bidder.toLowerCase();
+      if (!userBidMap.has(bidder)) {
+        userBidMap.set(bidder, []);
+      }
+      userBidMap.get(bidder)!.push(bid);
+    });
+
+    // Add current user if they're not in the map
+    if (connectedAddress && !userBidMap.has(connectedAddress.toLowerCase())) {
+      userBidMap.set(connectedAddress.toLowerCase(), []);
+    }
+
+    // Calculate stats for each user
+    const stats = Array.from(userBidMap.entries()).map(([address, bids]) => {
+      const numBids = bids.length;
+      const lastBid = bids.length > 0 ? bids.sort((a, b) => Number(b.timestamp) - Number(a.timestamp))[0] : null;
+      const lastBidAmount = lastBid ? (lastBid.amount as bigint) : 0n;
+
+      // Calculate total cost (sum of all bids + fees)
+      const platformFeePerBid = (latestAuction.platformFee as bigint) || 0n;
+      const totalFees = BigInt(numBids) * platformFeePerBid;
+
+      // Calculate potential loss (total cost if they don't win)
+      const potentialLoss = totalFees;
+
+      // Calculate potential profit (auction value - total cost - next bid if they're not highest)
+      const auctionValue = latestAuction.auctionAmount as bigint;
+      const isHighestBidder = address.toLowerCase() === topBidderAddress.toLowerCase();
+      const nextBidAmount = isHighestBidder ? lastBidAmount : (nextBid as bigint) + (platformFee as bigint);
+      const potentialProfit = auctionValue - totalFees - nextBidAmount;
+
+      return {
+        address,
+        numBids,
+        lastBidAmount,
+        potentialLoss,
+        potentialProfit,
+        isCurrentUser: connectedAddress && address.toLowerCase() === connectedAddress.toLowerCase(),
+      };
+    });
+
+    // Sort by number of bids (descending), then by last bid amount (descending)
+    return stats.sort((a, b) => {
+      return Number(b.lastBidAmount) - Number(a.lastBidAmount);
+    });
+  }, [BidEvents, latestAuction, connectedAddress, topBidderAddress, nextBid]);
+
   const sharingUrl =
     (process.env.NEXT_PUBLIC_URL ?? "http://localhost:3000") +
     (connectedAddress ? "/" + connectedAddress + "/" + new Date().getTime() : "");
@@ -582,7 +650,7 @@ export default function HomeClient() {
                         {isBidding ? (
                           <div className="mt-1 text-gray-500 text-xs">Please wait...</div>
                         ) : platformFee ? (
-                          <div className="mt-1 text-gray-500 text-xs">
+                          <div className="mt-1 text-base-content/70 text-xs">
                             ({formatToken(platformFee as unknown as bigint)} {String(tokenSymbol ?? "")} fee applies)
                           </div>
                         ) : null}
@@ -690,7 +758,7 @@ export default function HomeClient() {
         {connectedAddress && (
           <div className="bg-base-100 p-4 rounded-3xl shadow-md shadow-secondary border border-base-300 flex flex-col gap-1 mt-4">
             <div className="text-lg font-light text-center items-center">Pre-Approve for faster bidding</div>
-            <div className="text-center items-center text-gray-500 text-xs mb-2">
+            <div className="text-center items-center text-base-content/70 text-xs mb-2">
               Your current allowance is {allowance ? formatToken(allowance as bigint) : "0"}{" "}
               {String(tokenSymbol ?? "USDC")}.{" "}
             </div>
@@ -716,6 +784,57 @@ export default function HomeClient() {
               >
                 {isRevoking ? "Revoking..." : "Revoke"}
               </button>
+            </div>
+          </div>
+        )}
+
+        {/* Current Auction Stats */}
+        {isAuctionActive && latestAuction && userStats.length > 0 && (
+          <div className="bg-base-100 mt-4 p-0 rounded-3xl shadow-md shadow-secondary border border-base-300 flex flex-col gap-3">
+            <div className="text-lg font-light text-center mt-3">Current Auction Stats</div>
+            <div className="overflow-x-auto">
+              <table className="table table-sm w-full">
+                <thead>
+                  <tr>
+                    <th className="p-1 text-xs">User</th>
+                    <th className="p-1 text-xs text-right">
+                      No. of Bids
+                      <br />
+                      Last Bid
+                    </th>
+                    <th className="p-1 text-xs text-right">
+                      Potential Loss
+                      <br />
+                      Potential Win
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {userStats.map(stat => (
+                    <tr key={stat.address}>
+                      <td className="p-1">
+                        <div className="flex items-center gap-2">
+                          <AddressFarcaster size="sm" address={stat.address as `0x${string}`} />
+                        </div>
+                      </td>
+                      <td className="p-1 text-right font-mono text-sm">
+                        <div className="text-base-content/70">{stat.numBids}</div>
+                        <div>{stat.lastBidAmount > 0n ? formatToken(stat.lastBidAmount) : "0.00"}</div>
+                      </td>
+                      <td className="p-1 text-right font-mono text-sm">
+                        <div className={stat.potentialLoss > 0n ? "text-error" : "text-base-content"}>
+                          {stat.potentialLoss > 0n ? `-${formatToken(BigInt(stat.potentialLoss))}` : "0.00"}
+                        </div>
+                        <div className={stat.potentialProfit > 0n ? "font-bold text-success" : "font-bold text-error"}>
+                          {stat.potentialProfit > 0n
+                            ? `+${formatToken(BigInt(stat.potentialProfit))}`
+                            : formatToken(BigInt(stat.potentialProfit))}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           </div>
         )}
