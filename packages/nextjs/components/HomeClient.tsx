@@ -789,7 +789,7 @@ export default function HomeClient() {
         )}
 
         {/* Current Auction Stats */}
-        {isAuctionActive && latestAuction && userStats.length > 0 && (
+        {latestAuction && userStats.length > 0 && (
           <div className="bg-base-100 mt-4 p-0 rounded-3xl shadow-md shadow-secondary border border-base-300 flex flex-col gap-3">
             <div className="text-lg font-light text-center mt-3">Current Auction Stats</div>
             <div className="overflow-x-auto">
