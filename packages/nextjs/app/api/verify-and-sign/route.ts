@@ -154,6 +154,7 @@ export async function POST(request: NextRequest) {
     };
 
     console.log("Access token generated successfully for:", address);
+    console.log("Access token:", accessToken);
     return NextResponse.json({ accessToken });
   } catch (error) {
     console.error("Error in verify-and-sign:", error);
