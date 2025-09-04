@@ -156,6 +156,8 @@ export async function POST(request: NextRequest) {
     console.log("Access token generated successfully for:", address);
     console.log("Access token:", accessToken);
     console.log("Current timestamp:", Math.floor(Date.now() / 1000));
+    console.log("Current time:", new Date().toISOString());
+
     return NextResponse.json({ accessToken });
   } catch (error) {
     console.error("Error in verify-and-sign:", error);
