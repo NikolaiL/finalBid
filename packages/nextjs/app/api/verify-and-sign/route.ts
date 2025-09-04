@@ -132,7 +132,7 @@ export async function POST(request: NextRequest) {
     console.log("Verifying human proof...");
     const isHuman = await verifyRecaptcha(humanProof);
     if (!isHuman) {
-      console.log("reCAPTCHA verification failed for token:", humanProof);
+      console.log("reCAPTCHA verification failed");
       return NextResponse.json({ error: "Human verification failed" }, { status: 400 });
     }
 
