@@ -10,6 +10,7 @@ ponder.on("FinalBidContract:AuctionCreated", async ({ event, context }) => {
     auctionAmount: event.args.auctionAmount,
     startTime: event.args.startTime,
     endTime: event.args.endTime,
+    streamingEndTime: event.args.endTime,
     startingAmount: event.args.startingAmount,
     bidIncrement: event.args.bidIncrement,
     referralFee: event.args.referralFee,

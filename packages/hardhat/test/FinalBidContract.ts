@@ -188,7 +188,7 @@ describe("FinalBidContract", function () {
 
       // Test signature generation
       const accessToken = await generateAccessToken(serverPrivateKey, user1.address, 1n);
-      console.log("Generated access token:", accessToken);
+      //console.log("Generated access token:", accessToken);
 
       // Test the signature verification directly
       const isValid = await finalBidContract.isValidSigner(
@@ -198,7 +198,7 @@ describe("FinalBidContract", function () {
         accessToken.auctionId,
       );
 
-      console.log("Signature valid:", isValid);
+      //console.log("Signature valid:", isValid);
       expect(isValid).to.be.true;
     });
 
@@ -224,10 +224,10 @@ describe("FinalBidContract", function () {
       // Calculate expected total: bid amount + platform fee
       const platformFee = await finalBidContract.platformFee();
       const actualBalanceIncrease = (await dummyUsdcContract.balanceOf(finalBidContract.target)) - balanceBefore;
-      const expectedTotal = 200000 + Number(platformFee);
-      console.log("Platform fee:", Number(platformFee));
-      console.log("Expected total:", expectedTotal);
-      console.log("Actual balance increase:", Number(actualBalanceIncrease));
+      //const expectedTotal = 200000 + Number(platformFee);
+      //console.log("Platform fee:", Number(platformFee));
+      //console.log("Expected total:", expectedTotal);
+      //console.log("Actual balance increase:", Number(actualBalanceIncrease));
       expect(actualBalanceIncrease).to.equal(330000); // Actual value from contract
 
       // we should also expect the platformFeesCollected to be platform fee minus referral fee and deployer fee
@@ -558,6 +558,198 @@ describe("FinalBidContract", function () {
       expect(await finalBidContract.deployerFee()).to.equal(platformFee - referralFee);
       await (finalBidContract as any).setDeployerFee(platformFee - referralFee - 1n);
       expect(await finalBidContract.deployerFee()).to.equal(platformFee - referralFee - 1n);
+    });
+  });
+
+  describe("Streaming Functionality", function () {
+    beforeEach(async function () {
+      // Start an auction before testing streaming functionality
+      await finalBidContract.startAuction();
+    });
+
+    it("Should add streaming units on bid placement", async function () {
+      const initialStreamingUnits = await finalBidContract.streamingUnits();
+      expect(initialStreamingUnits).to.equal(0);
+
+      const accessToken1 = await generateAccessToken(serverPrivateKey, user1.address, 1n);
+      await finalBidContract.connect(user1).placeBid(accessToken1, user1.address);
+      expect(await finalBidContract.streamingUnits()).to.equal(1);
+
+      // Check that the address was added to the streaming addresses array
+      const streamingAddresses = await finalBidContract.streamingAddresses(0);
+      expect(streamingAddresses).to.equal(user1.address);
+
+      // Check that the streaming data was stored correctly
+      const streamingData = await finalBidContract.streamings(user1.address);
+      expect(streamingData.units).to.equal(1);
+    });
+
+    it("Should calculate flow rate per unit based on auction parameters", async function () {
+      // Add streaming units
+
+      const accessToken1 = await generateAccessToken(serverPrivateKey, user1.address, 1n);
+      await finalBidContract.connect(user1).placeBid(accessToken1, user1.address);
+
+      // Get auction data
+      const auction = await finalBidContract.auctions(1);
+      const auctionLength = auction.endTime - auction.startTime;
+      const auctionAmount = auction.auctionAmount;
+
+      // Calculate expected flow rate per unit
+      const expectedTotalFlowRate = ((auctionAmount / 2n) * 1000n) / auctionLength;
+      const expectedFlowRatePerUnit = expectedTotalFlowRate;
+
+      // Check that flow rate is calculated correctly
+      const streamingData = await finalBidContract.streamings(user1.address);
+      expect(streamingData.flowRate).to.equal(expectedFlowRatePerUnit);
+    });
+
+    it("Should update flow rates when streaming units are added", async function () {
+      // Add initial streaming units
+      const accessToken1 = await generateAccessToken(serverPrivateKey, user1.address, 1n);
+      await finalBidContract.connect(user1).placeBid(accessToken1, user1.address);
+      const initialFlowRate = (await finalBidContract.streamings(user1.address)).flowRate;
+
+      // Add more streaming units
+      const accessToken2 = await generateAccessToken(serverPrivateKey, user2.address, 1n);
+      await finalBidContract.connect(user2).placeBid(accessToken2, user2.address);
+
+      // Check that flow rates are recalculated
+      const user1FlowRate = (await finalBidContract.streamings(user1.address)).flowRate;
+      const user2FlowRate = (await finalBidContract.streamings(user2.address)).flowRate;
+
+      // Both should have the same flow rate per unit
+      expect(user1FlowRate).to.equal(user2FlowRate); // user1 has half the units
+
+      // user flow rate should be less than initial flow rate
+      expect(user1FlowRate).to.be.lt(initialFlowRate);
+      expect(user2FlowRate).to.be.lt(initialFlowRate);
+    });
+
+    it("Should accumulate balance over time based on flow rate", async function () {
+      // Add streaming units
+      const accessToken1 = await generateAccessToken(serverPrivateKey, user1.address, 1n);
+      await finalBidContract.connect(user1).placeBid(accessToken1, user1.address);
+
+      // Get initial data
+      const initialBalance = (await finalBidContract.streamings(user1.address)).balance;
+      const flowRate = (await finalBidContract.streamings(user1.address)).flowRate;
+
+      // Check that flow rate is greater than 0
+      expect(flowRate).to.be.gt(0);
+
+      // Wait some time (simulate with block timestamp manipulation)
+      await ethers.provider.send("evm_increaseTime", [100]); // 100 seconds
+      await ethers.provider.send("evm_mine", []);
+
+      // Add more streaming units to trigger recalculation
+      const accessToken2 = await generateAccessToken(serverPrivateKey, user2.address, 1n);
+      await finalBidContract.connect(user2).placeBid(accessToken2, user2.address);
+
+      // Check that balance has increased
+      const finalBalance = (await finalBidContract.streamings(user1.address)).balance;
+      expect(finalBalance).to.be.gt(initialBalance);
+    });
+
+    it("Should not accumulate balance after original endtime", async function () {
+      // Add streaming units
+      const accessToken1 = await generateAccessToken(serverPrivateKey, user1.address, 1n);
+      await finalBidContract.connect(user1).placeBid(accessToken1, user1.address);
+
+      // Get auction data
+      let auction = await finalBidContract.auctions(1);
+      const initialEndTime = auction.endTime;
+
+      // Wait some time (simulate with block timestamp manipulation)
+      await ethers.provider.send("evm_increaseTime", [3580]); // 3580 seconds
+      await ethers.provider.send("evm_mine", []);
+
+      // Add more streaming units to trigger recalculation
+      const accessToken2 = await generateAccessToken(serverPrivateKey, user2.address, 1n);
+      await finalBidContract.connect(user2).placeBid(accessToken2, user2.address);
+
+      // get auction data
+      auction = await finalBidContract.auctions(1);
+      const updatedEndTime = auction.endTime;
+      expect(updatedEndTime).to.be.gt(initialEndTime);
+
+      await ethers.provider.send("evm_increaseTime", [30]); // 30 seconds
+      await ethers.provider.send("evm_mine", []);
+
+      // Add more streaming units to trigger recalculation
+      const accessToken3 = await generateAccessToken(serverPrivateKey, user3.address, 1n);
+      await finalBidContract.connect(user3).placeBid(accessToken3, user3.address);
+
+      // get user1 streamin balance
+      const initialBalance = (await finalBidContract.streamings(user1.address)).balance;
+
+      await ethers.provider.send("evm_increaseTime", [30]); // 30 seconds
+      await ethers.provider.send("evm_mine", []);
+
+      // Add more streaming units to trigger recalculation
+      const accessToken1New = await generateAccessToken(serverPrivateKey, user1.address, 1n);
+      await finalBidContract.connect(user1).placeBid(accessToken1New, user1.address);
+
+      await ethers.provider.send("evm_increaseTime", [30]); // 30 seconds
+      await ethers.provider.send("evm_mine", []);
+
+      // get user1 streamin balance
+      const finalBalance = (await finalBidContract.streamings(user1.address)).balance;
+      expect(finalBalance).to.equal(initialBalance);
+
+      expect(finalBalance).to.equal(initialBalance);
+    });
+
+    it("Should handle zero streaming units gracefully", async function () {
+      // This should not revert but should handle the division by zero case
+      expect(await finalBidContract.streamingUnits()).to.equal(0);
+    });
+
+    it("Should finalize streaming and transfer balances", async function () {
+      // Get initial token balance
+
+      // Add streaming units
+      const accessToken1 = await generateAccessToken(serverPrivateKey, user1.address, 1n);
+      await finalBidContract.connect(user1).placeBid(accessToken1, user1.address);
+
+      //wait 100 seconds
+      await ethers.provider.send("evm_increaseTime", [100]);
+      await ethers.provider.send("evm_mine", []);
+
+      const accessToken2 = await generateAccessToken(serverPrivateKey, user2.address, 1n);
+      await finalBidContract.connect(user2).placeBid(accessToken2, user2.address);
+
+      const initialBalance1 = await dummyUsdcContract.balanceOf(user1.address);
+      const initialBalance2 = await dummyUsdcContract.balanceOf(user2.address);
+
+      // End the auction to trigger streaming finalization
+      await ethers.provider.send("evm_increaseTime", [3600]); // 1 hour
+      await ethers.provider.send("evm_mine", []);
+      await finalBidContract.endAuction();
+
+      // Check that user received tokens
+      const finalBalance1 = await dummyUsdcContract.balanceOf(user1.address);
+      const finalBalance2 = await dummyUsdcContract.balanceOf(user2.address);
+
+      expect(finalBalance1).to.be.gt(initialBalance1);
+      expect(finalBalance2).to.be.gt(initialBalance2);
+    });
+
+    it("Should erase all streaming units and balances when auction is ended", async function () {
+      // Add streaming units
+      const accessToken1 = await generateAccessToken(serverPrivateKey, user1.address, 1n);
+      await finalBidContract.connect(user1).placeBid(accessToken1, user1.address);
+
+      // End the auction to trigger streaming finalization
+      await ethers.provider.send("evm_increaseTime", [3600]); // 1 hour
+      await ethers.provider.send("evm_mine", []);
+      await finalBidContract.endAuction();
+
+      // Check that all streaming units and balances are erased
+      const streamingUnits = await finalBidContract.streamingUnits();
+      expect(streamingUnits).to.equal(0);
+      const streamingBalances = await finalBidContract.streamings(user1.address);
+      expect(streamingBalances.balance).to.equal(0);
     });
   });
 });

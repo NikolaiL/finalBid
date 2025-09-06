@@ -28,7 +28,7 @@ const deployYourContract: DeployFunction = async function (hre: HardhatRuntimeEn
     mainnet: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
     sepolia: "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238",
     base: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
-    baseSepolia: "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
+    //baseSepolia: "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
     arbitrum: "0xaf88d065e77c8cC2239327C5EDb3A432268e5831",
     //arbitrumSepolia: "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
     optimism: "0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85",

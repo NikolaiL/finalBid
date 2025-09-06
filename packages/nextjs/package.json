@@ -19,6 +19,7 @@
     "@farcaster/miniapp-sdk": "^0.1.8",
     "@farcaster/miniapp-wagmi-connector": "^1.0.0",
     "@heroicons/react": "~2.1.5",
+    "@number-flow/react": "^0.5.10",
     "@ponder/client": "latest",
     "@ponder/react": "latest",
     "@rainbow-me/rainbowkit": "2.2.7",

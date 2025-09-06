@@ -144,6 +144,7 @@ type auctionCreated {
   auctionAmount: BigInt!
   startTime: BigInt!
   endTime: BigInt!
+  streamingEndTime: BigInt!
   startingAmount: BigInt!
   bidIncrement: BigInt!
   referralFee: BigInt!
@@ -208,6 +209,14 @@ input auctionCreatedFilter {
   endTime_lt: BigInt
   endTime_gte: BigInt
   endTime_lte: BigInt
+  streamingEndTime: BigInt
+  streamingEndTime_not: BigInt
+  streamingEndTime_in: [BigInt]
+  streamingEndTime_not_in: [BigInt]
+  streamingEndTime_gt: BigInt
+  streamingEndTime_lt: BigInt
+  streamingEndTime_gte: BigInt
+  streamingEndTime_lte: BigInt
   startingAmount: BigInt
   startingAmount_not: BigInt
   startingAmount_in: [BigInt]

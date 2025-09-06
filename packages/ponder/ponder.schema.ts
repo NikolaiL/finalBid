@@ -24,6 +24,7 @@ export const auctionCreated = onchainTable("auctionCreated", (t) => ({
   auctionAmount: t.bigint().notNull(),
   startTime: t.bigint().notNull(),
   endTime: t.bigint().notNull(),
+  streamingEndTime: t.bigint().notNull(),
   startingAmount: t.bigint().notNull(),
   bidIncrement: t.bigint().notNull(),
   referralFee: t.bigint().notNull(),

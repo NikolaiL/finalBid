@@ -67,7 +67,14 @@ export default function AboutPage() {
           <h3 className="text-xl font-bold mt-8 mb-4 text-primary">How it works</h3>
           <ul className="list-disc ml-6 space-y-2">
             <li>
-              <span className="font-semibold">Highest bid wins</span> — the final top bidder receives the prize pot.
+              <span className="font-semibold">Highest bid wins 1/2 of the prize pot</span> — the final top bidder
+              receives 1/2 of the prize pot.
+            </li>
+            <li>
+              <span className="font-semibold">
+                The other 1/2 of the prize pot is streamed to all bidders, based on their number of bids -{" "}
+              </span>
+              bid early to start your stream, bid often to increase it.
             </li>
             <li>If you’re outbid, your bid is immediately returned to you on the next bid.</li>
             <li>

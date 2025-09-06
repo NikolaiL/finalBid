@@ -42,6 +42,8 @@ contract FinalBidContract is Ownable, Pausable, ReentrancyGuard {
     address public validSigner;
     uint256 public accessTokenValidity = 30; // 30 seconds
 
+    uint256 public streamingUnits = 0;
+
     struct AccessToken {
         address wallet;
         uint256 timestamp;
@@ -53,6 +55,7 @@ contract FinalBidContract is Ownable, Pausable, ReentrancyGuard {
         uint256 auctionAmount;
         uint256 startTime;
         uint256 endTime;
+        uint256 streamingEndTime;
         uint256 startingAmount;
         uint256 bidIncrement;
         uint256 referralFee;
@@ -63,7 +66,17 @@ contract FinalBidContract is Ownable, Pausable, ReentrancyGuard {
         bool ended;
     }
 
+    struct Streaming {
+        uint256 units;
+        uint256 balance;
+        uint256 flowRate;
+        uint256 lastUpdated;
+    }
+
     mapping(uint256 => Auction) public auctions;
+
+    mapping(address => Streaming) public streamings;
+    address[] public streamingAddresses;
 
     // mapping(address => uint256) public referralRewards;
 
@@ -89,6 +102,80 @@ contract FinalBidContract is Ownable, Pausable, ReentrancyGuard {
         validSigner = _validSigner;
     }
 
+    function _calculateFlowRatePerUnit() internal view returns (uint256) {
+        // calculate streaming per unit
+        // we need to calculate total length of the current auction
+        // then calculate total flow rate per second
+        // then divide it by streamingUnits
+        if (streamingUnits == 0) {
+            return 0;
+        }
+        uint256 auctionLength = auctions[auctionId].streamingEndTime - auctions[auctionId].startTime;
+        if (auctionLength == 0) {
+            return 0;
+        }
+        // Use a larger multiplier to avoid precision loss
+        uint256 totalFlowRate = (auctions[auctionId].auctionAmount / 2) * 1000 / auctionLength;
+        uint256 flowRatePerUnit = totalFlowRate / streamingUnits;
+        return flowRatePerUnit;
+    }
+
+    function _recalculateFlowRate() internal {
+        // recalculate streaming per unit
+        uint256 flowRatePerUnit = _calculateFlowRatePerUnit();
+
+        uint256 calculateUntil = auctions[auctionId].streamingEndTime;
+        if (block.timestamp < calculateUntil) {
+            calculateUntil = block.timestamp;
+        }
+
+        for (uint256 i = 0; i < streamingAddresses.length; i++) {
+            address streamingAddress = streamingAddresses[i];
+            Streaming storage streaming = streamings[streamingAddress];
+            // Accumulate balance using the flow rate
+            uint256 streamingTime = calculateUntil > streaming.lastUpdated ? calculateUntil - streaming.lastUpdated : 0;
+            streaming.balance += streaming.flowRate * streamingTime / 1000;
+            streaming.flowRate = flowRatePerUnit * streaming.units;
+            streaming.lastUpdated = calculateUntil;
+        }
+    }
+
+    function _finalizeStreaming() internal {
+        // recalculate first
+        _recalculateFlowRate();
+        // then send the balance to the streaming address
+        for (uint256 i = 0; i < streamingAddresses.length; i++) {
+            address streamingAddress = streamingAddresses[i];
+            Streaming storage streaming = streamings[streamingAddress];
+            if (streaming.balance > 0) {
+                IERC20(tokenAddress).safeTransfer(streamingAddress, streaming.balance);
+            }
+        }
+
+        
+        // delete streamings
+        for (uint256 i = 0; i < streamingAddresses.length; i++) {
+            address streamingAddress = streamingAddresses[i];
+            delete streamings[streamingAddress];
+        }
+        
+        // delete streamingAddresses
+        delete streamingAddresses;
+
+        // reset streamingUnits
+        streamingUnits = 0;
+    }
+
+    function _addStreamingUnits(address _address, uint256 _units) internal {
+        // Add address to array if it's the first time
+        if (streamings[_address].units == 0) {
+            streamingAddresses.push(_address);
+        }
+        streamings[_address].units += _units;
+        streamingUnits += _units;
+        _recalculateFlowRate();
+    }
+
     function _createAuction(uint256 _auctionId, address _tokenAddress, uint256 _startTime, uint256 _endTime, uint256 _startingAmount, uint256 _bidIncrement, uint256 _referralFee, uint256 _platformFee) internal {
         // check if _auctionAmount is available
         uint256 availableAmount = IERC20(_tokenAddress).balanceOf(address(this));
@@ -97,10 +184,6 @@ contract FinalBidContract is Ownable, Pausable, ReentrancyGuard {
         uint256 auctionAmountToUse = availableAmount * percentageToUse / 100;
 
         
-
-        // if we have more than the auction amount, we will withdraw 50% of that excess 
-        // 20% will be used to increase the pot
-        // 30% will remain in the wallet for the future auctions
         if (availableAmount > auctionAmountToUse ) {
             uint256 amountToWithdraw = availableAmount * percentageToWithdraw / 100;
             _withdrawExcess(amountToWithdraw);
@@ -110,6 +193,7 @@ contract FinalBidContract is Ownable, Pausable, ReentrancyGuard {
             auctionAmount: auctionAmountToUse,
             startTime: _startTime,
             endTime: _endTime,
+            streamingEndTime: _endTime,
             startingAmount: _startingAmount,
             bidIncrement: _bidIncrement,
             referralFee: _referralFee,
@@ -145,10 +229,14 @@ contract FinalBidContract is Ownable, Pausable, ReentrancyGuard {
         require(auction.endTime < block.timestamp || auction.highestBid >= auction.auctionAmount, "Auction not ended");
 
         auction.ended = true;
+        
+        // Finalize streaming before paying the winner
+        _finalizeStreaming();
+        
         if (auction.highestBidder != address(0)) {
             // pay the winner
             IERC20 token = IERC20(tokenAddress);
-            token.safeTransfer(auction.highestBidder, auction.auctionAmount);
+            token.safeTransfer(auction.highestBidder, auction.auctionAmount / 2);
         }
         emit AuctionEnded(_auctionId, auction.highestBidder, auction.auctionAmount, auction.highestBid);
     }
@@ -222,7 +310,8 @@ contract FinalBidContract is Ownable, Pausable, ReentrancyGuard {
             token.safeTransfer(owner(), referralFee+deployerFee);
         }
 
-        // send deployer fee to owner
+        // add streamin units
+        _addStreamingUnits(msg.sender, 1);
 
         platformFeesCollected += (platformFee - referralFee - deployerFee);
 

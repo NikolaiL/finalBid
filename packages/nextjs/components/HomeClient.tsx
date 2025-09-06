@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import NumberFlow from "@number-flow/react";
 import { toast } from "react-hot-toast";
 import { useAccount, useReadContract, useWriteContract } from "wagmi";
 import { useMiniapp } from "~~/components/MiniappProvider";
@@ -22,10 +23,10 @@ import { useDataLiveQuery } from "~~/lib/useDataLiveQuery";
 const DISPLAY_DECIMALS = Number(process.env.NEXT_PUBLIC_DISPLAY_DECIMALS) ?? 2;
 const TOKEN_DECIMALS = Number(process.env.NEXT_PUBLIC_TOKEN_DECIMALS) ?? 6;
 
-const formatToken = (amount: bigint | 0n): string => {
+const formatToken = (amount: bigint | 0n, decimals: number = DISPLAY_DECIMALS): string => {
   const amountNumber = Number(amount);
   const tokenAmount = amountNumber / 10 ** TOKEN_DECIMALS;
-  return tokenAmount.toFixed(DISPLAY_DECIMALS);
+  return tokenAmount.toFixed(decimals);
 };
 
 const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
@@ -40,6 +41,249 @@ const formatTimeAgoBrief = (nowMs: number, timestampSeconds: number | bigint): s
   if (hours < 24) return `${hours} hour${hours !== 1 ? "s" : ""} ago`;
   const days = Math.floor(hours / 24);
   return `${days} day${days !== 1 ? "s" : ""} ago`;
+};
+
+// Helper function to calculate streaming amount for a given address with millisecond precision
+const calculateStreamingAmount = (
+  address: string,
+  streamingData: any,
+  auctionData: any,
+  currentTime: number,
+): bigint => {
+  if (!streamingData || !auctionData) return 0n;
+
+  const [units, balance, flowRate, lastUpdated] = streamingData as [bigint, bigint, bigint, bigint];
+  const [, , , streamingEndTime, , , , , , , ,] = auctionData as [
+    bigint,
+    bigint,
+    bigint,
+    bigint,
+    bigint,
+    bigint,
+    bigint,
+    bigint,
+    bigint,
+    string,
+    bigint,
+    boolean,
+  ];
+
+  // If no streaming units, return 0
+  if (units === 0n) return 0n;
+
+  // Use precise time calculations with milliseconds
+  const currentTimeMs = currentTime;
+  const streamingEndTimeMs = Number(streamingEndTime) * 1000;
+  const lastUpdatedMs = Number(lastUpdated) * 1000;
+
+  // Calculate until current time or streaming end time
+  const calculateUntilMs = Math.min(currentTimeMs, streamingEndTimeMs);
+
+  // Time since last update in milliseconds
+  const timeSinceUpdateMs = Math.max(0, calculateUntilMs - lastUpdatedMs);
+
+  // Convert flow rate from per-second to per-millisecond and apply
+  const flowRatePerMs = Number(flowRate) / 1000;
+  const additionalStreaming = flowRatePerMs * timeSinceUpdateMs;
+
+  // Current balance plus accumulated streaming since last update
+  const currentStreamingAmount = BigInt(balance) + BigInt(Math.floor(additionalStreaming / 1000));
+
+  // Divide by 1000 to account for the precision multiplier used in the contract
+  return currentStreamingAmount;
+};
+
+// Component for displaying real-time streaming amounts
+const StreamingAmount = ({ address, auctionId }: { address: string; auctionId: bigint | undefined }) => {
+  const [currentTime, setCurrentTime] = useState(Date.now());
+
+  // Read streaming data for this address
+  const { data: streamingData } = useScaffoldReadContract({
+    contractName: "FinalBidContract",
+    functionName: "streamings",
+    args: [address as `0x${string}`],
+    watch: true,
+  });
+
+  // Read current auction data
+  const { data: auctionData } = useScaffoldReadContract({
+    contractName: "FinalBidContract",
+    functionName: "auctions",
+    args: [auctionId || 0n],
+    watch: true,
+  });
+
+  // Read total streaming units
+  const { data: totalStreamingUnits } = useScaffoldReadContract({
+    contractName: "FinalBidContract",
+    functionName: "streamingUnits",
+    watch: true,
+  });
+
+  // Calculate the actual streaming amount with millisecond precision
+  const actualStreamingAmount = useMemo(() => {
+    if (!streamingData || !auctionData || !totalStreamingUnits) return 0;
+
+    const [units, balance, flowRate, lastUpdated] = streamingData as [bigint, bigint, bigint, bigint];
+    const [, , , streamingEndTime, , , , , , , ,] = auctionData as [
+      bigint,
+      bigint,
+      bigint,
+      bigint,
+      bigint,
+      bigint,
+      bigint,
+      bigint,
+      bigint,
+      string,
+      bigint,
+      boolean,
+    ];
+
+    // If no streaming units, return 0
+    if (units === 0n) return 0;
+
+    // Use precise time calculations with milliseconds
+    const currentTimeMs = currentTime;
+    //const currentTimeSeconds = currentTimeMs / 1000;
+    const streamingEndTimeMs = Number(streamingEndTime) * 1000;
+    const lastUpdatedMs = Number(lastUpdated) * 1000;
+
+    // Calculate until current time or streaming end time
+    const calculateUntilMs = Math.min(currentTimeMs, streamingEndTimeMs);
+
+    // Time since last update in milliseconds
+    const timeSinceUpdateMs = Math.max(0, calculateUntilMs - lastUpdatedMs);
+
+    // Convert flow rate from per-second to per-millisecond and apply
+    const flowRatePerMs = Number(flowRate) / 1000;
+    const additionalStreaming = flowRatePerMs * timeSinceUpdateMs;
+
+    // Current balance plus accumulated streaming since last update
+    const currentStreamingAmount = Number(balance) * 1000 + additionalStreaming;
+
+    // Divide by 1000 to account for the precision multiplier used in the contract
+    return currentStreamingAmount / 1000 / 10 ** TOKEN_DECIMALS;
+  }, [streamingData, auctionData, totalStreamingUnits, currentTime]);
+
+  // Update current time every 16ms (60fps) for ultra-smooth streaming calculation
+  useEffect(() => {
+    const interval = setInterval(() => setCurrentTime(Date.now()), 100);
+    return () => clearInterval(interval);
+  }, []);
+
+  if (actualStreamingAmount === 0) return <div className="text-base-content/50">&nbsp;</div>;
+
+  return (
+    <div className="text-success font-mono">
+      +
+      <NumberFlow
+        value={actualStreamingAmount}
+        format={{
+          notation: "standard",
+          minimumFractionDigits: DISPLAY_DECIMALS * 2,
+          maximumFractionDigits: DISPLAY_DECIMALS * 2,
+        }}
+      />
+    </div>
+  );
+};
+
+// Component for displaying potential loss/profit with streaming amounts
+const PotentialAmounts = ({
+  address,
+  auctionId,
+  totalFees,
+  auctionValue,
+  nextBidAmount,
+  isHighestBidder,
+  platformFee,
+}: {
+  address: string;
+  auctionId: bigint | undefined;
+  totalFees: bigint;
+  auctionValue: bigint;
+  nextBidAmount: bigint;
+  isHighestBidder: boolean;
+  platformFee: bigint;
+}) => {
+  const [currentTime, setCurrentTime] = useState(Date.now());
+
+  // Read streaming data for this address
+  const { data: streamingData } = useScaffoldReadContract({
+    contractName: "FinalBidContract",
+    functionName: "streamings",
+    args: [address as `0x${string}`],
+    watch: true,
+  });
+
+  // Read current auction data
+  const { data: auctionData } = useScaffoldReadContract({
+    contractName: "FinalBidContract",
+    functionName: "auctions",
+    args: [auctionId || 0n],
+    watch: true,
+  });
+
+  // Calculate streaming amount
+  const streamingAmount = useMemo(() => {
+    if (!streamingData || !auctionData) return 0n;
+    return calculateStreamingAmount(address, streamingData, auctionData, currentTime);
+  }, [streamingData, auctionData, address, currentTime]);
+
+  // Calculate potential loss and profit with streaming
+  const actualLoss = useMemo(() => {
+    return streamingAmount - totalFees;
+  }, [totalFees, streamingAmount]);
+
+  const actualProfit = useMemo(() => {
+    return auctionValue - totalFees - (isHighestBidder ? 0n : nextBidAmount + platformFee) + streamingAmount;
+  }, [auctionValue, totalFees, nextBidAmount, streamingAmount, isHighestBidder, platformFee]);
+
+  // Convert to display values
+  const lossValue = Number(actualLoss) / 10 ** TOKEN_DECIMALS;
+  const profitValue = Number(actualProfit) / 10 ** TOKEN_DECIMALS;
+
+  // Update current time every 16ms (60fps) for ultra-smooth streaming calculation
+  useEffect(() => {
+    const interval = setInterval(() => setCurrentTime(Date.now()), 16);
+    return () => clearInterval(interval);
+  }, []);
+
+  return (
+    <>
+      <div
+        className={
+          actualLoss === 0n
+            ? "text-base-content/50"
+            : actualLoss > 0n
+              ? "font-bold text-success"
+              : "font-bold text-error"
+        }
+      >
+        <NumberFlow
+          value={lossValue}
+          format={{
+            notation: "standard",
+            minimumFractionDigits: DISPLAY_DECIMALS,
+            maximumFractionDigits: DISPLAY_DECIMALS,
+          }}
+          prefix={actualLoss > 0n ? "+" : ""}
+        />
+      </div>
+      <div className={actualProfit > 0n ? "font-bold text-success" : "font-bold text-error"}>
+        <NumberFlow
+          value={profitValue}
+          format={{
+            notation: "standard",
+            minimumFractionDigits: DISPLAY_DECIMALS,
+            maximumFractionDigits: DISPLAY_DECIMALS,
+          }}
+          prefix={actualProfit > 0n ? "+" : ""}
+        />
+      </div>
+    </>
+  );
 };
 
 // Inline brand icons
@@ -360,6 +604,7 @@ export default function HomeClient() {
     });
 
     if (!response.ok) {
+      toast.error("Are you human? Please reload and try again!");
       const errorData = await response.json();
       throw new Error(errorData.error || "Failed to get access token");
     }
@@ -382,6 +627,7 @@ export default function HomeClient() {
       // Step 2: Human verification (reCAPTCHA)
       const humanProof = await verifyHuman();
       if (!humanProof) {
+        toast.error("Are you human? Please reload and try again!");
         throw new Error("Human verification failed");
       }
 
@@ -566,14 +812,18 @@ export default function HomeClient() {
       const platformFeePerBid = (latestAuction.platformFee as bigint) || 0n;
       const totalFees = BigInt(numBids) * platformFeePerBid;
 
-      // Calculate potential loss (total cost if they don't win)
-      const potentialLoss = totalFees;
+      // For now, we'll calculate streaming amount as a placeholder
+      // This will be updated by the StreamingAmount component
+      const streamingAmount = 0n; // Placeholder - actual streaming will be calculated per user
 
-      // Calculate potential profit (auction value - total cost - next bid if they're not highest)
+      // Calculate potential loss (total cost if they don't win) - subtract streaming amount
+      const potentialLoss = streamingAmount - totalFees;
+
+      // Calculate potential profit (auction value - total cost - next bid if they're not highest) + streaming amount
       const auctionValue = latestAuction.auctionAmount as bigint;
       const isHighestBidder = address.toLowerCase() === topBidderAddress.toLowerCase();
       const nextBidAmount = isHighestBidder ? lastBidAmount : (nextBid as bigint) + (platformFee as bigint);
-      const potentialProfit = auctionValue - totalFees - nextBidAmount;
+      const potentialProfit = auctionValue - totalFees - nextBidAmount + streamingAmount;
 
       return {
         address,
@@ -581,6 +831,7 @@ export default function HomeClient() {
         lastBidAmount,
         potentialLoss,
         potentialProfit,
+        streamingAmount,
         isCurrentUser: connectedAddress && address.toLowerCase() === connectedAddress.toLowerCase(),
       };
     });
@@ -630,7 +881,7 @@ export default function HomeClient() {
           {latestAuction ? (
             <>
               <div className="flex flex-col sm:flex-row flex-wrap gap-0 sm:gap-4 items-center">
-                <div className="text-center sm:text-right flex-1 text-2xl font-light items-end">Win</div>
+                <div className="text-center sm:text-right flex-1 text-2xl font-light items-end">Winning Pot</div>
                 <div className="flex-none items-center font-black text-6xl text-primary">
                   {formatToken(latestAuction?.auctionAmount)}
                 </div>
@@ -638,25 +889,30 @@ export default function HomeClient() {
                   {String(tokenSymbol ?? "USDC")}
                 </div>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 items-center">
-                <div className="text-center sm:text-left">
+              <div className="text-xs text-base-content/50 text-center w-full -mt-4">
+                50% goes to the winner. 50% is streamed to all bidders, based on their number of bids.
+              </div>
+              <div className="grid grid-cols-2 gap-4 items-center">
+                <div className="text-left">
                   <div className="text-sm text-base-content/70">
                     {topBidderAddress !== ZERO_ADDRESS ? "Current top bid" : "Be the first to bid"}
                   </div>
                   <div className="text-2xl font-black">{formatToken(currentBid)}</div>
                   <div className="text-sm text-base-content/70"> {String(tokenSymbol ?? "USDC")}</div>
                 </div>
-                <div className="text-center">
+                <div className="text-right">
                   {topBidderAddress !== ZERO_ADDRESS && (
                     <>
                       <div className="text-sm text-base-content/70">Top bid by</div>
-                      <div className="flex justify-center">
+                      <div className="flex justify-end">
                         <AddressFarcaster address={topBidderAddress} />
                       </div>
                     </>
                   )}
                 </div>
-                <div className="text-center sm:text-right">
+              </div>
+              <div>
+                <div className="text-center">
                   {isAcutionReadytoBeOver ? (
                     <>
                       <div className="text-sm text-base-content/70">&nbsp;</div>
@@ -858,17 +1114,17 @@ export default function HomeClient() {
         {latestAuction && userStats.length > 0 && (
           <div className="bg-base-100 mt-4 p-0 rounded-3xl shadow-md shadow-secondary border border-base-300 flex flex-col gap-3">
             <div className="text-lg font-light text-center mt-3">Current Auction Stats</div>
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto overflow-y-hidden">
               <table className="table table-sm w-full">
                 <thead>
                   <tr>
-                    <th className="p-1 text-xs">User</th>
-                    <th className="p-1 text-xs text-right">
-                      No. of Bids
+                    <th className="py-1 pl-1 pr-px text-xs font-light">User</th>
+                    <th className="py-1 px-px text-xs text-right font-light">
+                      Bids / Last
                       <br />
-                      Last Bid
+                      Streamed
                     </th>
-                    <th className="p-1 text-xs text-right">
+                    <th className="py-1 pr-1 pl-px text-xs text-right font-light">
                       Potential Loss
                       <br />
                       Potential Win
@@ -878,24 +1134,31 @@ export default function HomeClient() {
                 <tbody>
                   {userStats.map(stat => (
                     <tr key={stat.address}>
-                      <td className="p-1">
+                      <td className="p-1 text-xs">
                         <div className="flex items-center gap-2">
-                          <AddressFarcaster size="sm" address={stat.address as `0x${string}`} />
+                          <AddressFarcaster size="xs" address={stat.address as `0x${string}`} />
                         </div>
                       </td>
-                      <td className="p-1 text-right font-mono text-sm">
-                        <div className="text-base-content/70">{stat.numBids > 0 ? stat.numBids : ""}</div>
-                        <div>{stat.lastBidAmount > 0n ? formatToken(stat.lastBidAmount) : ""}</div>
+                      <td className="p-1 text-right font-mono text-xs whitespace-nowrap">
+                        <div className="text-base-content/70">
+                          {stat.numBids > 0 ? stat.numBids + " / " + formatToken(stat.lastBidAmount) : " "}
+                        </div>
+                        <StreamingAmount address={stat.address} auctionId={latestAuction?.auctionId} />
                       </td>
-                      <td className="p-1 text-right font-mono text-sm">
-                        <div className={stat.potentialLoss > 0n ? "text-error" : "text-base-content/50"}>
-                          {stat.potentialLoss > 0n ? `-${formatToken(BigInt(stat.potentialLoss))}` : "0.00"}
-                        </div>
-                        <div className={stat.potentialProfit > 0n ? "font-bold text-success" : "font-bold text-error"}>
-                          {stat.potentialProfit > 0n
-                            ? `+${formatToken(BigInt(stat.potentialProfit))}`
-                            : formatToken(BigInt(stat.potentialProfit))}
-                        </div>
+                      <td className="p-1 text-right font-mono text-xs whitespace-nowrap">
+                        <PotentialAmounts
+                          address={stat.address}
+                          auctionId={latestAuction?.auctionId}
+                          totalFees={BigInt(stat.numBids) * ((latestAuction?.platformFee as bigint) || 0n)}
+                          auctionValue={latestAuction?.auctionAmount as bigint}
+                          nextBidAmount={
+                            stat.isCurrentUser
+                              ? stat.lastBidAmount
+                              : (nextBid as bigint) + ((platformFee as bigint) || 0n)
+                          }
+                          isHighestBidder={stat.address.toLowerCase() === topBidderAddress.toLowerCase()}
+                          platformFee={latestAuction?.platformFee as bigint}
+                        />
                       </td>
                     </tr>
                   ))}
