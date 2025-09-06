@@ -196,16 +196,12 @@ const PotentialAmounts = ({
   totalFees,
   auctionValue,
   nextBidAmount,
-  isHighestBidder,
-  platformFee,
 }: {
   address: string;
   auctionId: bigint | undefined;
   totalFees: bigint;
   auctionValue: bigint;
   nextBidAmount: bigint;
-  isHighestBidder: boolean;
-  platformFee: bigint;
 }) => {
   const [currentTime, setCurrentTime] = useState(Date.now());
 
@@ -237,8 +233,8 @@ const PotentialAmounts = ({
   }, [totalFees, streamingAmount]);
 
   const actualProfit = useMemo(() => {
-    return auctionValue - totalFees - (isHighestBidder ? 0n : nextBidAmount + platformFee) + streamingAmount;
-  }, [auctionValue, totalFees, nextBidAmount, streamingAmount, isHighestBidder, platformFee]);
+    return auctionValue - totalFees - nextBidAmount + streamingAmount;
+  }, [auctionValue, totalFees, nextBidAmount, streamingAmount]);
 
   // Convert to display values
   const lossValue = Number(actualLoss) / 10 ** TOKEN_DECIMALS;
@@ -1156,8 +1152,6 @@ export default function HomeClient() {
                               ? stat.lastBidAmount
                               : (nextBid as bigint) + ((platformFee as bigint) || 0n)
                           }
-                          isHighestBidder={stat.address.toLowerCase() === topBidderAddress.toLowerCase()}
-                          platformFee={latestAuction?.platformFee as bigint}
                         />
                       </td>
                     </tr>
