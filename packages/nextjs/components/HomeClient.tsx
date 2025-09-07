@@ -470,10 +470,10 @@ export default function HomeClient() {
       const resultsPromises = latestResults.map(async event => {
         const winner = event.winner as string;
         const displayName = await getAddressDisplayName(winner);
-        const amount = formatToken(event.amount as bigint);
+        const amount = formatToken((event.amount / 2n) as unknown as bigint);
         const bid = formatToken(event.highestBid as bigint);
         const token = String(tokenSymbol ?? "USDC");
-        return `${displayName} bids ${bid} wins  ${amount} ${token}`;
+        return `${displayName} bids ${bid} wins ${amount} ${token}`;
       });
 
       const results = await Promise.all(resultsPromises);
@@ -865,8 +865,11 @@ export default function HomeClient() {
 
   const signature = "🔥 @firebid by @nikolaii.eth";
 
+  // let change it to: The pot is 4.49 USDC—place a 0.03 bid and win half of it!
+  //
+
   const baseText = isAuctionActive
-    ? `Bid ${formatToken(nextBid as unknown as bigint)} and win ${formatToken(latestAuction?.auctionAmount)} ${String(tokenSymbol ?? "")} on FireBid`
+    ? `The pot is ${formatToken(latestAuction?.auctionAmount)} ${String(tokenSymbol ?? "")} — place a ${formatToken(nextBid as unknown as bigint)} bid and win half of it!\nPlus, everyone wins: the other half gets streamed to all bidders!`
     : `Win on FireBid`;
 
   const sharingText = latestResults ? `${baseText}\n\n${latestResults}\n\n${signature}` : `${baseText}\n${signature}`;
