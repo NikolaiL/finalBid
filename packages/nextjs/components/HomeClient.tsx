@@ -1202,7 +1202,7 @@ export default function HomeClient() {
                 <div className="flex flex-col sm:flex-row items-center gap-2 text-sm">
                   <AddressFarcaster size="sm" address={event.winner as `0x${string}`} />
                   <div className="text-sm">
-                    wins <span className="font-black">{formatToken(event.amount as bigint)}</span>{" "}
+                    wins <span className="font-black">{formatToken((event.amount / 2n) as bigint)}</span>{" "}
                     {String(tokenSymbol ?? "USDC")}
                   </div>
                   <div className="text-sm">
