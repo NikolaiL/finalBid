@@ -181,8 +181,8 @@ const StreamingAmount = ({ address, auctionId }: { address: string; auctionId: b
         value={actualStreamingAmount}
         format={{
           notation: "standard",
-          minimumFractionDigits: DISPLAY_DECIMALS * 2,
-          maximumFractionDigits: DISPLAY_DECIMALS * 2,
+          minimumFractionDigits: DISPLAY_DECIMALS * 2.5,
+          maximumFractionDigits: DISPLAY_DECIMALS * 2.5,
         }}
       />
     </div>
