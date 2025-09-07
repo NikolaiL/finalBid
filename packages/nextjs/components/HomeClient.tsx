@@ -233,7 +233,7 @@ const PotentialAmounts = ({
   }, [totalFees, streamingAmount]);
 
   const actualProfit = useMemo(() => {
-    return auctionValue - totalFees - nextBidAmount + streamingAmount;
+    return BigInt(Math.floor(Number(auctionValue) / 2)) - totalFees - nextBidAmount + streamingAmount;
   }, [auctionValue, totalFees, nextBidAmount, streamingAmount]);
 
   // Convert to display values
@@ -819,7 +819,8 @@ export default function HomeClient() {
       const auctionValue = latestAuction.auctionAmount as bigint;
       const isHighestBidder = address.toLowerCase() === topBidderAddress.toLowerCase();
       const nextBidAmount = isHighestBidder ? lastBidAmount : (nextBid as bigint) + (platformFee as bigint);
-      const potentialProfit = auctionValue - totalFees - nextBidAmount + streamingAmount;
+      const potentialProfit =
+        BigInt(Math.floor(Number(auctionValue) / 2)) - totalFees - nextBidAmount + streamingAmount;
 
       return {
         address,
@@ -829,6 +830,7 @@ export default function HomeClient() {
         potentialProfit,
         streamingAmount,
         isCurrentUser: connectedAddress && address.toLowerCase() === connectedAddress.toLowerCase(),
+        isHighestBidder: address.toLowerCase() === topBidderAddress.toLowerCase(),
       };
     });
 
@@ -1148,7 +1150,7 @@ export default function HomeClient() {
                           totalFees={BigInt(stat.numBids) * ((latestAuction?.platformFee as bigint) || 0n)}
                           auctionValue={latestAuction?.auctionAmount as bigint}
                           nextBidAmount={
-                            stat.isCurrentUser
+                            stat.isHighestBidder
                               ? stat.lastBidAmount
                               : (nextBid as bigint) + ((platformFee as bigint) || 0n)
                           }
