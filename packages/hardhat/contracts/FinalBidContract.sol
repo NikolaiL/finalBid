@@ -40,7 +40,7 @@ contract FinalBidContract is Ownable, Pausable, ReentrancyGuard {
     
     // Signature verification for bot prevention
     address public validSigner;
-    uint256 public accessTokenValidity = 30; // 30 seconds
+    uint256 public accessTokenValidity = 60; // 30 seconds
 
     uint256 public streamingUnits = 0;
 
@@ -184,7 +184,7 @@ contract FinalBidContract is Ownable, Pausable, ReentrancyGuard {
         uint256 auctionAmountToUse = availableAmount * percentageToUse / 100;
 
         
-        if (availableAmount > auctionAmountToUse ) {
+        if (availableAmount > auctionAmountToUse && percentageToWithdraw > 0) {
             uint256 amountToWithdraw = availableAmount * percentageToWithdraw / 100;
             _withdrawExcess(amountToWithdraw);
         }
@@ -389,7 +389,6 @@ contract FinalBidContract is Ownable, Pausable, ReentrancyGuard {
     }
 
     function setPercentageToWithdraw(uint256 _percentageToWithdraw) external onlyOwner {
-        require(_percentageToWithdraw > 0, "percentageToWithdraw must be > 0");
         require(_percentageToWithdraw <= 100, "percentageToWithdraw must be <= 100");
         require(_percentageToWithdraw + percentageToUse <= 100, "percentageToWithdraw + percentageToUse cannot exceed 100");
         percentageToWithdraw = _percentageToWithdraw;
