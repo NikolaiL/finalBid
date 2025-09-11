@@ -356,6 +356,13 @@ export default function HomeClient() {
     functionName: "tokenAddress",
   });
 
+  // Check if new auction is allowed
+  const { data: newAuctionIsAllowed } = useScaffoldReadContract({
+    contractName: "FinalBidContract",
+    functionName: "newAuctionIsAllowed",
+    watch: true,
+  });
+
   const { writeContractAsync: writeTokenContractAsync } = useWriteContract();
 
   // ERC20 ABI for allowance and approve functions
@@ -1011,14 +1018,18 @@ export default function HomeClient() {
                   </button>
                 ) : null}
                 {!latestAuction?.auctionId || isAuctionOver ? (
-                  <button
-                    className="btn btn-primary text-xl transition-all h-14 px-6 "
-                    onClick={async () => {
-                      await writeContractAsync({ functionName: "startAuction" });
-                    }}
-                  >
-                    Start a New Auction
-                  </button>
+                  newAuctionIsAllowed ? (
+                    <button
+                      className="btn btn-primary text-xl transition-all h-14 px-6 "
+                      onClick={async () => {
+                        await writeContractAsync({ functionName: "startAuction" });
+                      }}
+                    >
+                      Start a New Auction
+                    </button>
+                  ) : (
+                    <div className="text-2xl font-black text-center py-8">Something is Cooking 🚀🚀🚀</div>
+                  )
                 ) : null}
               </div>
             </>

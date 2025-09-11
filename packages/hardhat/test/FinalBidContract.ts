@@ -573,7 +573,7 @@ describe("FinalBidContract", function () {
 
       const accessToken1 = await generateAccessToken(serverPrivateKey, user1.address, 1n);
       await finalBidContract.connect(user1).placeBid(accessToken1, user1.address);
-      expect(await finalBidContract.streamingUnits()).to.equal(1);
+      expect(await finalBidContract.streamingUnits()).to.equal(1024);
 
       // Check that the address was added to the streaming addresses array
       const streamingAddresses = await finalBidContract.streamingAddresses(0);
@@ -581,7 +581,7 @@ describe("FinalBidContract", function () {
 
       // Check that the streaming data was stored correctly
       const streamingData = await finalBidContract.streamings(user1.address);
-      expect(streamingData.units).to.equal(1);
+      expect(streamingData.units).to.equal(1024);
     });
 
     it("Should calculate flow rate per unit based on auction parameters", async function () {
@@ -597,11 +597,11 @@ describe("FinalBidContract", function () {
 
       // Calculate expected flow rate per unit
       const expectedTotalFlowRate = ((auctionAmount / 2n) * 1000n) / auctionLength;
-      const expectedFlowRatePerUnit = expectedTotalFlowRate;
+      const expectedFlowRatePerUnit = expectedTotalFlowRate / 1024n;
 
       // Check that flow rate is calculated correctly
       const streamingData = await finalBidContract.streamings(user1.address);
-      expect(streamingData.flowRate).to.equal(expectedFlowRatePerUnit);
+      expect(streamingData.flowRate).to.equal(expectedFlowRatePerUnit * 1024n);
     });
 
     it("Should update flow rates when streaming units are added", async function () {
@@ -619,7 +619,7 @@ describe("FinalBidContract", function () {
       const user2FlowRate = (await finalBidContract.streamings(user2.address)).flowRate;
 
       // Both should have the same flow rate per unit
-      expect(user1FlowRate).to.equal(user2FlowRate); // user1 has half the units
+      expect(user1FlowRate * 2n).to.equal(user2FlowRate); // user1 has half the units
 
       // user flow rate should be less than initial flow rate
       expect(user1FlowRate).to.be.lt(initialFlowRate);

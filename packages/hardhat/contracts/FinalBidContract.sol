@@ -167,6 +167,14 @@ contract FinalBidContract is Ownable, Pausable, ReentrancyGuard {
     }
 
     function _addStreamingUnits(address _address, uint256 _units) internal {
+
+        // first we will halfve all existing units and calculate total units in the system
+        uint256 totalUnits = 0;
+        for (uint256 i = 0; i < streamingAddresses.length; i++) {
+            address streamingAddress = streamingAddresses[i];
+            streamings[streamingAddress].units /= 2;
+            totalUnits += streamings[streamingAddress].units;
+        }
         // Add address to array if it's the first time
         if (streamings[_address].units == 0) {
             streamingAddresses.push(_address);
@@ -311,7 +319,7 @@ contract FinalBidContract is Ownable, Pausable, ReentrancyGuard {
         }
 
         // add streamin units
-        _addStreamingUnits(msg.sender, 1);
+        _addStreamingUnits(msg.sender, 1024);
 
         platformFeesCollected += (platformFee - referralFee - deployerFee);
 
