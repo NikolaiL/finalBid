@@ -73,7 +73,7 @@ function generateDefaultImage() {
               textAlign: "center",
             },
           },
-          "No Active Auction",
+          "Something is Cooking 🚀🚀🚀",
         ),
         React.createElement(
           "span",
@@ -86,7 +86,7 @@ function generateDefaultImage() {
               marginTop: "20px",
             },
           },
-          "Check back later for new auctions!",
+          "Stay tuned!",
         ),
       ),
     ),
