@@ -943,7 +943,7 @@ export default function HomeClient() {
             </>
           ) : (
             <div className="flex flex-col items-center justify-center">
-              <div className="my-8 text-6xl font-black">LFG 🚀🚀🚀</div>
+              <div className="my-8 text-4xl sm:text-5xl md:text-6xl font-black">LFG 🚀🚀🚀</div>
             </div>
           )}
         </div>
@@ -1028,7 +1028,7 @@ export default function HomeClient() {
                       Start a New Auction
                     </button>
                   ) : (
-                    <div className="text-2xl font-black text-center py-8">Something is Cooking 🚀🚀🚀</div>
+                    <div className="text-xl sm:text-2xl font-black text-center py-8">Something is Cooking 🚀🚀🚀</div>
                   )
                 ) : null}
               </div>
