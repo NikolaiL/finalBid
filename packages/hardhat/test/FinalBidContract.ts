@@ -62,7 +62,7 @@ describe("FinalBidContract", function () {
   });
 
   beforeEach(async () => {
-    const initialSupply = 1000000000000;
+    const initialSupply = 1000;
 
     const dummyUsdcContractFactory = await ethers.getContractFactory("DummyUsdcContract");
     dummyUsdcContract = (await dummyUsdcContractFactory.deploy(owner.address, initialSupply)) as DummyUsdcContract;
@@ -82,16 +82,18 @@ describe("FinalBidContract", function () {
     )) as FinalBidContract;
     await finalBidContract.waitForDeployment();
 
-    // mint 1000000000000 USDC to user1, user2, user3, contrcat
-    await dummyUsdcContract.mint(user1.address, 1500000000); // 1500 USDC
-    await dummyUsdcContract.mint(user2.address, 500000000); // 500 USDC
-    await dummyUsdcContract.mint(user3.address, 500000000); // 500 USD
-    await dummyUsdcContract.mint(finalBidContract.target, 110000000);
+    await finalBidContract.setNewAuctionIsAllowed();
 
-    // allowance for user1 to spend 1000000000000 USDC
-    await dummyUsdcContract.connect(user1).approve(finalBidContract.target, 10000000000000);
-    await dummyUsdcContract.connect(user2).approve(finalBidContract.target, 10000000000000);
-    await dummyUsdcContract.connect(user3).approve(finalBidContract.target, 10000000000000);
+    // mint 1000 USDC to user1, user2, user3, contract
+    await dummyUsdcContract.mint(user1.address, ethers.parseEther("1000000")); // 1,000 USDC
+    await dummyUsdcContract.mint(user2.address, ethers.parseEther("1000000")); // 1,000 USDC
+    await dummyUsdcContract.mint(user3.address, ethers.parseEther("1000000")); // 1,000 USDC
+    await dummyUsdcContract.mint(finalBidContract.target, ethers.parseEther("1000000"));
+
+    // allowance for users to spend 1,000 Degen
+    await dummyUsdcContract.connect(user1).approve(finalBidContract.target, ethers.parseEther("1000000"));
+    await dummyUsdcContract.connect(user2).approve(finalBidContract.target, ethers.parseEther("1000000"));
+    await dummyUsdcContract.connect(user3).approve(finalBidContract.target, ethers.parseEther("1000000"));
   });
 
   describe("Start Auction", function () {
@@ -147,7 +149,7 @@ describe("FinalBidContract", function () {
       const balanceBefore = await dummyUsdcContract.balanceOf(finalBidContract.target);
       await dummyUsdcContract.connect(owner).burnFrom(finalBidContract.target, balanceBefore);
 
-      const balance = 50000000; // 50 USDC
+      const balance = ethers.parseEther("50"); // 50 USDC
 
       await dummyUsdcContract.mint(finalBidContract.target, balance);
 
@@ -163,7 +165,7 @@ describe("FinalBidContract", function () {
       const balanceBefore = await dummyUsdcContract.balanceOf(finalBidContract.target);
       await dummyUsdcContract.connect(owner).burnFrom(finalBidContract.target, balanceBefore);
 
-      const balance = 500000; // 0.5 USDC
+      const balance = ethers.parseEther("0.5"); // 0.5 USDC
       await dummyUsdcContract.mint(finalBidContract.target, balance);
 
       await expect(finalBidContract.startAuction()).to.be.revertedWith("Insufficient balance to start auction");
@@ -208,6 +210,12 @@ describe("FinalBidContract", function () {
 
       const referralAddress = "0x0000000000000000000000000000000000000000";
 
+      const startingAmount = await finalBidContract.startingAmount();
+      const platformFee = await finalBidContract.platformFee();
+      const referralFee = await finalBidContract.referralFee();
+      const deployerFee = await finalBidContract.deployerFee();
+      const expectedPlatformFee = platformFee - referralFee - deployerFee;
+
       const balanceBefore = await dummyUsdcContract.balanceOf(finalBidContract.target);
 
       // Generate access token for user1
@@ -218,23 +226,20 @@ describe("FinalBidContract", function () {
       const auction = await finalBidContract.auctions(1);
 
       expect(auction.highestBidder).to.equal(user1.address);
-      expect(auction.highestBid).to.equal(200000); // 0.2 USD
+      expect(auction.highestBid).to.equal(startingAmount);
       expect(auction.bidCount).to.equal(1);
 
       // Calculate expected total: bid amount + platform fee
-      const platformFee = await finalBidContract.platformFee();
       const actualBalanceIncrease = (await dummyUsdcContract.balanceOf(finalBidContract.target)) - balanceBefore;
       //const expectedTotal = 200000 + Number(platformFee);
       //console.log("Platform fee:", Number(platformFee));
       //console.log("Expected total:", expectedTotal);
       //console.log("Actual balance increase:", Number(actualBalanceIncrease));
-      expect(actualBalanceIncrease).to.equal(330000); // Actual value from contract
+      expect(actualBalanceIncrease).to.equal(expectedPlatformFee + startingAmount); // Actual value from contract
 
       // we should also expect the platformFeesCollected to be platform fee minus referral fee and deployer fee
-      const referralFee = await finalBidContract.referralFee();
-      const deployerFee = await finalBidContract.deployerFee();
-      const expectedPlatformFees = Number(platformFee) - Number(referralFee) - Number(deployerFee);
-      expect(await finalBidContract.platformFeesCollected()).to.equal(expectedPlatformFees);
+
+      expect(await finalBidContract.platformFeesCollected()).to.equal(expectedPlatformFee);
 
       // we should also expect the referralRewards to be 1000000
     });
@@ -257,6 +262,7 @@ describe("FinalBidContract", function () {
       expect(await finalBidContract.auctionId()).to.equal(1);
 
       const bidIncrement = await finalBidContract.bidIncrement();
+      const startingAmount = await finalBidContract.startingAmount();
 
       const referralAddress = "0x0000000000000000000000000000000000000000";
 
@@ -269,19 +275,19 @@ describe("FinalBidContract", function () {
       await finalBidContract.connect(user1).placeBid(accessToken1, referralAddress);
 
       let auction = await finalBidContract.auctions(1);
-      expect(auction.highestBid).to.equal(200000);
+      expect(auction.highestBid).to.equal(startingAmount);
 
       // call as user2
       await finalBidContract.connect(user2).placeBid(accessToken2, user1);
 
       auction = await finalBidContract.auctions(1);
-      expect(auction.highestBid).to.equal(200000 + Number(bidIncrement));
+      expect(auction.highestBid).to.equal(startingAmount + bidIncrement);
 
       // call as user3
       await finalBidContract.connect(user3).placeBid(accessToken3, user2);
 
       auction = await finalBidContract.auctions(1);
-      expect(auction.highestBid).to.equal(200000 + Number(bidIncrement) * 2);
+      expect(auction.highestBid).to.equal(startingAmount + bidIncrement * 2n);
     });
 
     it("Should increase the auction duration if the auction is not over", async function () {
@@ -307,6 +313,27 @@ describe("FinalBidContract", function () {
     });
     it("Should not increase the auction duration if the latest bet is equal or more than the auction amount", async function () {
       const zeroAddress = "0x0000000000000000000000000000000000000000";
+
+      // Increase allowance for this test since it does many bids
+      await dummyUsdcContract.connect(user1).approve(finalBidContract.target, ethers.parseEther("100000000"));
+      await dummyUsdcContract.connect(user2).approve(finalBidContract.target, ethers.parseEther("100000000"));
+
+      // calculate what balance do we need to start auction with amoutn apprx 50 times higehr than the increase
+      // and burn the rest
+      const currentBalance = await dummyUsdcContract.balanceOf(finalBidContract.target);
+      // balance required = starting amount + (50 * increase)
+      const startingAmount = await finalBidContract.startingAmount();
+      const bidIncrement = await finalBidContract.bidIncrement();
+      const percentageToUse = await finalBidContract.percentageToUse();
+
+      const requiredAmount = ((startingAmount + 50n * bidIncrement) * 100n) / percentageToUse;
+
+      const amountToBurn = requiredAmount > currentBalance ? 0 : currentBalance - requiredAmount;
+
+      console.log("Amount to burn:", amountToBurn);
+      if (amountToBurn > 0) {
+        await dummyUsdcContract.burnFrom(finalBidContract.target, amountToBurn);
+      }
 
       await finalBidContract.startAuction();
 
@@ -382,8 +409,6 @@ describe("FinalBidContract", function () {
       await finalBidContract.startAuction();
       expect(await finalBidContract.auctionId()).to.equal(1);
 
-      const bidIncrement = await finalBidContract.bidIncrement();
-
       const zeroAddress = "0x0000000000000000000000000000000000000000";
 
       // Generate access tokens for all users
@@ -394,14 +419,17 @@ describe("FinalBidContract", function () {
       // call as user1
       await finalBidContract.connect(user1).placeBid(accessToken1, zeroAddress);
 
+      const startingAmount = await finalBidContract.startingAmount();
+      const bidIncrement = await finalBidContract.bidIncrement();
+
       let auction = await finalBidContract.auctions(1);
-      expect(auction.highestBid).to.equal(200000);
+      expect(auction.highestBid).to.equal(startingAmount);
 
       // call as user2
       await finalBidContract.connect(user2).placeBid(accessToken2, user1);
 
       auction = await finalBidContract.auctions(1);
-      expect(auction.highestBid).to.equal(200000 + Number(bidIncrement));
+      expect(auction.highestBid).to.equal(startingAmount + bidIncrement);
 
       // get user1 balance
       const user1BalanceBefore = await dummyUsdcContract.balanceOf(user1.address);
@@ -409,7 +437,7 @@ describe("FinalBidContract", function () {
       await finalBidContract.connect(user3).placeBid(accessToken3, user1);
 
       auction = await finalBidContract.auctions(1);
-      expect(auction.highestBid).to.equal(200000 + Number(bidIncrement) * 2);
+      expect(auction.highestBid).to.equal(startingAmount + bidIncrement * 2n);
 
       // check the user1 balance
       const user1BalanceAfter = await dummyUsdcContract.balanceOf(user1.address);
@@ -537,14 +565,18 @@ describe("FinalBidContract", function () {
       await expect((finalBidContract.connect(user1) as any).setPlatformFee(100)).to.be.reverted;
       await expect((finalBidContract as any).setPlatformFee(0)).to.be.revertedWith("platformFee must be > 0");
 
+      const referralFee = await finalBidContract.referralFee();
+      const deployerFee = await finalBidContract.deployerFee();
+      //const platformFee = await finalBidContract.platformFee();
+
       // set referralFee to some value, then attempt lowering platformFee below it
-      await (finalBidContract as any).setReferralFee(50000); // 0.05 USDC
-      await expect((finalBidContract as any).setPlatformFee(49999)).to.be.revertedWith(
+      await (finalBidContract as any).setReferralFee(referralFee / 2n); // 0.05 USDC
+      await expect((finalBidContract as any).setPlatformFee(referralFee / 2n - 10n)).to.be.revertedWith(
         "referralFee + deployerFee cannot exceed platformFee",
       );
 
-      await (finalBidContract as any).setPlatformFee(1500000); // 1.5 USDC
-      expect(await finalBidContract.platformFee()).to.equal(1500000);
+      await (finalBidContract as any).setPlatformFee(referralFee + deployerFee + 1n);
+      expect(await finalBidContract.platformFee()).to.equal(referralFee + deployerFee + 1n);
     });
 
     it("Deployer fee must be <= platform fee - referral fee; only owner can set", async function () {

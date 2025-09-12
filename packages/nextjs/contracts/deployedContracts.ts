@@ -1187,7 +1187,7 @@ const deployedContracts = {
   },
   31337: {
     DummyUsdcContract: {
-      address: "0x5FbDB2315678afecb367f032d93F642f64180aa3",
+      address: "0xa513E6E4b8f2a923D98304ec87F64353C4D5C853",
       abi: [
         {
           inputs: [
@@ -1714,10 +1714,10 @@ const deployedContracts = {
         renounceOwnership: "@openzeppelin/contracts/access/Ownable.sol",
         transferOwnership: "@openzeppelin/contracts/access/Ownable.sol",
       },
-      deployedOnBlock: 1,
+      deployedOnBlock: 10,
     },
     FinalBidContract: {
-      address: "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512",
+      address: "0x2279B7A0a67DB372996a5FaB50D91eAA73d2eBe6",
       abi: [
         {
           inputs: [
@@ -2892,12 +2892,12 @@ const deployedContracts = {
         transferOwnership: "@openzeppelin/contracts/access/Ownable.sol",
         paused: "@openzeppelin/contracts/utils/Pausable.sol",
       },
-      deployedOnBlock: 3,
+      deployedOnBlock: 12,
     },
   },
   84532: {
     DummyUsdcContract: {
-      address: "0x31fDdEf1Bd0BffB7D78413878694aC33ED01Bc56",
+      address: "0xC7fDAe92Edf79d265Fc5405AFD8E21F5207bC191",
       abi: [
         {
           inputs: [
@@ -3424,10 +3424,10 @@ const deployedContracts = {
         renounceOwnership: "@openzeppelin/contracts/access/Ownable.sol",
         transferOwnership: "@openzeppelin/contracts/access/Ownable.sol",
       },
-      deployedOnBlock: 30676717,
+      deployedOnBlock: 30971474,
     },
     FinalBidContract: {
-      address: "0x2e5DcC8ecEd7bBbc343B20Fa6Aa1f492010Aa4cA",
+      address: "0x0e0A96bbAEEE336DDdEc5ACced7C7FaE9663d3cB",
       abi: [
         {
           inputs: [
@@ -4602,7 +4602,7 @@ const deployedContracts = {
         transferOwnership: "@openzeppelin/contracts/access/Ownable.sol",
         paused: "@openzeppelin/contracts/utils/Pausable.sol",
       },
-      deployedOnBlock: 30678011,
+      deployedOnBlock: 30971477,
     },
   },
   421614: {

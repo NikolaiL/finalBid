@@ -18,15 +18,16 @@ const rubik = Rubik({
   variable: "--font-rubik",
 });
 
+const recaptchaUrl = "https://www.google.com/recaptcha/api.js?render=" + process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY;
+if (!recaptchaUrl) {
+  throw new Error("NEXT_PUBLIC_RECAPTCHA_SITE_KEY is not set");
+}
+
 const ScaffoldEthApp = ({ children }: { children: React.ReactNode }) => {
   return (
     <html suppressHydrationWarning className={`${rubik.variable}`}>
       <head>
-        <script
-          src="https://www.google.com/recaptcha/api.js?render=6LdtW7wrAAAAAIK-Zvxja48Nl0NdLy5qnoEft4h8"
-          async
-          defer
-        ></script>
+        <script src={recaptchaUrl} async defer></script>
       </head>
       <body>
         <ThemeProvider enableSystem>

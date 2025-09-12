@@ -22,20 +22,20 @@ contract FinalBidContract is Ownable, Pausable, ReentrancyGuard {
     // State Variables
     address public tokenAddress;
     uint256 public auctionId;
-    uint256 public auctionAmount = 20_000_000; // 20 USDC
+    uint256 public auctionAmount = 10000 * 10 ** 18; // 10000 Degen
     uint256 public auctionDuration = 3_600; // 1 hour
     uint256 public auctionDurationIncrease = 45; // 1 minute
-    uint256 public startingAmount = 200_000; // 0.2 USDC
-    uint256 public bidIncrement = 10_000; // 0.01 USDC
-    uint256 public referralFee = 50_000; // 0.05 USDC
-    uint256 public platformFee = 200_000; // 0.2 USDC
-    uint256 public deployerFee = 20_000; // 0.02 UCDC
+    uint256 public startingAmount = 1 * 10 ** 18; // 1 Degen
+    uint256 public bidIncrement = 1 * 10 ** 18; // 1 Degen
+    uint256 public referralFee = 10 * 10 ** 18; // 10 Degen
+    uint256 public platformFee = 100 * 10 ** 18; // 100 Degen
+    uint256 public deployerFee = 10 * 10 ** 18; // 10 Degen
     uint256 public platformFeesCollected;
     uint256 public platformFeesClaimed;
     uint256 public totalReferralRewardsCollected;
     uint256 public percentageToWithdraw = 1;
     uint256 public percentageToUse = 10;
-    bool public newAuctionIsAllowed = true;
+    bool public newAuctionIsAllowed = false;
     //uint256 public totalReferralRewardsClaimed;
     
     // Signature verification for bot prevention

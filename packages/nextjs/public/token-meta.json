@@ -1,7 +1,7 @@
 {
-  "chainId": 8453,
-  "finalBidAddress": "0x4c43B88A239930d00222B3a4Ba2E4268Dd68f10E",
-  "tokenAddress": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
-  "symbol": "USDC",
-  "decimals": 6
+  "chainId": 84532,
+  "finalBidAddress": "0x0e0A96bbAEEE336DDdEc5ACced7C7FaE9663d3cB",
+  "tokenAddress": "0xC7fDAe92Edf79d265Fc5405AFD8E21F5207bC191",
+  "symbol": "dDEGEN",
+  "decimals": 18
 }

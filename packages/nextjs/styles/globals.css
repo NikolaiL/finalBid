@@ -12,8 +12,9 @@
 
 @plugin "daisyui" {
   themes:
-    light,
-    dark --prefersdark;
+    /* light,
+    dark --prefersdark; */
+    dark -default;
 }
 
 @plugin "daisyui/theme" {
@@ -36,15 +37,15 @@
   --color-warning: #ffcf72;
   --color-error: #ff8863;
 
-  --radius-field: 9999rem;
-  --radius-box: 1rem;
+  --radius-field: 0.5rem;
+  --radius-box: 0.5rem;
   --tt-tailw: 6px;
 }
 
 @plugin "daisyui/theme" {
   name: "dark";
 
-  --color-primary: #ff6600;
+  --color-primary: #a36efd;
   --color-primary-content: #f9fbff;
   --color-secondary: #323f61;
   --color-secondary-content: #f9fbff;
@@ -52,9 +53,9 @@
   --color-accent-content: #f9fbff;
   --color-neutral: #f9fbff;
   --color-neutral-content: #385183;
-  --color-base-100: #385183;
-  --color-base-200: #2a3655;
-  --color-base-300: #212638;
+  --color-base-100: #141D2A;
+  --color-base-200: #1e2a3c;
+  --color-base-300: #1e2a3c;
   --color-base-content: #f9fbff;
   --color-info: #385183;
   --color-success: #34eeb6;
@@ -109,7 +110,7 @@
 }
 
 .btn {
-  @apply shadow-md transition-all;
+  @apply shadow-md transition-all !rounded-md;
 }
 
 .btn.btn-ghost {

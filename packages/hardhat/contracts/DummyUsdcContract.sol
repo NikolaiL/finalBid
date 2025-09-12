@@ -14,7 +14,7 @@ import "@openzeppelin/contracts/access/Ownable.sol";
  */
 contract DummyUsdcContract is ERC20, Ownable {
     // USDC has 6 decimals
-    uint8 private constant DECIMALS = 6;
+    uint8 private constant DECIMALS = 18;
 
     // Events
     event Minted(address indexed to, uint256 amount);
@@ -25,7 +25,7 @@ contract DummyUsdcContract is ERC20, Ownable {
      * @param initialOwner The address that will receive the initial supply
      * @param initialSupply The initial supply of tokens (in smallest units)
      */
-    constructor(address initialOwner, uint256 initialSupply) ERC20("Dummy USDC", "dUSDC") Ownable(initialOwner) {
+    constructor(address initialOwner, uint256 initialSupply) ERC20("Dummy Degen", "dDEGEN") Ownable(initialOwner) {
         _mint(initialOwner, initialSupply);
     }
 
@@ -48,8 +48,8 @@ contract DummyUsdcContract is ERC20, Ownable {
     }
 
     function grab() public {
-        _mint(msg.sender, 10000000); // 10 USDC
-        emit Minted(msg.sender, 10000000);
+        _mint(msg.sender, 10000 * 10 ** DECIMALS); // 10 USDC
+        emit Minted(msg.sender, 10000 * 10 ** DECIMALS);
     }
 
     /**

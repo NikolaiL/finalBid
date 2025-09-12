@@ -25,14 +25,7 @@ const deployYourContract: DeployFunction = async function (hre: HardhatRuntimeEn
   // USDC addresses for each network
   // You can get some testnet USDC from the faucet here: https://faucet.circle.com/
   const usdcAddressMap = {
-    mainnet: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
-    sepolia: "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238",
-    base: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
-    //baseSepolia: "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
-    arbitrum: "0xaf88d065e77c8cC2239327C5EDb3A432268e5831",
-    //arbitrumSepolia: "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
-    optimism: "0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85",
-    optimismSepolia: "0x5fd84259d66Cd46123540766Be93DFE6D43130D7",
+    base: "0x4ed4e862860bed51a9570b96d89af5e1b0efefed",
   };
 
   const networkName = await hre.network.name;
@@ -94,34 +87,36 @@ const deployYourContract: DeployFunction = async function (hre: HardhatRuntimeEn
     const usdcContractInstance = await hre.ethers.getContractAt("DummyUsdcContract", usdcAddress);
     console.log("👋 USDC Contract:", usdcAddress);
 
+    const amountToMint = hre.ethers.parseUnits("1000000", 18);
+
     // wait for 3 seconds to avoid nonce error
     await new Promise(resolve => setTimeout(resolve, 3000));
 
-    await usdcContractInstance.connect(deployerSigner).mint(deployer, 100000000);
+    await usdcContractInstance.connect(deployerSigner).mint(deployer, amountToMint);
     console.log("👋 Minted USDC to deployer");
 
     // wait for 3 seconds to avoid nonce error
     await new Promise(resolve => setTimeout(resolve, 3000));
 
-    await usdcContractInstance.connect(deployerSigner).mint(finalBidContract.address, 100000000);
+    await usdcContractInstance.connect(deployerSigner).mint(finalBidContract.address, amountToMint);
     console.log("👋 Minted USDC to finalBidContract");
 
     // wait for 3 seconds to avoid nonce error
     await new Promise(resolve => setTimeout(resolve, 3000));
 
-    await usdcContractInstance.connect(deployerSigner).mint("0x296b0874401a354aF58CAe1222ca7876601d2828", 100000000);
+    await usdcContractInstance.connect(deployerSigner).mint("0x296b0874401a354aF58CAe1222ca7876601d2828", amountToMint);
     console.log("👋 Minted USDC to 0x296b0874401a354aF58CAe1222ca7876601d2828");
 
     // wait for 3 seconds to avoid nonce error
     await new Promise(resolve => setTimeout(resolve, 3000));
 
-    await usdcContractInstance.connect(deployerSigner).mint("0x4b7b07D8BAf51975eeAb0E1eb4B481A5aC691ED6", 100000000);
+    await usdcContractInstance.connect(deployerSigner).mint("0x4b7b07D8BAf51975eeAb0E1eb4B481A5aC691ED6", amountToMint);
     console.log("👋 Minted USDC to 0x4b7b07D8BAf51975eeAb0E1eb4B481A5aC691ED6");
 
     // wait for 3 seconds to avoid nonce error
     await new Promise(resolve => setTimeout(resolve, 3000));
 
-    await usdcContractInstance.connect(deployerSigner).mint("0x8D6230427a37986D25Fe4D5B3d0aaEF1b924fEd6", 100000000);
+    await usdcContractInstance.connect(deployerSigner).mint("0x8D6230427a37986D25Fe4D5B3d0aaEF1b924fEd6", amountToMint);
     console.log("👋 Minted USDC to 0x8D6230427a37986D25Fe4D5B3d0aaEF1b924fEd6");
   }
 

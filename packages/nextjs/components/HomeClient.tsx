@@ -20,13 +20,16 @@ import {
 import { getAddressDisplayName } from "~~/lib/farcaster";
 import { useDataLiveQuery } from "~~/lib/useDataLiveQuery";
 
-const DISPLAY_DECIMALS = Number(process.env.NEXT_PUBLIC_DISPLAY_DECIMALS) ?? 2;
-const TOKEN_DECIMALS = Number(process.env.NEXT_PUBLIC_TOKEN_DECIMALS) ?? 6;
+const DISPLAY_DECIMALS = Number(process.env.NEXT_PUBLIC_DISPLAY_DECIMALS) ?? 0;
+const TOKEN_DECIMALS = Number(process.env.NEXT_PUBLIC_TOKEN_DECIMALS) ?? 18;
 
 const formatToken = (amount: bigint | 0n, decimals: number = DISPLAY_DECIMALS): string => {
   const amountNumber = Number(amount);
   const tokenAmount = amountNumber / 10 ** TOKEN_DECIMALS;
-  return tokenAmount.toFixed(decimals);
+  return tokenAmount.toLocaleString("en-US", {
+    minimumFractionDigits: decimals,
+    maximumFractionDigits: decimals,
+  });
 };
 
 const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
@@ -432,8 +435,7 @@ export default function HomeClient() {
   const [isBidding, setIsBidding] = useState(false);
   const [bidStatus, setBidStatus] = useState<string>("");
   const [latestResults, setLatestResults] = useState<string>("");
-  const [isApproving20, setIsApproving20] = useState(false);
-  const [isApproving100, setIsApproving100] = useState(false);
+  const [isApproving, setIsApproving] = useState(0);
   const [isRevoking, setIsRevoking] = useState(false);
 
   // Constants
@@ -696,11 +698,7 @@ export default function HomeClient() {
     if (!tokenAddress || !finalBidContractInfo?.address) return;
 
     // Set the appropriate approval state based on amount
-    if (amount === 20) {
-      setIsApproving20(true);
-    } else if (amount === 100) {
-      setIsApproving100(true);
-    }
+    setIsApproving(amount);
 
     try {
       const amountInWei = BigInt(amount * 10 ** TOKEN_DECIMALS);
@@ -733,11 +731,7 @@ export default function HomeClient() {
       toast.error("Failed to approve allowance");
     } finally {
       // Reset the appropriate approval state based on amount
-      if (amount === 20) {
-        setIsApproving20(false);
-      } else if (amount === 100) {
-        setIsApproving100(false);
-      }
+      setIsApproving(0);
     }
   };
 
@@ -885,7 +879,7 @@ export default function HomeClient() {
     <div className="w-full max-w-3xl mx-auto px-2 sm:px-4 lg:px-6">
       <div className="flex flex-col gap-1 py-4 px-2">
         {/* Auction info */}
-        <div className="bg-base-100 p-5 rounded-3xl shadow-md shadow-secondary border border-base-300 flex flex-col gap-3">
+        <div className="bg-base-100 p-5 rounded-xl shadow-md shadow-secondary border border-base-300 flex flex-col gap-3">
           {latestAuction ? (
             <>
               <div className="flex flex-col sm:flex-row flex-wrap gap-0 sm:gap-4 items-center">
@@ -898,7 +892,7 @@ export default function HomeClient() {
                 </div>
               </div>
               <div className="text-xs text-base-content/50 text-center w-full -mt-4">
-                50% goes to the winner. 50% is streamed to all bidders, based on their number of bids.
+                50% goes to the winner. 50% is streamed to the last 10 bidders, based on their bid.
               </div>
               <div className="grid grid-cols-2 gap-4 items-center">
                 <div className="text-left">
@@ -1043,12 +1037,12 @@ export default function HomeClient() {
         </div>
 
         {/* Share block */}
-        <div className="bg-base-100 p-4 rounded-3xl shadow-md shadow-secondary border border-base-300 flex flex-col gap-3">
+        <div className="bg-base-100 p-4 rounded-xl shadow-md shadow-secondary border border-base-300 flex flex-col gap-3">
           {connectedAddress ? (
             <div className="text-lg font-light text-center items-center">
               Share and earn{" "}
               <span className="font-black text-lg text-primary">
-                {formatToken(latestAuction?.referralFee ?? 250000)}
+                {formatToken(latestAuction?.referralFee ?? 10 * 10 ** 18)}
               </span>{" "}
               {String(tokenSymbol ?? "USDC")} from every bid:
             </div>
@@ -1090,7 +1084,7 @@ export default function HomeClient() {
         {/* preapprove block */}
         {/* only show if wallet is connected */}
         {connectedAddress && (
-          <div className="bg-base-100 p-4 rounded-3xl shadow-md shadow-secondary border border-base-300 flex flex-col gap-1 mt-4">
+          <div className="bg-base-100 p-4 rounded-xl shadow-md shadow-secondary border border-base-300 flex flex-col gap-1 mt-4">
             <div className="text-lg font-light text-center items-center">Pre-Approve for faster bidding</div>
             <div className="text-center items-center text-base-content/70 text-xs mb-2">
               Your current allowance is {allowance ? formatToken(allowance as bigint) : "0"}{" "}
@@ -1099,17 +1093,17 @@ export default function HomeClient() {
             <div className="flex gap-2 justify-center items-center">
               <button
                 className="btn btn-accent btn-sm flex items-center gap-2"
-                onClick={() => handlePreApprove(20)}
-                disabled={isApproving20 || isApproving100}
+                onClick={() => handlePreApprove(2000)}
+                disabled={isApproving === 2000}
               >
-                {isApproving20 ? "Approving..." : "20 USDC"}
+                {isApproving === 2000 ? "Approving..." : "2,000" + " " + String(tokenSymbol ?? "USDC")}
               </button>
               <button
                 className="btn btn-accent btn-sm flex items-center gap-2"
-                onClick={() => handlePreApprove(100)}
-                disabled={isApproving20 || isApproving100}
+                onClick={() => handlePreApprove(10000)}
+                disabled={isApproving === 10000}
               >
-                {isApproving100 ? "Approving..." : "100 USDC"}
+                {isApproving === 10000 ? "Approving..." : "10,000" + " " + String(tokenSymbol ?? "USDC")}
               </button>
               <button
                 className="btn btn-secondary btn-sm flex items-center gap-2"
@@ -1124,7 +1118,7 @@ export default function HomeClient() {
 
         {/* Current Auction Stats */}
         {latestAuction && userStats.length > 0 && (
-          <div className="bg-base-100 mt-4 p-0 rounded-3xl shadow-md shadow-secondary border border-base-300 flex flex-col gap-3">
+          <div className="bg-base-100 mt-4 p-0 rounded-xl shadow-md shadow-secondary border border-base-300 flex flex-col gap-3">
             <div className="text-lg font-light text-center mt-3">Current Auction Stats</div>
             <div className="overflow-x-auto overflow-y-hidden">
               <table className="table table-sm w-full">
@@ -1186,7 +1180,7 @@ export default function HomeClient() {
               {CurrentBidEvents.map(event => (
                 <div
                   key={event.id}
-                  className="flex items-center justify-center border border-base-300 rounded-3xl bg-base-100 p-4 shadow-md shadow-secondary"
+                  className="flex items-center justify-center border border-base-300 rounded-xl bg-base-100 p-4 shadow-md shadow-secondary"
                 >
                   <div className="flex flex-col items-center gap-1">
                     <div className="flex flex-col sm:flex-row items-center gap-2 text-sm">
@@ -1207,7 +1201,7 @@ export default function HomeClient() {
           {PastAuctions.map(event => (
             <div
               key={String(event.auctionId)}
-              className="relative flex flex-col items-center justify-center border border-base-300 rounded-3xl bg-base-100 p-4 shadow-md shadow-secondary"
+              className="relative flex flex-col items-center justify-center border border-base-300 rounded-xl bg-base-100 p-4 shadow-md shadow-secondary"
             >
               <div className="flex flex-col items-center gap-1">
                 <div className="flex flex-col sm:flex-row items-center gap-2 text-sm">

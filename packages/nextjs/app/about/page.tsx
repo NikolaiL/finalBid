@@ -72,7 +72,7 @@ export default function AboutPage() {
             </li>
             <li>
               <span className="font-semibold">
-                The other 1/2 of the prize pot is streamed to all bidders, based on their number of bids -{" "}
+                The other 1/2 of the prize pot is streamed to the last 10 bidders, based on their bid amount -{" "}
               </span>
               bid early to start your stream, bid often to increase it.
             </li>
