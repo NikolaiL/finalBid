@@ -928,7 +928,7 @@ export default function HomeClient() {
                   ) : (
                     <>
                       <div className="text-sm text-base-content/70">Auction ends in</div>
-                      <div className="text-2xl text-[#9ae600] font-black">
+                      <div className="text-2xl text-[#9ae600] font-black font-mono">
                         <NumberFlow
                           value={secondsRemaining}
                           format={{
