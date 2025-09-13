@@ -39,7 +39,7 @@ function generateDefaultImage() {
         style: {
           width: "1200px",
           height: "800px",
-          background: "#F4F8FF",
+          background: "#141D2A",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
@@ -52,15 +52,15 @@ function generateDefaultImage() {
           style: {
             width: "1040px",
             height: "500px",
-            background: "#ffffff",
-            borderRadius: "75px",
-            border: "3px solid #DAE8FF",
+            background: "#1e2a3c",
+            borderRadius: "20px",
+            border: "3px solid #314158",
             display: "flex",
             flexDirection: "column",
             alignItems: "center",
             justifyContent: "center",
             padding: "40px",
-            boxShadow: "0 20px 20px #DAE8FF",
+            boxShadow: "0 20px 20px #1e2a3c",
           },
         },
         React.createElement(
@@ -100,9 +100,9 @@ function generateDefaultImage() {
 export async function GET(req: NextRequest) {
   try {
     // Declare variables outside try block so they're accessible in the image generation
-    let auctionAmountFormatted = "100.00";
+    let auctionAmountFormatted = "100";
     let timeRemainingFormatted = "300";
-    let nextBidFormatted = "1.00";
+    let nextBidFormatted = "1";
     let auction: any = null;
     let tokenMeta: { tokenAddress: `0x${string}`; symbol: string; decimals: number } | null = null;
     let isActive = false;
@@ -115,7 +115,6 @@ export async function GET(req: NextRequest) {
     tokenMeta = await readTokenMeta();
 
     const tokenSymbol = tokenMeta?.symbol ?? "USDC";
-    const tokenDecimals = tokenMeta?.decimals ?? 6;
 
     // Fetch current auction data from Ponder API
 
@@ -198,14 +197,13 @@ export async function GET(req: NextRequest) {
 
       // Safely format token amounts with fallbacks
       try {
-        auctionAmountFormatted = formatToken(BigInt(auction.auctionAmount || "0"), tokenDecimals);
+        auctionAmountFormatted = formatToken(BigInt(auction.auctionAmount || "0"));
         nextBidFormatted = formatToken(
           BigInt(
             BigInt(auction.highestBid) > 0
               ? BigInt(auction.highestBid) + BigInt(auction.bidIncrement)
               : BigInt(auction.startingAmount),
           ),
-          tokenDecimals,
         );
       } catch (formatError) {
         console.error("Error formatting USDC amounts:", formatError);
@@ -231,7 +229,7 @@ export async function GET(req: NextRequest) {
           style: {
             width: "1200px",
             height: "800px", // 3:2 aspect ratio
-            background: "#F4F8FF",
+            background: "#141D2A",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
@@ -246,15 +244,15 @@ export async function GET(req: NextRequest) {
             style: {
               width: "1040px",
               height: "500px",
-              background: "#ffffff",
-              borderRadius: "75px",
-              border: "3px solid #DAE8FF",
+              background: "#1e2a3c",
+              borderRadius: "20px",
+              border: "3px solid #314158",
               display: "flex",
               flexDirection: "column",
               alignItems: "center",
               justifyContent: "center",
               padding: "40px",
-              boxShadow: "0 20px 20px #DAE8FF",
+              boxShadow: "0 20px 20px #1e2a3c",
               position: "relative",
             },
           },
@@ -276,7 +274,7 @@ export async function GET(req: NextRequest) {
                 style: {
                   fontSize: "48px",
                   fontWeight: "300",
-                  color: "#000000",
+                  color: "#FFFFFF",
                   marginRight: "8px",
                   fontFamily: "RubikLight",
                 },
@@ -289,7 +287,7 @@ export async function GET(req: NextRequest) {
                 style: {
                   fontSize: "100px",
                   fontFamily: "RubikBlack",
-                  color: "#ff6600",
+                  color: "#a36efd",
                   marginRight: "8px",
                 },
               },
@@ -301,7 +299,7 @@ export async function GET(req: NextRequest) {
                 style: {
                   fontSize: "48px",
                   fontWeight: "300",
-                  color: "#000000",
+                  color: "#FFFFFF",
                   fontFamily: "RubikLight",
                 },
               },
@@ -320,7 +318,7 @@ export async function GET(req: NextRequest) {
                     alignItems: "center",
                     justifyContent: "center",
                     position: "absolute",
-                    top: "130px",
+                    top: "140px",
                   },
                 },
                 React.createElement(
@@ -329,7 +327,7 @@ export async function GET(req: NextRequest) {
                     style: {
                       fontSize: "24px",
                       fontWeight: "400",
-                      color: "#00000080",
+                      color: "#FFFFFFA0",
                       marginRight: "8px",
                     },
                   },
@@ -342,7 +340,7 @@ export async function GET(req: NextRequest) {
                       fontSize: "36px",
                       fontWeight: "800",
                       fontFamily: "RubikBlack",
-                      color: "#00000080",
+                      color: "#FFFFFFA0",
                       paddingLeft: "10px",
                       paddingRight: "10px",
                     },
@@ -355,7 +353,7 @@ export async function GET(req: NextRequest) {
                     style: {
                       fontSize: "24px",
                       fontWeight: "400",
-                      color: "#00000080",
+                      color: "#FFFFFFA0",
                       marginRight: "8px",
                     },
                   },
@@ -392,7 +390,7 @@ export async function GET(req: NextRequest) {
                     src: winnerData.profilePicture,
                     width: 45,
                     height: 45,
-                    style: { marginRight: "8px", borderRadius: "50%" },
+                    style: { marginRight: "8px", borderRadius: "20px" },
                     alt: "Winner Profile Picture",
                   }),
                   React.createElement(
@@ -426,7 +424,7 @@ export async function GET(req: NextRequest) {
                       style: {
                         fontSize: "24px",
                         fontWeight: "400",
-                        color: "#666666",
+                        color: "#FFFFFFC0",
                         fontFamily: "Rubik",
                         marginRight: "8px",
                       },
@@ -437,12 +435,12 @@ export async function GET(req: NextRequest) {
                     src: winnerData.profilePicture,
                     width: 32,
                     height: 32,
-                    style: { borderRadius: "50%" },
+                    style: { borderRadius: "20px" },
                     alt: "Current Top Bidder Profile Picture",
                   }),
                   React.createElement(
                     "span",
-                    { style: { fontSize: "24px", fontWeight: "700", color: "#666666", fontFamily: "RubikBold" } },
+                    { style: { fontSize: "24px", fontWeight: "700", color: "#FFFFFFC0", fontFamily: "RubikBold" } },
                     `${winnerData.username}`,
                   ),
                 )
@@ -456,14 +454,14 @@ export async function GET(req: NextRequest) {
               style: {
                 width: "480px",
                 height: "100px",
-                background: "#ff6600",
-                borderRadius: "50px",
+                background: "#a36efd",
+                borderRadius: "20px",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
                 position: "absolute",
                 bottom: "120px",
-                boxShadow: "0 8px 24px rgba(255, 107, 53, 0.3)",
+                boxShadow: "0 8px 24px rgba(163, 110, 253, 0.3)",
               },
             },
             React.createElement(
@@ -505,12 +503,12 @@ export async function GET(req: NextRequest) {
                 style: {
                   fontSize: "36px",
                   fontWeight: "700",
-                  color: "#ff6600",
+                  color: "#a36efd",
                   marginTop: "6px",
                   fontFamily: "RubikBold",
                 },
               },
-              "FireBid",
+              "FireBid Degen 🎩",
             ),
           ),
 
@@ -578,7 +576,7 @@ export async function GET(req: NextRequest) {
           style: {
             width: "1200px",
             height: "800px",
-            background: "#f3f4f6",
+            background: "#141D2A",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
