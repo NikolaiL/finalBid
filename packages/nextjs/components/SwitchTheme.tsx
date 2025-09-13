@@ -20,11 +20,10 @@ export const SwitchTheme = ({ className }: { className?: string }) => {
 
   useEffect(() => {
     setMounted(true);
-  }, []);
+    setTheme("dark");
+  }, [setTheme]);
 
   if (!mounted) return null;
-
-  setTheme("dark");
 
   return (
     <div className={`hidden flex space-x-2 h-8 items-center justify-center text-sm ${className}`}>
