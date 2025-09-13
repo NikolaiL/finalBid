@@ -7,7 +7,7 @@ import { GenericContractsDeclaration } from "~~/utils/scaffold-eth/contract";
 const deployedContracts = {
   8453: {
     FinalBidContract: {
-      address: "0x4c43B88A239930d00222B3a4Ba2E4268Dd68f10E",
+      address: "0x560E6391ea0322A259DB404dcf916EBcD5044f23",
       abi: [
         {
           inputs: [
@@ -1182,7 +1182,7 @@ const deployedContracts = {
         transferOwnership: "@openzeppelin/contracts/access/Ownable.sol",
         paused: "@openzeppelin/contracts/utils/Pausable.sol",
       },
-      deployedOnBlock: 35394645,
+      deployedOnBlock: 35475094,
     },
   },
   31337: {

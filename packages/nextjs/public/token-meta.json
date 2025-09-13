@@ -1,7 +1,7 @@
 {
-  "chainId": 84532,
-  "finalBidAddress": "0x0e0A96bbAEEE336DDdEc5ACced7C7FaE9663d3cB",
-  "tokenAddress": "0xC7fDAe92Edf79d265Fc5405AFD8E21F5207bC191",
-  "symbol": "dDEGEN",
+  "chainId": 8453,
+  "finalBidAddress": "0x560E6391ea0322A259DB404dcf916EBcD5044f23",
+  "tokenAddress": "0x4ed4E862860beD51a9570b96d89aF5E1B0Efefed",
+  "symbol": "DEGEN",
   "decimals": 18
 }
