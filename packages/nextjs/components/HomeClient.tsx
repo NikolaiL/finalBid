@@ -97,15 +97,7 @@ const calculateStreamingAmount = (
 };
 
 // Component for displaying real-time streaming amounts
-const StreamingAmount = ({
-  address,
-  auctionId,
-  totalStreamingUnits,
-}: {
-  address: string;
-  auctionId: bigint | undefined;
-  totalStreamingUnits: any;
-}) => {
+const StreamingAmount = ({ address, auctionId }: { address: string; auctionId: bigint | undefined }) => {
   const [currentTime, setCurrentTime] = useState(Date.now());
 
   // Read streaming data for this address
@@ -121,6 +113,13 @@ const StreamingAmount = ({
     contractName: "FinalBidContract",
     functionName: "auctions",
     args: [auctionId || 0n],
+    watch: true,
+  });
+
+  // Read total streaming units
+  const { data: totalStreamingUnits } = useScaffoldReadContract({
+    contractName: "FinalBidContract",
+    functionName: "streamingUnits",
     watch: true,
   });
 
@@ -190,72 +189,6 @@ const StreamingAmount = ({
         }}
       />
     </div>
-  );
-};
-
-// Component for displaying auction distribution (winner vs streaming amounts)
-const AuctionDistribution = ({
-  latestAuction,
-  totalStreamingUnits,
-}: {
-  latestAuction: any;
-  totalStreamingUnits: any;
-}) => {
-  const [currentTime, setCurrentTime] = useState(Date.now());
-
-  // Calculate total streaming amount so far
-  const totalStreamingAmount = useMemo(() => {
-    if (!latestAuction || !totalStreamingUnits) return 0n;
-
-    const streamingEndTime = latestAuction.streamingEndTime as bigint;
-    const auctionStartTime = latestAuction.startTime as bigint;
-
-    const currentTimeMs = currentTime;
-    const streamingEndTimeMs = Number(streamingEndTime) * 1000;
-    const auctionStartTimeMs = Number(auctionStartTime) * 1000;
-
-    // Calculate streaming time (from auction start to current time or streaming end)
-    const streamingStartTimeMs = auctionStartTimeMs;
-    const calculateUntilMs = Math.min(currentTimeMs, streamingEndTimeMs);
-    const streamingDurationMs = Math.max(0, calculateUntilMs - streamingStartTimeMs);
-
-    // Calculate total streaming amount based on duration and total units
-    const streamingDurationSeconds = streamingDurationMs / 1000;
-    const totalStreaming = (totalStreamingUnits as bigint) * BigInt(Math.floor(streamingDurationSeconds));
-
-    return totalStreaming;
-  }, [latestAuction, totalStreamingUnits, currentTime]);
-
-  // Update current time for real-time streaming calculation
-  useEffect(() => {
-    const interval = setInterval(() => setCurrentTime(Date.now()), 1000);
-    return () => clearInterval(interval);
-  }, []);
-
-  // Calculate winner amount (half of auction amount)
-  const winnerAmount = latestAuction?.auctionAmount ? (latestAuction.auctionAmount as bigint) / 2n : 0n;
-
-  return (
-    <span>
-      <NumberFlow
-        value={Number(winnerAmount) / 10 ** TOKEN_DECIMALS}
-        format={{
-          notation: "standard",
-          minimumFractionDigits: 0,
-          maximumFractionDigits: 0,
-        }}
-      />{" "}
-      goes to the winner.{" "}
-      <NumberFlow
-        value={Number(totalStreamingAmount) / 10 ** TOKEN_DECIMALS}
-        format={{
-          notation: "standard",
-          minimumFractionDigits: 0,
-          maximumFractionDigits: 0,
-        }}
-      />{" "}
-      is streamed to the last 10 bidders, based on their bid size.
-    </span>
   );
 };
 
@@ -404,13 +337,6 @@ export default function HomeClient() {
 
   const auctionEndedQuery: any = useDataLiveQuery(auctionEndedQueryOptions as any);
   const AuctionEndedEvents: any[] = useMemo(() => (auctionEndedQuery?.data ?? []) as any[], [auctionEndedQuery?.data]);
-
-  // Read total streaming units (shared across components)
-  const { data: totalStreamingUnits } = useScaffoldReadContract({
-    contractName: "FinalBidContract",
-    functionName: "streamingUnits",
-    watch: true,
-  });
 
   // Exclude auctions with zero-address winner
   const PastAuctions = useMemo(() => {
@@ -966,7 +892,7 @@ export default function HomeClient() {
                 </div>
               </div>
               <div className="text-xs text-base-content/50 text-center w-full -mt-4">
-                <AuctionDistribution latestAuction={latestAuction} totalStreamingUnits={totalStreamingUnits} />
+                50% goes to the winner. 50% is streamed to the last 10 bidders, based on their bid size.
               </div>
               <div className="grid grid-cols-2 gap-4 items-center">
                 <div className="text-left">
@@ -1230,11 +1156,7 @@ export default function HomeClient() {
                         <div className="text-base-content/70">
                           {stat.numBids > 0 ? stat.numBids + " / " + formatToken(stat.lastBidAmount) : " "}
                         </div>
-                        <StreamingAmount
-                          address={stat.address}
-                          auctionId={latestAuction?.auctionId}
-                          totalStreamingUnits={totalStreamingUnits}
-                        />
+                        <StreamingAmount address={stat.address} auctionId={latestAuction?.auctionId} />
                       </td>
                       <td className="p-1 text-right font-mono text-xs whitespace-nowrap">
                         <PotentialAmounts
