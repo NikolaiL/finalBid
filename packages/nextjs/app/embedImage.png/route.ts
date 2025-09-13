@@ -491,7 +491,7 @@ export async function GET(req: NextRequest) {
               },
             },
             React.createElement("img", {
-              src: `${baseUrl}/fireBidOrange.svg`,
+              src: `${baseUrl}/firebid-degen.svg`,
               width: 45,
               height: 45,
               style: { marginRight: "8px" },
@@ -508,7 +508,7 @@ export async function GET(req: NextRequest) {
                   fontFamily: "RubikBold",
                 },
               },
-              "FireBid Degen 🎩",
+              "FireBid Degen",
             ),
           ),
 
