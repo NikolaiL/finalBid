@@ -870,7 +870,7 @@ export default function HomeClient() {
   //
 
   const baseText = isAuctionActive
-    ? `The pot is ${formatToken(latestAuction?.auctionAmount)} $${String(tokenSymbol ?? "")} - place a $${formatToken(nextBid as unknown as bigint)} ${String(tokenSymbol ?? "")} bid and win half of it!\nPlus, everyone wins: the other half gets streamed to all bidders!`
+    ? `The pot is ${formatToken(latestAuction?.auctionAmount)} $${String(tokenSymbol ?? "")} - place a ${formatToken(nextBid as unknown as bigint)} $${String(tokenSymbol ?? "")} bid and win half of it!\nPlus, everyone wins: the other half gets streamed to all bidders!`
     : `Win on FireBid`;
 
   const sharingText = latestResults ? `${baseText}\n\n${latestResults}\n\n${signature}` : `${baseText}\n${signature}`;
