@@ -892,7 +892,7 @@ export default function HomeClient() {
                 </div>
               </div>
               <div className="text-xs text-base-content/50 text-center w-full -mt-4">
-                50% goes to the winner. 50% is streamed to the last 10 bidders, based on their bid.
+                50% goes to the winner. 50% is streamed to the last 10 bidders, based on their bid size.
               </div>
               <div className="grid grid-cols-2 gap-4 items-center">
                 <div className="text-left">
@@ -928,7 +928,14 @@ export default function HomeClient() {
                   ) : (
                     <>
                       <div className="text-sm text-base-content/70">Auction ends in</div>
-                      <div className="text-2xl font-black">{secondsRemaining}</div>
+                      <div className="text-2xl text-[#9ae600] font-black">
+                        <NumberFlow
+                          value={secondsRemaining}
+                          format={{
+                            notation: "standard",
+                          }}
+                        />
+                      </div>
                       <div className="text-sm text-base-content/70">seconds</div>
                     </>
                   )}
