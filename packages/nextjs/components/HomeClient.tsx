@@ -184,8 +184,8 @@ const StreamingAmount = ({ address, auctionId }: { address: string; auctionId: b
         value={actualStreamingAmount}
         format={{
           notation: "standard",
-          minimumFractionDigits: DISPLAY_DECIMALS * 2.5,
-          maximumFractionDigits: DISPLAY_DECIMALS * 2.5,
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2,
         }}
       />
     </div>
@@ -264,8 +264,8 @@ const PotentialAmounts = ({
           value={lossValue}
           format={{
             notation: "standard",
-            minimumFractionDigits: DISPLAY_DECIMALS,
-            maximumFractionDigits: DISPLAY_DECIMALS,
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
           }}
           prefix={actualLoss > 0n ? "+" : ""}
         />
@@ -275,8 +275,8 @@ const PotentialAmounts = ({
           value={profitValue}
           format={{
             notation: "standard",
-            minimumFractionDigits: DISPLAY_DECIMALS,
-            maximumFractionDigits: DISPLAY_DECIMALS,
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
           }}
           prefix={actualProfit > 0n ? "+" : ""}
         />
