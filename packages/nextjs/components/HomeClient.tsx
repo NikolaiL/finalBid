@@ -962,7 +962,7 @@ export default function HomeClient() {
               }}
             >
               <div className="font-bold text-xs sm:text-lg">
-                Win {formatToken(BigInt(externalAuction.auctionAmount) / BigInt(10 ** 18), 0)} $DEGEN
+                Win {formatToken(BigInt(externalAuction.auctionAmount) / BigInt(10 ** 12), 0)} $DEGEN
               </div>
               <div className="flex items-center gap-2">
                 <span className="text-xs sm:text-lg">Ends in</span>
