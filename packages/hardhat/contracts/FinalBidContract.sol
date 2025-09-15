@@ -180,7 +180,8 @@ contract FinalBidContract is Ownable, Pausable, ReentrancyGuard {
             streamingAddresses.push(_address);
         }
         streamings[_address].units += _units;
-        streamingUnits += _units;
+        totalUnits += _units;
+        streamingUnits = totalUnits;
         _recalculateFlowRate();
     }
 

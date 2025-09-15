@@ -783,5 +783,25 @@ describe("FinalBidContract", function () {
       const streamingBalances = await finalBidContract.streamings(user1.address);
       expect(streamingBalances.balance).to.equal(0);
     });
+    it("Should calculate the total streaming units correctly", async function () {
+      // Add streaming units
+      const accessToken1 = await generateAccessToken(serverPrivateKey, user1.address, 1n);
+      await finalBidContract.connect(user1).placeBid(accessToken1, user1.address);
+
+      const streamingUnits = await finalBidContract.streamingUnits();
+      expect(streamingUnits).to.equal(1024);
+
+      const accessToken2 = await generateAccessToken(serverPrivateKey, user2.address, 1n);
+      await finalBidContract.connect(user2).placeBid(accessToken2, user2.address);
+
+      const streamingUnits2 = await finalBidContract.streamingUnits();
+      expect(streamingUnits2).to.equal(1024 + 512);
+
+      const accessToken3 = await generateAccessToken(serverPrivateKey, user3.address, 1n);
+      await finalBidContract.connect(user3).placeBid(accessToken3, user3.address);
+
+      const streamingUnits3 = await finalBidContract.streamingUnits();
+      expect(streamingUnits3).to.equal(1024 + 512 + 256);
+    });
   });
 });
