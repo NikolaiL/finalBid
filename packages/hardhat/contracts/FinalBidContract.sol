@@ -170,13 +170,17 @@ contract FinalBidContract is Ownable, Pausable, ReentrancyGuard {
 
         // first we will halfve all existing units and calculate total units in the system
         uint256 totalUnits = 0;
+        bool addressExists = false;
         for (uint256 i = 0; i < streamingAddresses.length; i++) {
             address streamingAddress = streamingAddresses[i];
             streamings[streamingAddress].units /= 2;
             totalUnits += streamings[streamingAddress].units;
+            if (streamingAddress == _address) {
+                addressExists = true;
+            }
         }
         // Add address to array if it's the first time
-        if (streamings[_address].units == 0) {
+        if (!addressExists) {
             streamingAddresses.push(_address);
         }
         streamings[_address].units += _units;
