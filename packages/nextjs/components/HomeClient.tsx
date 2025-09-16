@@ -71,8 +71,8 @@ const calculateStreamingAmount = (
     boolean,
   ];
 
-  // If no streaming units, return 0
-  if (units === 0n) return 0n;
+  // If no streaming units, return balance
+  if (units === 0n) return BigInt(balance);
 
   // Use precise time calculations with milliseconds
   const currentTimeMs = currentTime;
@@ -143,8 +143,8 @@ const StreamingAmount = ({ address, auctionId }: { address: string; auctionId: b
       boolean,
     ];
 
-    // If no streaming units, return 0
-    if (units === 0n) return 0;
+    // If no streaming units, return balance
+    if (units === 0n) return Number(balance);
 
     // Use precise time calculations with milliseconds
     const currentTimeMs = currentTime;
