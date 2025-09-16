@@ -803,5 +803,32 @@ describe("FinalBidContract", function () {
       const streamingUnits3 = await finalBidContract.streamingUnits();
       expect(streamingUnits3).to.equal(1024 + 512 + 256);
     });
+    it("Should not duplicate streaming units when adding the same address multiple times", async function () {
+      // Add streaming units
+      const accessToken1 = await generateAccessToken(serverPrivateKey, user1.address, 1n);
+      await finalBidContract.connect(user1).placeBid(accessToken1, user1.address);
+
+      const accessToken2 = await generateAccessToken(serverPrivateKey, user2.address, 1n);
+      await finalBidContract.connect(user2).placeBid(accessToken2, user2.address);
+
+      const accessToken3 = await generateAccessToken(serverPrivateKey, user3.address, 1n);
+      await finalBidContract.connect(user3).placeBid(accessToken3, user3.address);
+
+      for (let i = 0; i < 10; i++) {
+        await finalBidContract.connect(user2).placeBid(accessToken2, user2.address);
+        await finalBidContract.connect(user3).placeBid(accessToken3, user3.address);
+      }
+
+      // now, if we check user1 his streaming units should be zero
+      const streamingUnits = await finalBidContract.streamings(user1.address);
+      expect(streamingUnits.units).to.equal(0);
+
+      // and if we bid again as user 1 we should not have duplicated address in the streaming addresses array
+      await finalBidContract.connect(user1).placeBid(accessToken1, user1.address);
+
+      const streamingAddressesLength = await finalBidContract.getStreamingAddressesLength();
+      console.log("Streaming addresses length:", streamingAddressesLength);
+      expect(streamingAddressesLength).to.equal(3);
+    });
   });
 });

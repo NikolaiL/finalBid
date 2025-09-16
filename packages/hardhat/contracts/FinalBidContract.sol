@@ -87,6 +87,11 @@ contract FinalBidContract is Ownable, Pausable, ReentrancyGuard {
     // Admin update events
     event AuctionAmountUpdated(uint256 oldAmount, uint256 newAmount);
     event AuctionDurationUpdated(uint256 oldDuration, uint256 newDuration);
+
+    // Function to get the length of streamingAddresses array
+    function getStreamingAddressesLength() public view returns (uint256) {
+        return streamingAddresses.length;
+    }
     event AuctionDurationIncreaseUpdated(uint256 oldIncrease, uint256 newIncrease);
     event StartingAmountUpdated(uint256 oldAmount, uint256 newAmount);
     event BidIncrementUpdated(uint256 oldAmount, uint256 newAmount);
@@ -170,13 +175,17 @@ contract FinalBidContract is Ownable, Pausable, ReentrancyGuard {
 
         // first we will halfve all existing units and calculate total units in the system
         uint256 totalUnits = 0;
+        bool addressExists = false;
         for (uint256 i = 0; i < streamingAddresses.length; i++) {
             address streamingAddress = streamingAddresses[i];
             streamings[streamingAddress].units /= 2;
             totalUnits += streamings[streamingAddress].units;
+            if (streamingAddress == _address) {
+                addressExists = true;
+            }
         }
         // Add address to array if it's the first time
-        if (streamings[_address].units == 0) {
+        if (!addressExists) {
             streamingAddresses.push(_address);
         }
         streamings[_address].units += _units;
