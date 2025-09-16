@@ -23,8 +23,8 @@ contract FinalBidContract is Ownable, Pausable, ReentrancyGuard {
     address public tokenAddress;
     uint256 public auctionId;
     uint256 public auctionAmount = 10000 * 10 ** 18; // 10000 Degen
-    uint256 public auctionDuration = 3_600; // 1 hour
-    uint256 public auctionDurationIncrease = 45; // 1 minute
+    uint256 public auctionDuration = 14_400; // 4 hour
+    uint256 public auctionDurationIncrease = 45; // 45 seconds
     uint256 public startingAmount = 1 * 10 ** 18; // 1 Degen
     uint256 public bidIncrement = 1 * 10 ** 18; // 1 Degen
     uint256 public referralFee = 10 * 10 ** 18; // 10 Degen
@@ -34,7 +34,7 @@ contract FinalBidContract is Ownable, Pausable, ReentrancyGuard {
     uint256 public platformFeesClaimed;
     uint256 public totalReferralRewardsCollected;
     uint256 public percentageToWithdraw = 1;
-    uint256 public percentageToUse = 10;
+    uint256 public percentageToUse = 20;
     bool public newAuctionIsAllowed = false;
     //uint256 public totalReferralRewardsClaimed;
     

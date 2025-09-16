@@ -7,7 +7,7 @@ import { GenericContractsDeclaration } from "~~/utils/scaffold-eth/contract";
 const deployedContracts = {
   8453: {
     FinalBidContract: {
-      address: "0xa68EDe0d0d465493f78B20F8bf05231119409264",
+      address: "0x479dC3fB56bb72ae5AB0cA92D4FcC711d76fCD46",
       abi: [
         {
           inputs: [
@@ -625,6 +625,19 @@ const deployedContracts = {
           type: "function",
         },
         {
+          inputs: [],
+          name: "getStreamingAddressesLength",
+          outputs: [
+            {
+              internalType: "uint256",
+              name: "",
+              type: "uint256",
+            },
+          ],
+          stateMutability: "view",
+          type: "function",
+        },
+        {
           inputs: [
             {
               internalType: "bytes",
@@ -1182,7 +1195,7 @@ const deployedContracts = {
         transferOwnership: "@openzeppelin/contracts/access/Ownable.sol",
         paused: "@openzeppelin/contracts/utils/Pausable.sol",
       },
-      deployedOnBlock: 35587876,
+      deployedOnBlock: 35614614,
     },
   },
   31337: {
