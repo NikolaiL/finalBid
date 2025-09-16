@@ -144,7 +144,7 @@ const StreamingAmount = ({ address, auctionId }: { address: string; auctionId: b
     ];
 
     // If no streaming units, return balance
-    if (units === 0n) return Number(balance);
+    if (units === 0n) return Number(balance) / 10 ** TOKEN_DECIMALS;
 
     // Use precise time calculations with milliseconds
     const currentTimeMs = currentTime;
