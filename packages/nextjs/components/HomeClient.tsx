@@ -292,7 +292,7 @@ const PotentialAmounts = ({
         <div className="text-sm text-base-content/70">and you will {isWinning ? "win" : "lose"}</div>
         <div className={`text-xl font-bold font-mono ${isWinning ? "text-success" : "text-error"}`}>
           <NumberFlow
-            value={lossValue}
+            value={Math.abs(lossValue)}
             format={{
               notation: "standard",
               minimumFractionDigits: 2,
@@ -318,7 +318,7 @@ const PotentialAmounts = ({
         }
       >
         <NumberFlow
-          value={Math.abs(lossValue)}
+          value={lossValue}
           format={{
             notation: "standard",
             minimumFractionDigits: 2,
@@ -1007,42 +1007,63 @@ export default function HomeClient() {
           )}
         </div>
 
-        {/* Potential amounts section - only show if auction is active and user is connected */}
-        {connectedAddress && latestAuction?.auctionId && isAuctionActive && !isUserHighestBidder && (
-          <div className="">
-            {(() => {
-              const currentUserStats = userStats.find(stat => stat.isCurrentUser);
-              const hasPlacedBids = currentUserStats && currentUserStats.numBids > 0;
+        <div className="min-h-36">
+          {/* Potential amounts section - only show if auction is active and user is connected */}
+          {connectedAddress && latestAuction?.auctionId && isAuctionActive && !isUserHighestBidder && (
+            <div className="mb-2">
+              {(() => {
+                const currentUserStats = userStats.find(stat => stat.isCurrentUser);
+                const hasPlacedBids = currentUserStats && currentUserStats.numBids > 0;
 
-              if (hasPlacedBids) {
-                // Show both columns when user has placed bids
-                const totalFees =
-                  BigInt(currentUserStats?.numBids || 0) * ((latestAuction?.platformFee as bigint) || 0n);
+                if (hasPlacedBids) {
+                  // Show both columns when user has placed bids
+                  const totalFees =
+                    BigInt(currentUserStats?.numBids || 0) * ((latestAuction?.platformFee as bigint) || 0n);
 
-                return (
-                  <div className="grid grid-cols-2 gap-4">
-                    {/* Stop Now - Left column, left aligned */}
-                    <div className="text-left p-3">
-                      <PotentialAmounts
-                        address={connectedAddress}
-                        auctionId={latestAuction?.auctionId}
-                        totalFees={totalFees}
-                        auctionValue={latestAuction?.auctionAmount as bigint}
-                        nextBidAmount={(nextBid as bigint) + ((platformFee as bigint) || 0n)}
-                        showStopNowOutcome={true}
-                        tokenSymbol={String(tokenSymbol ?? "")}
-                      />
+                  return (
+                    <div className="grid grid-cols-2 gap-4">
+                      {/* Stop Now - Left column, left aligned */}
+                      <div className="text-left p-3">
+                        <PotentialAmounts
+                          address={connectedAddress}
+                          auctionId={latestAuction?.auctionId}
+                          totalFees={totalFees}
+                          auctionValue={latestAuction?.auctionAmount as bigint}
+                          nextBidAmount={(nextBid as bigint) + ((platformFee as bigint) || 0n)}
+                          showStopNowOutcome={true}
+                          tokenSymbol={String(tokenSymbol ?? "")}
+                        />
+                      </div>
+
+                      {/* Bid Now - Right column, right aligned */}
+                      <div className="text-right p-3">
+                        <div className="text-base font-bold text-base-content/90">Bid Now </div>
+                        <div className="text-sm text-base-content/70">and you could win</div>
+                        <div className="text-xl font-bold text-success font-mono">
+                          <PotentialAmounts
+                            address={connectedAddress}
+                            auctionId={latestAuction?.auctionId}
+                            totalFees={totalFees}
+                            auctionValue={latestAuction?.auctionAmount as bigint}
+                            nextBidAmount={(nextBid as bigint) + ((platformFee as bigint) || 0n)}
+                            showOnlyProfit={true}
+                          />
+                        </div>
+                        <div className="text-xs text-base-content/50">{String(tokenSymbol ?? "")}</div>
+                      </div>
                     </div>
-
-                    {/* Bid Now - Right column, right aligned */}
-                    <div className="text-right p-3">
+                  );
+                } else {
+                  // Show only Bid Now centered when user hasn't placed bids
+                  return (
+                    <div className="text-center p-3 hidden">
                       <div className="text-base font-bold text-base-content/90">Bid Now </div>
                       <div className="text-sm text-base-content/70">and you could win</div>
                       <div className="text-xl font-bold text-success font-mono">
                         <PotentialAmounts
                           address={connectedAddress}
                           auctionId={latestAuction?.auctionId}
-                          totalFees={totalFees}
+                          totalFees={0n}
                           auctionValue={latestAuction?.auctionAmount as bigint}
                           nextBidAmount={(nextBid as bigint) + ((platformFee as bigint) || 0n)}
                           showOnlyProfit={true}
@@ -1050,125 +1071,106 @@ export default function HomeClient() {
                       </div>
                       <div className="text-xs text-base-content/50">{String(tokenSymbol ?? "")}</div>
                     </div>
-                  </div>
-                );
-              } else {
-                // Show only Bid Now centered when user hasn't placed bids
-                return (
-                  <div className="text-center p-3 hidden">
-                    <div className="text-base font-bold text-base-content/90">Bid Now </div>
-                    <div className="text-sm text-base-content/70">and you could win</div>
-                    <div className="text-xl font-bold text-success font-mono">
-                      <PotentialAmounts
-                        address={connectedAddress}
-                        auctionId={latestAuction?.auctionId}
-                        totalFees={0n}
-                        auctionValue={latestAuction?.auctionAmount as bigint}
-                        nextBidAmount={(nextBid as bigint) + ((platformFee as bigint) || 0n)}
-                        showOnlyProfit={true}
-                      />
-                    </div>
-                    <div className="text-xs text-base-content/50">{String(tokenSymbol ?? "")}</div>
-                  </div>
-                );
-              }
-            })()}
-          </div>
-        )}
+                  );
+                }
+              })()}
+            </div>
+          )}
 
-        <div className="min-h-36 items-center justify-center flex">
-          {/* Bid action */}
-          {/* if address is connected */}
-          {connectedAddress ? (
-            <>
-              <div className="rounded-lg text-center w-full">
-                {latestAuction?.auctionId && isAuctionActive ? (
-                  <>
-                    {isUserHighestBidder ? (
-                      <>
-                        <div className="text-xl font-bold p-1">✅ You are the highest bidder</div>
-                        <div className="mt-1 text-gray-500 text-xs">
-                          {(() => {
-                            const endTime = latestAuction?.endTime as bigint;
-                            const remaining = endTime > nowSecBig ? Number(endTime - nowSecBig) : 0;
-                            return `Auction ends in ${remaining} seconds`;
-                          })()}
-                        </div>
-                      </>
-                    ) : (
-                      <>
-                        <button
-                          className="btn btn-primary text-xl transition-all h-14 px-6"
-                          onClick={handlePlaceBid}
-                          disabled={isBidding}
-                        >
-                          {isBidding
-                            ? bidStatus
-                            : `Bid ${formatToken(nextBid as unknown as bigint)} ${String(tokenSymbol ?? "")}`}
-                        </button>
-                        {isBidding ? (
-                          <div className="mt-1 text-gray-500 text-xs">Please wait...</div>
-                        ) : platformFee ? (
-                          <div className="mt-1 text-base-content/70 text-xs">
-                            ({formatToken(platformFee as unknown as bigint)} {String(tokenSymbol ?? "")} fee applies)
+          <div className="items-center justify-center flex">
+            {/* Bid action */}
+            {/* if address is connected */}
+            {connectedAddress ? (
+              <>
+                <div className="rounded-lg text-center w-full">
+                  {latestAuction?.auctionId && isAuctionActive ? (
+                    <>
+                      {isUserHighestBidder ? (
+                        <>
+                          <div className="text-xl font-bold p-1">✅ You are the highest bidder</div>
+                          <div className="mt-1 text-gray-500 text-xs">
+                            {(() => {
+                              const endTime = latestAuction?.endTime as bigint;
+                              const remaining = endTime > nowSecBig ? Number(endTime - nowSecBig) : 0;
+                              return `Auction ends in ${remaining} seconds`;
+                            })()}
                           </div>
-                        ) : null}
-                      </>
-                    )}
-                  </>
-                ) : null}
-                {latestAuction?.auctionId && isAcutionReadytoBeOver && !isAuctionOver ? (
-                  <button
-                    className="btn btn-primary text-xl transition-all h-14 px-6"
-                    onClick={async () => {
-                      const receipt = await writeContractAsync(
-                        { functionName: "endAuction" },
-                        {
-                          onBlockConfirmation: () => {
-                            // no-op here; we'll launch confetti after success
-                          },
-                          successMessage: "Auction finalized!",
-                          blockConfirmations: 1,
-                        },
-                      );
-                      if (receipt) {
-                        // fire and forget
-                        launchConfetti();
-                      }
-                    }}
-                  >
-                    {isUserHighestBidder ? (
-                      <span>
-                        🎉 <span className="mx-2">Claim My Win!</span> 🎉
-                      </span>
-                    ) : (
-                      "Finalize the auction"
-                    )}
-                  </button>
-                ) : null}
-                {!latestAuction?.auctionId || isAuctionOver ? (
-                  newAuctionIsAllowed ? (
+                        </>
+                      ) : (
+                        <>
+                          <button
+                            className="btn btn-primary text-xl transition-all h-14 px-6"
+                            onClick={handlePlaceBid}
+                            disabled={isBidding}
+                          >
+                            {isBidding
+                              ? bidStatus
+                              : `Bid ${formatToken(nextBid as unknown as bigint)} ${String(tokenSymbol ?? "")}`}
+                          </button>
+                          {isBidding ? (
+                            <div className="mt-1 text-gray-500 text-xs mb-4">Please wait...</div>
+                          ) : platformFee ? (
+                            <div className="mt-1 text-base-content/70 text-xs mb-4">
+                              ({formatToken(platformFee as unknown as bigint)} {String(tokenSymbol ?? "")} fee applies)
+                            </div>
+                          ) : null}
+                        </>
+                      )}
+                    </>
+                  ) : null}
+                  {latestAuction?.auctionId && isAcutionReadytoBeOver && !isAuctionOver ? (
                     <button
-                      className="btn btn-primary text-xl transition-all h-14 px-6 "
+                      className="btn btn-primary text-xl transition-all h-14 px-6"
                       onClick={async () => {
-                        await writeContractAsync({ functionName: "startAuction" });
+                        const receipt = await writeContractAsync(
+                          { functionName: "endAuction" },
+                          {
+                            onBlockConfirmation: () => {
+                              // no-op here; we'll launch confetti after success
+                            },
+                            successMessage: "Auction finalized!",
+                            blockConfirmations: 1,
+                          },
+                        );
+                        if (receipt) {
+                          // fire and forget
+                          launchConfetti();
+                        }
                       }}
                     >
-                      Start a New Auction
+                      {isUserHighestBidder ? (
+                        <span>
+                          🎉 <span className="mx-2">Claim My Win!</span> 🎉
+                        </span>
+                      ) : (
+                        "Finalize the auction"
+                      )}
                     </button>
-                  ) : (
-                    <div className="text-xl sm:text-2xl font-black text-center py-8">Something is Cooking 🚀🚀🚀</div>
-                  )
-                ) : null}
-              </div>
-            </>
-          ) : (
-            <>
-              <div className="flex justify-center items-center">
-                <RainbowKitCustomConnectButton className="btn-lg" />
-              </div>
-            </>
-          )}
+                  ) : null}
+                  {!latestAuction?.auctionId || isAuctionOver ? (
+                    newAuctionIsAllowed ? (
+                      <button
+                        className="btn btn-primary text-xl transition-all h-14 px-6 "
+                        onClick={async () => {
+                          await writeContractAsync({ functionName: "startAuction" });
+                        }}
+                      >
+                        Start a New Auction
+                      </button>
+                    ) : (
+                      <div className="text-xl sm:text-2xl font-black text-center py-8">Something is Cooking 🚀🚀🚀</div>
+                    )
+                  ) : null}
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="flex justify-center items-center">
+                  <RainbowKitCustomConnectButton className="btn-lg" />
+                </div>
+              </>
+            )}
+          </div>
         </div>
 
         {/* Share block */}
