@@ -922,6 +922,7 @@ export default function HomeClient() {
   }
 
   const signature = "🔥 @firebid by @nikolaii.eth";
+  const signatureTwitter = "🔥 @Firebid_eth by @NikolaiLeb";
 
   // let change it to: The pot is 4.49 USDC—place a 0.03 bid and win half of it!
   //
@@ -931,6 +932,7 @@ export default function HomeClient() {
     : `Win on FireBid`;
 
   const sharingText = latestResults ? `${baseText}\n\n${latestResults}\n\n${signature}` : `${baseText}\n${signature}`;
+  const sharingTextTwitter = baseText + "\n\n" + signatureTwitter;
 
   return (
     <div className="w-full max-w-3xl mx-auto px-2 sm:px-4 lg:px-6">
@@ -1196,7 +1198,7 @@ export default function HomeClient() {
             <a
               className="btn btn-accent btn-sm flex items-center gap-2"
               href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(
-                sharingText,
+                sharingTextTwitter,
               )}&url=${encodeURIComponent(sharingUrl)}`}
               target="_blank"
               rel="noreferrer noopener"
