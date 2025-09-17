@@ -318,14 +318,13 @@ const PotentialAmounts = ({
         }
       >
         <NumberFlow
-          value={lossValue}
+          value={Math.abs(lossValue)}
           format={{
             notation: "standard",
             minimumFractionDigits: 2,
             maximumFractionDigits: 2,
           }}
-          prefix={actualLoss > 0n ? "+" : ""}
-          trend={actualLoss > 0n ? 0 : 0}
+          prefix={actualLoss > 0n ? "+" : "-"}
         />
       </div>
       <div className={actualProfit > 0n ? "font-bold text-success" : "font-bold text-error"}>
