@@ -1006,7 +1006,7 @@ export default function HomeClient() {
           )}
         </div>
 
-        <div className="min-h-36">
+        <div className="min-h-36 flex flex-col justify-center">
           {/* Potential amounts section - only show if auction is active and user is connected */}
           {connectedAddress && latestAuction?.auctionId && isAuctionActive && !isUserHighestBidder && (
             <div className="mb-2">
