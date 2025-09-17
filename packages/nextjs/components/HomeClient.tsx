@@ -199,12 +199,20 @@ const PotentialAmounts = ({
   totalFees,
   auctionValue,
   nextBidAmount,
+  showOnlyLoss = false,
+  showOnlyProfit = false,
+  showStopNowOutcome = false,
+  tokenSymbol = "",
 }: {
   address: string;
   auctionId: bigint | undefined;
   totalFees: bigint;
   auctionValue: bigint;
   nextBidAmount: bigint;
+  showOnlyLoss?: boolean;
+  showOnlyProfit?: boolean;
+  showStopNowOutcome?: boolean;
+  tokenSymbol?: string;
 }) => {
   const [currentTime, setCurrentTime] = useState(Date.now());
 
@@ -249,6 +257,55 @@ const PotentialAmounts = ({
     return () => clearInterval(interval);
   }, []);
 
+  if (showOnlyLoss) {
+    return (
+      <NumberFlow
+        value={Math.abs(lossValue)}
+        format={{
+          notation: "standard",
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2,
+        }}
+      />
+    );
+  }
+
+  if (showOnlyProfit) {
+    return (
+      <NumberFlow
+        value={profitValue}
+        format={{
+          notation: "standard",
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2,
+        }}
+        prefix={actualProfit > 0n ? "+" : ""}
+      />
+    );
+  }
+
+  if (showStopNowOutcome) {
+    const isWinning = actualLoss > 0n;
+    return (
+      <>
+        <div className="text-base font-bold text-base-content/90">Stop Now </div>
+        <div className="text-sm text-base-content/70">and you will {isWinning ? "win" : "lose"}</div>
+        <div className={`text-xl font-bold font-mono ${isWinning ? "text-success" : "text-error"}`}>
+          <NumberFlow
+            value={lossValue}
+            format={{
+              notation: "standard",
+              minimumFractionDigits: 2,
+              maximumFractionDigits: 2,
+            }}
+            prefix={actualLoss > 0n ? "+" : ""}
+          />
+        </div>
+        <div className="text-xs text-base-content/50">{tokenSymbol}</div>
+      </>
+    );
+  }
+
   return (
     <>
       <div
@@ -261,13 +318,14 @@ const PotentialAmounts = ({
         }
       >
         <NumberFlow
-          value={lossValue}
+          value={Math.abs(lossValue)}
           format={{
             notation: "standard",
             minimumFractionDigits: 2,
             maximumFractionDigits: 2,
           }}
           prefix={actualLoss > 0n ? "+" : ""}
+          trend={actualLoss > 0n ? 0 : 0}
         />
       </div>
       <div className={actualProfit > 0n ? "font-bold text-success" : "font-bold text-error"}>
@@ -948,6 +1006,76 @@ export default function HomeClient() {
             </div>
           )}
         </div>
+
+        {/* Potential amounts section - only show if auction is active and user is connected */}
+        {connectedAddress && latestAuction?.auctionId && isAuctionActive && !isUserHighestBidder && (
+          <div className="">
+            {(() => {
+              const currentUserStats = userStats.find(stat => stat.isCurrentUser);
+              const hasPlacedBids = currentUserStats && currentUserStats.numBids > 0;
+
+              if (hasPlacedBids) {
+                // Show both columns when user has placed bids
+                const totalFees =
+                  BigInt(currentUserStats?.numBids || 0) * ((latestAuction?.platformFee as bigint) || 0n);
+
+                return (
+                  <div className="grid grid-cols-2 gap-4">
+                    {/* Stop Now - Left column, left aligned */}
+                    <div className="text-left p-3">
+                      <PotentialAmounts
+                        address={connectedAddress}
+                        auctionId={latestAuction?.auctionId}
+                        totalFees={totalFees}
+                        auctionValue={latestAuction?.auctionAmount as bigint}
+                        nextBidAmount={(nextBid as bigint) + ((platformFee as bigint) || 0n)}
+                        showStopNowOutcome={true}
+                        tokenSymbol={String(tokenSymbol ?? "")}
+                      />
+                    </div>
+
+                    {/* Bid Now - Right column, right aligned */}
+                    <div className="text-right p-3">
+                      <div className="text-base font-bold text-base-content/90">Bid Now </div>
+                      <div className="text-sm text-base-content/70">and you could win</div>
+                      <div className="text-xl font-bold text-success font-mono">
+                        <PotentialAmounts
+                          address={connectedAddress}
+                          auctionId={latestAuction?.auctionId}
+                          totalFees={totalFees}
+                          auctionValue={latestAuction?.auctionAmount as bigint}
+                          nextBidAmount={(nextBid as bigint) + ((platformFee as bigint) || 0n)}
+                          showOnlyProfit={true}
+                        />
+                      </div>
+                      <div className="text-xs text-base-content/50">{String(tokenSymbol ?? "")}</div>
+                    </div>
+                  </div>
+                );
+              } else {
+                // Show only Bid Now centered when user hasn't placed bids
+                return (
+                  <div className="text-center p-3 hidden">
+                    <div className="text-base font-bold text-base-content/90">Bid Now </div>
+                    <div className="text-sm text-base-content/70">and you could win</div>
+                    <div className="text-xl font-bold text-success font-mono">
+                      <PotentialAmounts
+                        address={connectedAddress}
+                        auctionId={latestAuction?.auctionId}
+                        totalFees={0n}
+                        auctionValue={latestAuction?.auctionAmount as bigint}
+                        nextBidAmount={(nextBid as bigint) + ((platformFee as bigint) || 0n)}
+                        showOnlyProfit={true}
+                      />
+                    </div>
+                    <div className="text-xs text-base-content/50">{String(tokenSymbol ?? "")}</div>
+                  </div>
+                );
+              }
+            })()}
+          </div>
+        )}
+
         <div className="min-h-36 items-center justify-center flex">
           {/* Bid action */}
           {/* if address is connected */}
