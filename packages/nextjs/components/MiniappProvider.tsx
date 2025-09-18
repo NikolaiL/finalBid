@@ -94,7 +94,12 @@ export const MiniappProvider = ({ children }: MiniappProviderProps) => {
 
   const openMiniApp = async (url: string) => {
     try {
-      await sdk.actions.openMiniApp({ url });
+      const inMiniApp = await sdk.isInMiniApp();
+      if (inMiniApp) {
+        await sdk.actions.openMiniApp({ url });
+      } else {
+        if (typeof window !== "undefined") window.open(url, "_blank");
+      }
     } catch (err) {
       console.error("openMiniApp error", err);
     }

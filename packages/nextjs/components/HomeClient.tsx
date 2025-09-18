@@ -1,9 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import NumberFlow from "@number-flow/react";
 import { toast } from "react-hot-toast";
 import { useAccount, useReadContract, useWriteContract } from "wagmi";
+import ExternalAuctionBlock from "~~/components/ExternalAuctionBlock";
 import { useMiniapp } from "~~/components/MiniappProvider";
 import { AddressFarcaster, RainbowKitCustomConnectButton } from "~~/components/scaffold-eth";
 import {
@@ -30,26 +31,6 @@ const formatToken = (amount: bigint | 0n, decimals: number = DISPLAY_DECIMALS): 
 };
 
 const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
-
-interface ExternalAuction {
-  auctionId: string;
-  hash: string;
-  auctionAmount: string;
-  startTime: string;
-  endTime: string;
-  streamingEndTime: string;
-  startingAmount: string;
-  bidIncrement: string;
-  referralFee: string;
-  platformFee: string;
-  bidCount: number;
-  highestBid: string;
-  highestBidder: string;
-  blockNumber: string;
-  logIndex: number;
-  timestamp: string;
-  ended: boolean;
-}
 
 const formatTimeAgoBrief = (nowMs: number, timestampSeconds: number | bigint): string => {
   const ts = typeof timestampSeconds === "bigint" ? Number(timestampSeconds) : timestampSeconds;
@@ -331,7 +312,7 @@ const UrlCopyIcon = ({ className = "w-5 h-5" }) => (
 
 export default function HomeClient() {
   const { address: connectedAddress, isConnecting, isReconnecting } = useAccount();
-  const { composeCast, openMiniApp } = useMiniapp();
+  const { composeCast } = useMiniapp();
 
   // First, fetch auction created events to get the latest auction
   const auctionCreatedQuery: any = useDataLiveQuery(auctionCreatedQueryOptions as any);
@@ -484,50 +465,6 @@ export default function HomeClient() {
     const id = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(id);
   }, []);
-
-  // External auction state
-  const [externalAuction, setExternalAuction] = useState<ExternalAuction | null>(null);
-
-  // Fetch external auction data
-  const fetchExternalAuction = useCallback(async () => {
-    try {
-      const response = await fetch("https://firebid-degen.altumbase.com/ponder/latest-auction");
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      const data: ExternalAuction = await response.json();
-      setExternalAuction(data);
-    } catch (error) {
-      console.error("Failed to fetch external auction:", error);
-    } finally {
-      console.log("fetchExternalAuction done");
-    }
-  }, []);
-
-  // Fetch external auction data on component mount
-  useEffect(() => {
-    fetchExternalAuction();
-  }, [fetchExternalAuction]);
-
-  // Refetch external auction data every 60 seconds
-  useEffect(() => {
-    const interval = setInterval(() => {
-      fetchExternalAuction();
-    }, 60000); // 60 seconds
-
-    return () => clearInterval(interval);
-  }, [fetchExternalAuction]);
-
-  // Refetch external auction data when current auction timer runs out
-  useEffect(() => {
-    if (isAuctionOver && externalAuction) {
-      // Refetch after a short delay to allow for any updates
-      const timeout = setTimeout(() => {
-        fetchExternalAuction();
-      }, 2000);
-      return () => clearTimeout(timeout);
-    }
-  }, [isAuctionOver, externalAuction, fetchExternalAuction]);
 
   // Fetch latest auction results when PastAuctions changes
   useEffect(() => {
@@ -934,10 +871,6 @@ export default function HomeClient() {
     );
   }
 
-  const openFirebidDegen = () => {
-    openMiniApp("https://firebid-degen.altumbase.com");
-  };
-
   const signature = "🔥 @firebid by @nikolaii.eth";
 
   // let change it to: The pot is 4.49 USDC—place a 0.03 bid and win half of it!
@@ -953,34 +886,13 @@ export default function HomeClient() {
     <div className="w-full max-w-3xl mx-auto px-2 sm:px-4 lg:px-6">
       <div className="flex flex-col gap-1 py-4 px-2">
         {/* External auction info */}
-        {externalAuction && !externalAuction.ended && (
-          <div className="bg-base-100 px-5 py-2 rounded-3xl shadow-md shadow-secondary border border-base-300 flex flex-col gap-3 mb-2">
-            <div
-              className="flex flex-row items-center justify-between gap-2 cursor-pointer"
-              onClick={() => {
-                openFirebidDegen();
-              }}
-            >
-              <div className="font-bold text-xs sm:text-lg">
-                Win {formatToken(BigInt(externalAuction.auctionAmount) / BigInt(10 ** 12), 0)} $DEGEN
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-xs sm:text-lg">Ends in</span>
-                <div className="text-xs sm:text-lg font-mono">
-                  <NumberFlow
-                    value={Math.max(0, Number(externalAuction.endTime) - Math.floor(now / 1000))}
-                    format={{
-                      notation: "standard",
-                      minimumFractionDigits: 0,
-                      maximumFractionDigits: 0,
-                    }}
-                  />
-                </div>
-                <span className="text-xs sm:text-lg">seconds</span>
-              </div>
-            </div>
-          </div>
-        )}
+        <ExternalAuctionBlock
+          infoUrl="https://firebid-degen.altumbase.com/ponder/latest-auction"
+          miniappUrl="https://firebid-degen.altumbase.com"
+          tokenName="DEGEN"
+          displayDecimals={0}
+          tokenDecimals={18}
+        />
 
         {/* Auction info */}
         <div className="bg-base-100 p-5 rounded-3xl shadow-md shadow-secondary border border-base-300 flex flex-col gap-3">
