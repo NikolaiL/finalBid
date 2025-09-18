@@ -12,6 +12,7 @@ import {
   useScaffoldWriteContract,
   useTransactor,
 } from "~~/hooks/scaffold-eth";
+import { useStreamingData } from "~~/hooks/useStreamingData";
 import {
   auctionCreatedQueryOptions,
   auctionEndedQueryOptions,
@@ -46,142 +47,17 @@ const formatTimeAgoBrief = (nowMs: number, timestampSeconds: number | bigint): s
   return `${days} day${days !== 1 ? "s" : ""} ago`;
 };
 
-// Helper function to calculate streaming amount for a given address with millisecond precision
-const calculateStreamingAmount = (
-  address: string,
-  streamingData: any,
-  auctionData: any,
-  currentTime: number,
-): bigint => {
-  if (!streamingData || !auctionData) return 0n;
-
-  const [units, balance, flowRate, lastUpdated] = streamingData as [bigint, bigint, bigint, bigint];
-  const [, , , streamingEndTime, , , , , , , ,] = auctionData as [
-    bigint,
-    bigint,
-    bigint,
-    bigint,
-    bigint,
-    bigint,
-    bigint,
-    bigint,
-    bigint,
-    string,
-    bigint,
-    boolean,
-  ];
-
-  // If no streaming units, return balance
-  if (units === 0n) return BigInt(balance);
-
-  // Use precise time calculations with milliseconds
-  const currentTimeMs = currentTime;
-  const streamingEndTimeMs = Number(streamingEndTime) * 1000;
-  const lastUpdatedMs = Number(lastUpdated) * 1000;
-
-  // Calculate until current time or streaming end time
-  const calculateUntilMs = Math.min(currentTimeMs, streamingEndTimeMs);
-
-  // Time since last update in milliseconds
-  const timeSinceUpdateMs = Math.max(0, calculateUntilMs - lastUpdatedMs);
-
-  // Convert flow rate from per-second to per-millisecond and apply
-  const flowRatePerMs = Number(flowRate) / 1000;
-  const additionalStreaming = flowRatePerMs * timeSinceUpdateMs;
-
-  // Current balance plus accumulated streaming since last update
-  const currentStreamingAmount = BigInt(balance) + BigInt(Math.floor(additionalStreaming / 1000));
-
-  // Divide by 1000 to account for the precision multiplier used in the contract
-  return currentStreamingAmount;
-};
-
 // Component for displaying real-time streaming amounts
 const StreamingAmount = ({ address, auctionId }: { address: string; auctionId: bigint | undefined }) => {
-  const [currentTime, setCurrentTime] = useState(Date.now());
+  const { streamingAmountDisplay } = useStreamingData(address, auctionId);
 
-  // Read streaming data for this address
-  const { data: streamingData } = useScaffoldReadContract({
-    contractName: "FinalBidContract",
-    functionName: "streamings",
-    args: [address as `0x${string}`],
-    watch: true,
-  });
-
-  // Read current auction data
-  const { data: auctionData } = useScaffoldReadContract({
-    contractName: "FinalBidContract",
-    functionName: "auctions",
-    args: [auctionId || 0n],
-    watch: true,
-  });
-
-  // Read total streaming units
-  const { data: totalStreamingUnits } = useScaffoldReadContract({
-    contractName: "FinalBidContract",
-    functionName: "streamingUnits",
-    watch: true,
-  });
-
-  // Calculate the actual streaming amount with millisecond precision
-  const actualStreamingAmount = useMemo(() => {
-    if (!streamingData || !auctionData || !totalStreamingUnits) return 0;
-
-    const [units, balance, flowRate, lastUpdated] = streamingData as [bigint, bigint, bigint, bigint];
-    const [, , , streamingEndTime, , , , , , , ,] = auctionData as [
-      bigint,
-      bigint,
-      bigint,
-      bigint,
-      bigint,
-      bigint,
-      bigint,
-      bigint,
-      bigint,
-      string,
-      bigint,
-      boolean,
-    ];
-
-    // If no streaming units, return balance
-    if (units === 0n) return Number(balance) / 10 ** TOKEN_DECIMALS;
-
-    // Use precise time calculations with milliseconds
-    const currentTimeMs = currentTime;
-    //const currentTimeSeconds = currentTimeMs / 1000;
-    const streamingEndTimeMs = Number(streamingEndTime) * 1000;
-    const lastUpdatedMs = Number(lastUpdated) * 1000;
-
-    // Calculate until current time or streaming end time
-    const calculateUntilMs = Math.min(currentTimeMs, streamingEndTimeMs);
-
-    // Time since last update in milliseconds
-    const timeSinceUpdateMs = Math.max(0, calculateUntilMs - lastUpdatedMs);
-
-    // Convert flow rate from per-second to per-millisecond and apply
-    const flowRatePerMs = Number(flowRate) / 1000;
-    const additionalStreaming = flowRatePerMs * timeSinceUpdateMs;
-
-    // Current balance plus accumulated streaming since last update
-    const currentStreamingAmount = Number(balance) * 1000 + additionalStreaming;
-
-    // Divide by 1000 to account for the precision multiplier used in the contract
-    return currentStreamingAmount / 1000 / 10 ** TOKEN_DECIMALS;
-  }, [streamingData, auctionData, totalStreamingUnits, currentTime]);
-
-  // Update current time every 16ms (60fps) for ultra-smooth streaming calculation
-  useEffect(() => {
-    const interval = setInterval(() => setCurrentTime(Date.now()), 100);
-    return () => clearInterval(interval);
-  }, []);
-
-  if (actualStreamingAmount === 0) return <div className="text-base-content/50">&nbsp;</div>;
+  if (streamingAmountDisplay === 0) return <div className="text-base-content/50">&nbsp;</div>;
 
   return (
     <div className="text-success font-mono">
       +
       <NumberFlow
-        value={actualStreamingAmount}
+        value={streamingAmountDisplay}
         format={{
           notation: "standard",
           minimumFractionDigits: 2,
@@ -214,29 +90,7 @@ const PotentialAmounts = ({
   showStopNowOutcome?: boolean;
   tokenSymbol?: string;
 }) => {
-  const [currentTime, setCurrentTime] = useState(Date.now());
-
-  // Read streaming data for this address
-  const { data: streamingData } = useScaffoldReadContract({
-    contractName: "FinalBidContract",
-    functionName: "streamings",
-    args: [address as `0x${string}`],
-    watch: true,
-  });
-
-  // Read current auction data
-  const { data: auctionData } = useScaffoldReadContract({
-    contractName: "FinalBidContract",
-    functionName: "auctions",
-    args: [auctionId || 0n],
-    watch: true,
-  });
-
-  // Calculate streaming amount
-  const streamingAmount = useMemo(() => {
-    if (!streamingData || !auctionData) return 0n;
-    return calculateStreamingAmount(address, streamingData, auctionData, currentTime);
-  }, [streamingData, auctionData, address, currentTime]);
+  const { streamingAmount } = useStreamingData(address, auctionId);
 
   // Calculate potential loss and profit with streaming
   const actualLoss = useMemo(() => {
@@ -250,12 +104,6 @@ const PotentialAmounts = ({
   // Convert to display values
   const lossValue = Number(actualLoss) / 10 ** TOKEN_DECIMALS;
   const profitValue = Number(actualProfit) / 10 ** TOKEN_DECIMALS;
-
-  // Update current time every 16ms (60fps) for ultra-smooth streaming calculation
-  useEffect(() => {
-    const interval = setInterval(() => setCurrentTime(Date.now()), 16);
-    return () => clearInterval(interval);
-  }, []);
 
   if (showOnlyLoss) {
     return (
@@ -289,7 +137,7 @@ const PotentialAmounts = ({
     return (
       <>
         <div className="text-base font-bold text-base-content/90">Stop Now </div>
-        <div className="text-sm text-base-content/70">and you will {isWinning ? "win" : "lose"}</div>
+        <div className="text-sm text-base-content/70">and you {isWinning ? "win" : "lose"}</div>
         <div className={`text-xl font-bold font-mono ${isWinning ? "text-success" : "text-error"}`}>
           <NumberFlow
             value={Math.abs(lossValue)}
@@ -414,6 +262,9 @@ export default function HomeClient() {
   const { data: tokenAddress } = useScaffoldReadContract({
     contractName: "FinalBidContract",
     functionName: "tokenAddress",
+    query: {
+      staleTime: 30000, // 30 seconds stale time for token address
+    },
   });
 
   // Check if new auction is allowed
@@ -421,6 +272,9 @@ export default function HomeClient() {
     contractName: "FinalBidContract",
     functionName: "newAuctionIsAllowed",
     watch: true,
+    query: {
+      staleTime: 5000, // 5 seconds stale time for auction status
+    },
   });
 
   const { writeContractAsync: writeTokenContractAsync } = useWriteContract();

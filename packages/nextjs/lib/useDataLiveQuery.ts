@@ -70,7 +70,7 @@ export function useDataLiveQuery<T = unknown>(opts: Opts<T>) {
   return useQuery<T>({
     queryKey: opts.queryKey,
     queryFn: opts.queryFn,
-    staleTime: opts.staleTime ?? 0,
+    staleTime: opts.staleTime ?? 5000, // 5 seconds default stale time
     refetchOnWindowFocus: opts.refetchOnWindowFocus ?? false,
   });
 }
