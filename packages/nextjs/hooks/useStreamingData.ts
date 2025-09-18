@@ -97,7 +97,7 @@ export const useStreamingData = (address: string, auctionId: bigint | undefined)
   // Convert to display value
   const streamingAmountDisplay = useMemo(() => {
     return Number(streamingAmount) / 10 ** TOKEN_DECIMALS;
-  }, [streamingAmount, TOKEN_DECIMALS]);
+  }, [streamingAmount]);
 
   // Update current time every 100ms (10fps) instead of 16ms (60fps) for better performance
   useEffect(() => {
