@@ -129,7 +129,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Step 1: Verify human proof (reCAPTCHA)
-    console.log("Verifying human proof...");
+    console.log("Verifying human proof for address: ", address);
     const isHuman = await verifyRecaptcha(humanProof);
     if (!isHuman) {
       console.log("reCAPTCHA verification failed");
