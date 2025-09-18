@@ -38,14 +38,14 @@ async function verifyRecaptcha(token: string): Promise<boolean> {
     const data = await response.json();
 
     // Log the full reCAPTCHA response for debugging
-    console.log("reCAPTCHA response:", {
-      success: data.success,
-      score: data.score,
-      action: data.action,
-      hostname: data.hostname,
-      challenge_ts: data.challenge_ts,
-      error_codes: data["error-codes"],
-    });
+    // console.log("reCAPTCHA response:", {
+    //   success: data.success,
+    //   score: data.score,
+    //   action: data.action,
+    //   hostname: data.hostname,
+    //   challenge_ts: data.challenge_ts,
+    //   error_codes: data["error-codes"],
+    // });
 
     // Check if the request was successful
     if (!data.success) {
@@ -154,8 +154,8 @@ export async function POST(request: NextRequest) {
     };
 
     console.log("Access token generated successfully for:", address);
-    console.log("Access token:", accessToken);
-    console.log("Current timestamp:", Math.floor(Date.now() / 1000));
+    //console.log("Access token:", accessToken);
+    //console.log("Current timestamp:", Math.floor(Date.now() / 1000));
     console.log("Current time:", new Date().toISOString());
 
     return NextResponse.json({ accessToken });
