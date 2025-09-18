@@ -49,7 +49,7 @@ async function verifyRecaptcha(token: string): Promise<boolean> {
 
     // Check if the request was successful
     if (!data.success) {
-      console.log("reCAPTCHA verification failed - success: false");
+      console.log("🛑 reCAPTCHA verification failed - success: false");
       return false;
     }
 
@@ -75,7 +75,7 @@ async function verifyRecaptcha(token: string): Promise<boolean> {
     //console.log("reCAPTCHA verification successful");
     return true;
   } catch (error) {
-    console.error("reCAPTCHA verification failed:", error);
+    console.error("🛑 reCAPTCHA verification failed:", error);
     return false;
   }
 }
@@ -132,7 +132,7 @@ export async function POST(request: NextRequest) {
     console.log("🔎 Verifying human proof for address: ", address);
     const isHuman = await verifyRecaptcha(humanProof);
     if (!isHuman) {
-      console.log("reCAPTCHA verification failed");
+      console.log("🛑 reCAPTCHA verification failed");
       return NextResponse.json({ error: "Human verification failed" }, { status: 400 });
     }
 
