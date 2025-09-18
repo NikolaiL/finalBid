@@ -134,6 +134,7 @@ export const AddressFarcaster = ({
             className="rounded-full object-cover cursor-pointer w-6 h-6"
             onClick={() => openProfile({ fid: user.fid, username: user.username })}
             onError={() => setImageFailed(true)}
+            unoptimized={user.pfp_url.includes("imgur.com")}
           />
         ) : (
           <BlockieAvatar address={checksum} size={avatarSize} />
