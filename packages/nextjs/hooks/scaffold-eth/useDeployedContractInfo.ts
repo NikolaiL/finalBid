@@ -57,7 +57,7 @@ export function useDeployedContractInfo<TContractName extends ContractName>(
   const cacheKey = useMemo(() => {
     if (!deployedContract) return null;
     return `${selectedNetwork.id}-${contractName}-${deployedContract.address}`;
-  }, [selectedNetwork.id, contractName, deployedContract?.address, deployedContract]);
+  }, [selectedNetwork.id, contractName, deployedContract]);
 
   useEffect(() => {
     const checkContractDeployment = async () => {
