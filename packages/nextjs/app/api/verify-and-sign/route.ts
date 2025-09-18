@@ -72,7 +72,7 @@ async function verifyRecaptcha(token: string): Promise<boolean> {
       return false;
     }
 
-    console.log("reCAPTCHA verification successful");
+    //console.log("reCAPTCHA verification successful");
     return true;
   } catch (error) {
     console.error("reCAPTCHA verification failed:", error);
@@ -129,7 +129,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Step 1: Verify human proof (reCAPTCHA)
-    console.log("Verifying human proof for address: ", address);
+    console.log("🔎 Verifying human proof for address: ", address);
     const isHuman = await verifyRecaptcha(humanProof);
     if (!isHuman) {
       console.log("reCAPTCHA verification failed");
@@ -153,10 +153,9 @@ export async function POST(request: NextRequest) {
       signature,
     };
 
-    console.log("Access token generated successfully for:", address);
+    console.log("✅ Access token generated successfully for:", address, "at", new Date().toISOString());
     //console.log("Access token:", accessToken);
     //console.log("Current timestamp:", Math.floor(Date.now() / 1000));
-    console.log("Current time:", new Date().toISOString());
 
     return NextResponse.json({ accessToken });
   } catch (error) {
