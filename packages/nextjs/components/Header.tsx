@@ -85,7 +85,9 @@ export const Header = () => {
             <Image alt="Final Bid logo" className="cursor-pointer" fill src="/firebid-degen.svg" />
           </div>
           <div className="flex flex-col mt-1">
-            <span className="font-bold leading-tight text-primary">{process.env.NEXT_PUBLIC_APP_NAME}</span>
+            <span className="text-xs sm:text-sm md:text-base font-bold leading-tight text-primary">
+              {process.env.NEXT_PUBLIC_APP_NAME}
+            </span>
             <span className="text-[0.5rem] sm:text-xs text-base-content/50">
               {process.env.NEXT_PUBLIC_APP_DESCRIPTION}
             </span>
@@ -95,7 +97,7 @@ export const Header = () => {
           <HeaderMenuLinks />
         </ul>
       </div>
-      <div className="navbar-end mr-4">
+      <div className="navbar-end mr-1 sm:mr-4">
         <RainbowKitCustomConnectButton />
         {isLocalNetwork && <FaucetButton />}
       </div>
