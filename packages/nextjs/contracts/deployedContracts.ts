@@ -7,7 +7,7 @@ import { GenericContractsDeclaration } from "~~/utils/scaffold-eth/contract";
 const deployedContracts = {
   8453: {
     FinalBidContract: {
-      address: "0x479dC3fB56bb72ae5AB0cA92D4FcC711d76fCD46",
+      address: "0xADE7AD7A818785d3121e00C09b23B120118149c1",
       abi: [
         {
           inputs: [
@@ -176,6 +176,12 @@ const deployedContracts = {
               indexed: false,
               internalType: "uint256",
               name: "endTime",
+              type: "uint256",
+            },
+            {
+              indexed: false,
+              internalType: "uint256",
+              name: "streamingEndTime",
               type: "uint256",
             },
             {
@@ -437,6 +443,55 @@ const deployedContracts = {
             },
           ],
           name: "StartingAmountUpdated",
+          type: "event",
+        },
+        {
+          anonymous: false,
+          inputs: [
+            {
+              indexed: false,
+              internalType: "uint256",
+              name: "auctionId",
+              type: "uint256",
+            },
+            {
+              indexed: false,
+              internalType: "address[]",
+              name: "participants",
+              type: "address[]",
+            },
+            {
+              indexed: false,
+              internalType: "uint256[]",
+              name: "units",
+              type: "uint256[]",
+            },
+            {
+              indexed: false,
+              internalType: "uint256[]",
+              name: "balances",
+              type: "uint256[]",
+            },
+            {
+              indexed: false,
+              internalType: "uint256[]",
+              name: "flowRates",
+              type: "uint256[]",
+            },
+            {
+              indexed: false,
+              internalType: "uint256",
+              name: "lastUpdated",
+              type: "uint256",
+            },
+            {
+              indexed: false,
+              internalType: "uint256",
+              name: "totalUnits",
+              type: "uint256",
+            },
+          ],
+          name: "StreamingBatchUpdate",
           type: "event",
         },
         {
@@ -1195,7 +1250,7 @@ const deployedContracts = {
         transferOwnership: "@openzeppelin/contracts/access/Ownable.sol",
         paused: "@openzeppelin/contracts/utils/Pausable.sol",
       },
-      deployedOnBlock: 35614614,
+      deployedOnBlock: 35746042,
     },
   },
   31337: {
