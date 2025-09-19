@@ -34,9 +34,19 @@ export const useStreamingData = (address: string, auctionId: bigint | undefined)
     // Get streaming end time from auction data
     const streamingEndTime = auctionData?.streamingEndTime;
 
+    // Validate that we have all required data
+    if (!streamingEndTime || !lastUpdated || !flowRate || !balance) {
+      return balance || 0n;
+    }
+
     // Calculate additional streaming since last update, but cap at streaming end time
     const streamingEndTimeMs = Number(streamingEndTime) * 1000;
     const lastUpdatedMs = Number(lastUpdated) * 1000;
+
+    // Validate that the numbers are valid
+    if (isNaN(streamingEndTimeMs) || isNaN(lastUpdatedMs)) {
+      return balance || 0n;
+    }
 
     // Calculate until current time or streaming end time, whichever is earlier
     const calculateUntilMs = Math.min(currentTime, streamingEndTimeMs);
@@ -47,6 +57,11 @@ export const useStreamingData = (address: string, auctionId: bigint | undefined)
 
     // Current balance plus accumulated streaming since last update
     const currentStreamingAmount = Number(balance) * 1000 + additionalStreaming;
+
+    // Validate the final calculation
+    if (isNaN(currentStreamingAmount)) {
+      return balance || 0n;
+    }
 
     // Divide by 1000 to account for the precision multiplier used in the contract
     return BigInt(Math.floor(currentStreamingAmount / 1000));
@@ -84,7 +99,7 @@ export const useAllStreamingData = (auctionId: bigint | undefined) => {
   const streamingDataWithAmounts = useMemo(() => {
     const allStreamingData = (allStreamingDataQuery?.data as any) || [];
     const auctionData = (auctionDataQuery?.data as any)?.[0];
-    
+
     return allStreamingData
       .map((data: any) => {
         const { units, balance, flowRate, lastUpdated } = data;
@@ -96,18 +111,34 @@ export const useAllStreamingData = (auctionId: bigint | undefined) => {
           // Get streaming end time from auction data
           const streamingEndTime = auctionData?.streamingEndTime;
 
-          // Calculate additional streaming since last update, but cap at streaming end time
-          const streamingEndTimeMs = Number(streamingEndTime) * 1000;
-          const lastUpdatedMs = Number(lastUpdated) * 1000;
+          // Validate that we have all required data
+          if (!streamingEndTime || !lastUpdated || !flowRate || !balance) {
+            calculatedAmount = balance || 0n;
+          } else {
+            // Calculate additional streaming since last update, but cap at streaming end time
+            const streamingEndTimeMs = Number(streamingEndTime) * 1000;
+            const lastUpdatedMs = Number(lastUpdated) * 1000;
 
-          // Calculate until current time or streaming end time, whichever is earlier
-          const calculateUntilMs = Math.min(currentTime, streamingEndTimeMs);
-          const timeSinceUpdateMs = Math.max(0, calculateUntilMs - lastUpdatedMs);
+            // Validate that the numbers are valid
+            if (isNaN(streamingEndTimeMs) || isNaN(lastUpdatedMs)) {
+              calculatedAmount = balance || 0n;
+            } else {
+              // Calculate until current time or streaming end time, whichever is earlier
+              const calculateUntilMs = Math.min(currentTime, streamingEndTimeMs);
+              const timeSinceUpdateMs = Math.max(0, calculateUntilMs - lastUpdatedMs);
 
-          const flowRatePerMs = Number(flowRate) / 1000;
-          const additionalStreaming = flowRatePerMs * timeSinceUpdateMs;
-          const currentStreamingAmount = Number(balance) * 1000 + additionalStreaming;
-          calculatedAmount = BigInt(Math.floor(currentStreamingAmount / 1000));
+              const flowRatePerMs = Number(flowRate) / 1000;
+              const additionalStreaming = flowRatePerMs * timeSinceUpdateMs;
+              const currentStreamingAmount = Number(balance) * 1000 + additionalStreaming;
+
+              // Validate the final calculation
+              if (isNaN(currentStreamingAmount)) {
+                calculatedAmount = balance || 0n;
+              } else {
+                calculatedAmount = BigInt(Math.floor(currentStreamingAmount / 1000));
+              }
+            }
+          }
         }
 
         return {
