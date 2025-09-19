@@ -838,5 +838,25 @@ describe("FinalBidContract", function () {
       console.log("Streaming addresses length:", streamingAddressesLength);
       expect(streamingAddressesLength).to.equal(3);
     });
+    it("Should emit StreamingBatchUpdate event when streaming units are added", async function () {
+      // Add streaming units
+      const accessToken1 = await generateAccessToken(serverPrivateKey, user1.address, 1n);
+      await expect(finalBidContract.connect(user1).placeBid(accessToken1, user1.address)).to.emit(
+        finalBidContract,
+        "StreamingBatchUpdate",
+      );
+    });
+    it("Should emit StreamingBatchUpdate event when auction is finished", async function () {
+      // Add streaming units
+      const accessToken1 = await generateAccessToken(serverPrivateKey, user1.address, 1n);
+      await expect(finalBidContract.connect(user1).placeBid(accessToken1, user1.address)).to.emit(
+        finalBidContract,
+        "StreamingBatchUpdate",
+      );
+      const auctionDuration = Number(await finalBidContract.auctionDuration()) + 10;
+      await ethers.provider.send("evm_increaseTime", [auctionDuration]);
+      await ethers.provider.send("evm_mine", []);
+      await expect(finalBidContract.endAuction()).to.emit(finalBidContract, "StreamingBatchUpdate");
+    });
   });
 });

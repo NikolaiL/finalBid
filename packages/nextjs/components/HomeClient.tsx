@@ -582,6 +582,7 @@ export default function HomeClient() {
           },
           onBlockConfirmation: (receipt: any) => {
             console.log("Bid confirmed in block:", receipt.blockNumber);
+            launchConfetti();
             // Refresh allowance after block confirmation with delay to ensure blockchain state is updated
             setTimeout(() => refetchAllowance(), 3000);
           },
@@ -788,6 +789,9 @@ export default function HomeClient() {
   const sharingText = latestResults ? `${baseText}\n\n${latestResults}\n\n${signature}` : `${baseText}\n${signature}`;
   const sharingTextTwitter = baseText + "\n\n" + signatureTwitter;
 
+  const timeRunningOutLimit = 30;
+  const isTimeRunningOut = secondsRemaining < timeRunningOutLimit && !isBidding;
+
   return (
     <div className="w-full max-w-3xl mx-auto px-2 sm:px-4 lg:px-6">
       <div className="flex flex-col gap-1 py-4 px-2">
@@ -943,7 +947,7 @@ export default function HomeClient() {
                       {isUserHighestBidder ? (
                         <>
                           <div className="text-xl font-bold p-1">✅ You are the highest bidder</div>
-                          <div className="mt-1 text-gray-500 text-xs">
+                          <div className="mt-1 text-base-content/50 text-xs">
                             {(() => {
                               const endTime = latestAuction?.endTime as bigint;
                               const remaining = endTime > nowSecBig ? Number(endTime - nowSecBig) : 0;
@@ -953,8 +957,16 @@ export default function HomeClient() {
                         </>
                       ) : (
                         <>
+                          {isTimeRunningOut && (
+                            <div className="mt-1 text-base-content/70 text-sm font-bold mb-4 animate-pulse text-warning">
+                              Time is running out! Bid Now!
+                            </div>
+                          )}
                           <button
-                            className="btn btn-primary text-xl transition-all h-14 px-6"
+                            className={
+                              "btn btn-primary text-xl transition-all h-14 px-6 " +
+                              (isTimeRunningOut ? "animate-pulse" : "")
+                            } //if time is running out, add pulse class
                             onClick={handlePlaceBid}
                             disabled={isBidding}
                           >
@@ -1078,7 +1090,7 @@ export default function HomeClient() {
         {connectedAddress && (
           <div className="bg-base-100 p-4 rounded-xl shadow-md shadow-secondary border border-base-300 flex flex-col gap-1 mt-4">
             <div className="text-lg font-light text-center items-center">Pre-Approve for faster bidding</div>
-            <div className="text-center items-center text-base-content/70 text-xs mb-2">
+            <div className="text-center items-center text-base-content/50 text-xs mb-2">
               Your current allowance is {allowance ? formatToken(allowance as bigint) : "0"}{" "}
               {String(tokenSymbol ?? "USDC")}.{" "}
             </div>
@@ -1110,8 +1122,15 @@ export default function HomeClient() {
 
         {/* Current Auction Stats */}
         {latestAuction && userStats.length > 0 && (
-          <div className="bg-base-100 mt-4 p-0 rounded-xl shadow-md shadow-secondary border border-base-300 flex flex-col gap-3">
+          <div className="bg-base-100 mt-4 p-0 rounded-xl shadow-md shadow-secondary border border-base-300 flex flex-col">
             <div className="text-lg font-light text-center mt-3">Current Auction Stats</div>
+            {latestAuction?.streamingEndTime > nowSecBig ? (
+              <div className="text-xs text-center text-base-content/50">
+                Streaming ends in {Number(latestAuction?.streamingEndTime as number) - Number(nowSecBig)} seconds
+              </div>
+            ) : (
+              <div className="text-xs text-center text-base-content/50">Streaming ended</div>
+            )}
             <div className="overflow-x-auto overflow-y-hidden">
               <table className="table table-sm w-full">
                 <thead>

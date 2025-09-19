@@ -80,7 +80,7 @@ contract FinalBidContract is Ownable, Pausable, ReentrancyGuard {
 
     // mapping(address => uint256) public referralRewards;
 
-    event AuctionCreated(uint256 indexed auctionId, uint256 auctionAmount, uint256 startTime, uint256 endTime, uint256 startingAmount, uint256 bidIncrement, uint256 referralFee, uint256 platformFee);
+    event AuctionCreated(uint256 indexed auctionId, uint256 auctionAmount, uint256 startTime, uint256 endTime, uint256 streamingEndTime, uint256 startingAmount, uint256 bidIncrement, uint256 referralFee, uint256 platformFee);
     event BidPlaced(uint256 indexed auctionId, address indexed bidder, uint256 amount, address indexed referral, uint256 endTime);
     event AuctionEnded(uint256 indexed auctionId, address indexed winner, uint256 amount, uint256 highestBid);
 
@@ -99,12 +99,49 @@ contract FinalBidContract is Ownable, Pausable, ReentrancyGuard {
     event PlatformFeeUpdated(uint256 oldAmount, uint256 newAmount);
     event DeployerFeeUpdated(uint256 oldAmount, uint256 newAmount);
 
+    event StreamingBatchUpdate(
+        uint256 auctionId,
+        address[] participants,
+        uint256[] units,
+        uint256[] balances,
+        uint256[] flowRates,
+        uint256 lastUpdated,
+        uint256 totalUnits
+    );
+
     // Constructor: Called once on contract deployment
     // Check packages/hardhat/deploy/00_deploy_your_contract.ts
     constructor(address _owner, address _tokenAddress, address _validSigner) Ownable(_owner) {
         // Owner is set in the Ownable constructor
         tokenAddress = _tokenAddress;
         validSigner = _validSigner;
+    }
+
+    function _emitStreamingBatchUpdate() internal {
+        uint256 length = streamingAddresses.length;
+
+        address[] memory participants = new address[](length);
+        uint256[] memory units = new uint256[](length);
+        uint256[] memory balances = new uint256[](length);
+        uint256[] memory flowRates = new uint256[](length);
+        uint256 lastUpdated;
+        
+        
+
+        for (uint256 i = 0; i < length; i++) {
+            auctionId;
+            address addr = streamingAddresses[i];
+            Streaming storage s = streamings[addr];
+            participants[i] = addr;
+            units[i] = s.units;
+            balances[i] = s.balance;
+            flowRates[i] = s.flowRate;
+            lastUpdated = s.lastUpdated;
+        }
+
+        uint256 totalUnits = streamingUnits;
+
+        emit StreamingBatchUpdate(auctionId, participants, units, balances, flowRates, lastUpdated, totalUnits);
     }
 
     function _calculateFlowRatePerUnit() internal view returns (uint256) {
@@ -143,6 +180,7 @@ contract FinalBidContract is Ownable, Pausable, ReentrancyGuard {
             streaming.flowRate = flowRatePerUnit * streaming.units;
             streaming.lastUpdated = calculateUntil;
         }
+        _emitStreamingBatchUpdate();
     }
 
     function _finalizeStreaming() internal {
@@ -222,7 +260,7 @@ contract FinalBidContract is Ownable, Pausable, ReentrancyGuard {
             ended: false
         });
 
-        emit AuctionCreated(auctionId, auctionAmountToUse, _startTime, _endTime, _startingAmount, _bidIncrement, _referralFee, _platformFee);
+        emit AuctionCreated(auctionId, auctionAmountToUse, _startTime, _endTime, _endTime, _startingAmount, _bidIncrement, _referralFee, _platformFee);
 
 
     }

@@ -23,6 +23,8 @@ type Query {
   auctionCreateds(where: auctionCreatedFilter, orderBy: String, orderDirection: String, before: String, after: String, limit: Int): auctionCreatedPage!
   auctionEnded(auctionId: BigInt!): auctionEnded
   auctionEndeds(where: auctionEndedFilter, orderBy: String, orderDirection: String, before: String, after: String, limit: Int): auctionEndedPage!
+  streamingData(id: String!): streamingData
+  streamingDatas(where: streamingDataFilter, orderBy: String, orderDirection: String, before: String, after: String, limit: Int): streamingDataPage!
   _meta: Meta
 }
 
@@ -385,6 +387,105 @@ input auctionEndedFilter {
   logIndex_lt: Int
   logIndex_gte: Int
   logIndex_lte: Int
+  timestamp: BigInt
+  timestamp_not: BigInt
+  timestamp_in: [BigInt]
+  timestamp_not_in: [BigInt]
+  timestamp_gt: BigInt
+  timestamp_lt: BigInt
+  timestamp_gte: BigInt
+  timestamp_lte: BigInt
+}
+
+type streamingData {
+  id: String!
+  auctionId: BigInt!
+  address: String!
+  units: BigInt!
+  balance: BigInt!
+  flowRate: BigInt!
+  lastUpdated: BigInt!
+  blockNumber: BigInt!
+  timestamp: BigInt!
+}
+
+type streamingDataPage {
+  items: [streamingData!]!
+  pageInfo: PageInfo!
+  totalCount: Int!
+}
+
+input streamingDataFilter {
+  AND: [streamingDataFilter]
+  OR: [streamingDataFilter]
+  id: String
+  id_not: String
+  id_in: [String]
+  id_not_in: [String]
+  id_contains: String
+  id_not_contains: String
+  id_starts_with: String
+  id_ends_with: String
+  id_not_starts_with: String
+  id_not_ends_with: String
+  auctionId: BigInt
+  auctionId_not: BigInt
+  auctionId_in: [BigInt]
+  auctionId_not_in: [BigInt]
+  auctionId_gt: BigInt
+  auctionId_lt: BigInt
+  auctionId_gte: BigInt
+  auctionId_lte: BigInt
+  address: String
+  address_not: String
+  address_in: [String]
+  address_not_in: [String]
+  address_contains: String
+  address_not_contains: String
+  address_starts_with: String
+  address_ends_with: String
+  address_not_starts_with: String
+  address_not_ends_with: String
+  units: BigInt
+  units_not: BigInt
+  units_in: [BigInt]
+  units_not_in: [BigInt]
+  units_gt: BigInt
+  units_lt: BigInt
+  units_gte: BigInt
+  units_lte: BigInt
+  balance: BigInt
+  balance_not: BigInt
+  balance_in: [BigInt]
+  balance_not_in: [BigInt]
+  balance_gt: BigInt
+  balance_lt: BigInt
+  balance_gte: BigInt
+  balance_lte: BigInt
+  flowRate: BigInt
+  flowRate_not: BigInt
+  flowRate_in: [BigInt]
+  flowRate_not_in: [BigInt]
+  flowRate_gt: BigInt
+  flowRate_lt: BigInt
+  flowRate_gte: BigInt
+  flowRate_lte: BigInt
+  lastUpdated: BigInt
+  lastUpdated_not: BigInt
+  lastUpdated_in: [BigInt]
+  lastUpdated_not_in: [BigInt]
+  lastUpdated_gt: BigInt
+  lastUpdated_lt: BigInt
+  lastUpdated_gte: BigInt
+  lastUpdated_lte: BigInt
+  blockNumber: BigInt
+  blockNumber_not: BigInt
+  blockNumber_in: [BigInt]
+  blockNumber_not_in: [BigInt]
+  blockNumber_gt: BigInt
+  blockNumber_lt: BigInt
+  blockNumber_gte: BigInt
+  blockNumber_lte: BigInt
   timestamp: BigInt
   timestamp_not: BigInt
   timestamp_in: [BigInt]

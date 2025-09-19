@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { ponder } from "ponder:registry";
-import { auctionCreated, auctionEnded, bidPlaced } from "ponder:schema";
+import { auctionCreated, auctionEnded, bidPlaced, streamingData } from "ponder:schema";
 import { eq, and, gt } from "drizzle-orm";
 
 ponder.on("FinalBidContract:AuctionCreated", async ({ event, context }) => {
@@ -10,7 +10,7 @@ ponder.on("FinalBidContract:AuctionCreated", async ({ event, context }) => {
     auctionAmount: event.args.auctionAmount,
     startTime: event.args.startTime,
     endTime: event.args.endTime,
-    streamingEndTime: event.args.endTime,
+    streamingEndTime: event.args.streamingEndTime,
     startingAmount: event.args.startingAmount,
     bidIncrement: event.args.bidIncrement,
     referralFee: event.args.referralFee,
@@ -62,6 +62,43 @@ ponder.on("FinalBidContract:AuctionEnded", async ({ event, context }) => {
     ended: true,
   });
   console.log("AuctionEnded", event.args.auctionId, event.args.winner, event.args.amount, event.args.highestBid);
+});
+
+ponder.on("FinalBidContract:StreamingBatchUpdate", async ({ event, context }) => {
+  const { auctionId, participants, units, balances, flowRates, lastUpdated, totalUnits } = event.args;
+  
+  // Process each participant's streaming data
+  for (let i = 0; i < participants.length; i++) {
+    const address = participants[i];
+    const id = `${auctionId}-${address.toLowerCase()}`;
+    
+    // Insert or update streaming data for this participant
+    await context.db.insert(streamingData).values({
+      id,
+      auctionId,
+      address: address.toLowerCase() as `0x${string}`,
+      units: units[i],
+      balance: balances[i],
+      flowRate: flowRates[i],
+      lastUpdated,
+      blockNumber: BigInt(event.block.number as any),
+      timestamp: BigInt(event.block.timestamp),
+    }).onConflictDoUpdate({
+        units: units[i],
+        balance: balances[i],
+        flowRate: flowRates[i],
+        lastUpdated,
+        blockNumber: BigInt(event.block.number as any),
+        timestamp: BigInt(event.block.timestamp),
+    });
+  }
+  
+  console.log("StreamingBatchUpdate", {
+    auctionId,
+    participantsCount: participants.length,
+    totalUnits,
+    lastUpdated,
+  });
 });
 
 

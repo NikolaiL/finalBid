@@ -53,6 +53,23 @@ export const auctionEnded = onchainTable("auctionEnded", (t) => ({
   winnerIdx: index().on(table.winner),
 }));
 
+// Streaming data table with unique key based on auctionId and address
+export const streamingData = onchainTable("streamingData", (t) => ({
+  id: t.text().primaryKey(), // `${auctionId}-${address}`
+  auctionId: t.bigint().notNull(),
+  address: t.hex().notNull(),
+  units: t.bigint().notNull(),
+  balance: t.bigint().notNull(),
+  flowRate: t.bigint().notNull(),
+  lastUpdated: t.bigint().notNull(),
+  blockNumber: t.bigint().notNull(),
+  timestamp: t.bigint().notNull(),
+}), (table) => ({
+  auctionIdx: index().on(table.auctionId),
+  addressIdx: index().on(table.address),
+  auctionAddressIdx: index().on(table.auctionId, table.address),
+}));
+
 
 //
 // uint256 auctionAmount;
