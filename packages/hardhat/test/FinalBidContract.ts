@@ -693,7 +693,13 @@ describe("FinalBidContract", function () {
       const initialEndTime = auction.endTime;
 
       // Wait some time (simulate with block timestamp manipulation)
-      await ethers.provider.send("evm_increaseTime", [3580]); // 3580 seconds
+      // get time from contract auctionDuration and auctionDurationIncrease, use a value in between
+
+      const auctionDuration = await finalBidContract.auctionDuration();
+      const auctionDurationIncrease = await finalBidContract.auctionDurationIncrease();
+      const increaseTime = Number(auctionDuration - auctionDurationIncrease / 2n);
+
+      await ethers.provider.send("evm_increaseTime", [increaseTime]);
       await ethers.provider.send("evm_mine", []);
 
       // Add more streaming units to trigger recalculation
@@ -755,7 +761,8 @@ describe("FinalBidContract", function () {
       const initialBalance2 = await dummyUsdcContract.balanceOf(user2.address);
 
       // End the auction to trigger streaming finalization
-      await ethers.provider.send("evm_increaseTime", [3600]); // 1 hour
+      const auctionDuration = Number(await finalBidContract.auctionDuration());
+      await ethers.provider.send("evm_increaseTime", [auctionDuration]); // 1 hour
       await ethers.provider.send("evm_mine", []);
       await finalBidContract.endAuction();
 
@@ -773,7 +780,8 @@ describe("FinalBidContract", function () {
       await finalBidContract.connect(user1).placeBid(accessToken1, user1.address);
 
       // End the auction to trigger streaming finalization
-      await ethers.provider.send("evm_increaseTime", [3600]); // 1 hour
+      const auctionDuration = Number(await finalBidContract.auctionDuration());
+      await ethers.provider.send("evm_increaseTime", [auctionDuration]);
       await ethers.provider.send("evm_mine", []);
       await finalBidContract.endAuction();
 

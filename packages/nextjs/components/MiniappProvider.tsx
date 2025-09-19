@@ -130,7 +130,7 @@ export const MiniappProvider = ({ children }: MiniappProviderProps) => {
         const ctx = await sdk.context;
         const added = ctx?.client?.added ?? false;
         console.log("added:", added);
-        if (!added) {
+        if (!added && isMiniApp) {
           try {
             await sdk.actions.addMiniApp();
           } catch (e) {
