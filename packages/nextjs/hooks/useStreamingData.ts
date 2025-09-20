@@ -1,10 +1,14 @@
 import { useEffect, useMemo, useState } from "react";
+import { getServerTime, useServerTimeDrift } from "~~/lib/global-time";
 import { createAllStreamingDataQueryOptions, createAuctionDataQueryOptions } from "~~/lib/streaming-query";
 import { useDataLiveQuery } from "~~/lib/useDataLiveQuery";
 
 const TOKEN_DECIMALS = Number(process.env.NEXT_PUBLIC_TOKEN_DECIMALS) ?? 18;
 
 export const useStreamingData = (address: string, auctionId: bigint | undefined) => {
+  // Initialize server time drift calculation
+  useServerTimeDrift();
+
   const [currentTime, setCurrentTime] = useState(Date.now());
 
   // Query all streaming data for the auction (single query)
@@ -72,9 +76,11 @@ export const useStreamingData = (address: string, auctionId: bigint | undefined)
     return Number(streamingAmount) / 10 ** TOKEN_DECIMALS;
   }, [streamingAmount]);
 
-  // Update current time every 1000ms (1fps) for better performance
+  // Update current time every 100ms with blockchain synchronization
   useEffect(() => {
-    const interval = setInterval(() => setCurrentTime(Date.now()), 100);
+    const interval = setInterval(() => {
+      setCurrentTime(getServerTime());
+    }, 100);
     return () => clearInterval(interval);
   }, []);
 
@@ -87,6 +93,9 @@ export const useStreamingData = (address: string, auctionId: bigint | undefined)
 
 // Hook to get all streaming data for an auction (useful for leaderboards, etc.)
 export const useAllStreamingData = (auctionId: bigint | undefined) => {
+  // Initialize server time drift calculation
+  useServerTimeDrift();
+
   const [currentTime, setCurrentTime] = useState(Date.now());
 
   // Query all streaming data for the auction
@@ -150,9 +159,11 @@ export const useAllStreamingData = (auctionId: bigint | undefined) => {
       .sort((a: any, b: any) => Number(b.calculatedAmount - a.calculatedAmount)); // Sort by amount descending
   }, [allStreamingDataQuery?.data, auctionDataQuery?.data, currentTime]);
 
-  // Update current time every 1000ms (1fps) for better performance
+  // Update current time every 1000ms with blockchain synchronization
   useEffect(() => {
-    const interval = setInterval(() => setCurrentTime(Date.now()), 1000);
+    const interval = setInterval(() => {
+      setCurrentTime(getServerTime());
+    }, 1000);
     return () => clearInterval(interval);
   }, []);
 

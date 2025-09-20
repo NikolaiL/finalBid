@@ -19,6 +19,7 @@ import {
   createBidPlacedQueryOptions,
 } from "~~/lib/bid-events-query";
 import { getAddressDisplayName } from "~~/lib/farcaster";
+import { formatTimeAgo, getServerTime, useServerTimeDrift } from "~~/lib/global-time";
 import { useDataLiveQuery } from "~~/lib/useDataLiveQuery";
 
 const DISPLAY_DECIMALS = Number(process.env.NEXT_PUBLIC_DISPLAY_DECIMALS) ?? 0;
@@ -35,17 +36,7 @@ const formatToken = (amount: bigint | 0n, decimals: number = DISPLAY_DECIMALS): 
 
 const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
 
-const formatTimeAgoBrief = (nowMs: number, timestampSeconds: number | bigint): string => {
-  const ts = typeof timestampSeconds === "bigint" ? Number(timestampSeconds) : timestampSeconds;
-  const diffSeconds = Math.max(0, Math.floor(nowMs / 1000) - ts);
-  if (diffSeconds < 60) return `${diffSeconds} seconds ago`;
-  const minutes = Math.floor(diffSeconds / 60);
-  if (minutes < 60) return `${minutes} minute${minutes !== 1 ? "s" : ""} ago`;
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours} hour${hours !== 1 ? "s" : ""} ago`;
-  const days = Math.floor(hours / 24);
-  return `${days} day${days !== 1 ? "s" : ""} ago`;
-};
+// formatTimeAgoBrief function removed - now using blockchain-synchronized formatTimeAgo
 
 // Component for displaying real-time streaming amounts
 const StreamingAmount = ({ address, auctionId }: { address: string; auctionId: bigint | undefined }) => {
@@ -371,10 +362,15 @@ export default function HomeClient() {
 
   const isAuctionOver = latestAuction?.ended;
 
-  // Live ticking timestamp (updates every second)
+  // Initialize blockchain time drift calculation
+  useServerTimeDrift();
+
+  // Local timer for frequent updates (every second)
   const [now, setNow] = useState<number>(() => Date.now());
   useEffect(() => {
-    const id = setInterval(() => setNow(Date.now()), 1000);
+    const id = setInterval(() => {
+      setNow(Date.now());
+    }, 1000);
     return () => clearInterval(id);
   }, []);
 
@@ -402,10 +398,21 @@ export default function HomeClient() {
     fetchResults();
   }, [PastAuctions, tokenSymbol]);
 
-  const nowSecBig = BigInt(Math.floor(now / 1000));
-  const isAcutionReadytoBeOver =
-    (latestAuction?.endTime as bigint) < nowSecBig ||
-    (latestAuction?.highestBid as bigint) >= (latestAuction?.auctionAmount as bigint);
+  // Check if auction is ready to be over using blockchain-synchronized time
+  const isAcutionReadytoBeOver = useMemo(() => {
+    if (!latestAuction) return false;
+
+    // Check if end time has passed
+    const serverTime = getServerTime();
+    const currentSeconds = Math.floor(serverTime / 1000);
+    const endTimePassed = latestAuction.endTime ? Number(latestAuction.endTime) <= currentSeconds : false;
+
+    // Check if highest bid reached auction amount
+    const highestBidReached = (latestAuction.highestBid as bigint) >= (latestAuction.auctionAmount as bigint);
+
+    return endTimePassed || highestBidReached;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [latestAuction, now]);
   const isAuctionActive = !isAcutionReadytoBeOver && !isAuctionOver && auctionId > 0;
 
   const isUserHighestBidder =
@@ -686,11 +693,14 @@ export default function HomeClient() {
 
   const currentBid = (latestAuction?.highestBid as bigint) || (latestAuction?.startingAmount as bigint) || 0n;
   const topBidderAddress = (latestAuction?.highestBidder as `0x${string}`) || (ZERO_ADDRESS as `0x${string}`);
-  const secondsRemaining = (() => {
-    const endTime = latestAuction?.endTime as bigint;
-    if (!endTime) return 0;
-    return endTime > nowSecBig ? Number(endTime - nowSecBig) : 0;
-  })();
+  const secondsRemaining = useMemo(() => {
+    if (!latestAuction?.endTime) return 0;
+    const endTime = Number(latestAuction.endTime);
+    const serverTime = getServerTime();
+    const currentSeconds = Math.floor(serverTime / 1000);
+    return Math.max(0, endTime - currentSeconds);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [latestAuction?.endTime, now]);
 
   // Calculate user statistics for the current auction
   const userStats = useMemo(() => {
@@ -949,8 +959,7 @@ export default function HomeClient() {
                           <div className="text-xl font-bold p-1">✅ You are the highest bidder</div>
                           <div className="mt-1 text-base-content/50 text-xs">
                             {(() => {
-                              const endTime = latestAuction?.endTime as bigint;
-                              const remaining = endTime > nowSecBig ? Number(endTime - nowSecBig) : 0;
+                              const remaining = secondsRemaining;
                               return `Auction ends in ${remaining} seconds`;
                             })()}
                           </div>
@@ -1124,13 +1133,21 @@ export default function HomeClient() {
         {latestAuction && userStats.length > 0 && (
           <div className="bg-base-100 mt-4 p-0 rounded-xl shadow-md shadow-secondary border border-base-300 flex flex-col">
             <div className="text-lg font-light text-center mt-3">Current Auction Stats</div>
-            {latestAuction?.streamingEndTime > nowSecBig ? (
-              <div className="text-xs text-center text-base-content/50">
-                Streaming ends in {Number(latestAuction?.streamingEndTime as number) - Number(nowSecBig)} seconds
-              </div>
-            ) : (
-              <div className="text-xs text-center text-base-content/50">Streaming ended</div>
-            )}
+            {(() => {
+              const streamingEndTime = latestAuction?.streamingEndTime;
+              if (!streamingEndTime)
+                return <div className="text-xs text-center text-base-content/50">Streaming ended</div>;
+
+              const serverTime = getServerTime();
+              const currentSeconds = Math.floor(serverTime / 1000);
+              const remaining = Math.max(0, Number(streamingEndTime) - currentSeconds);
+
+              return remaining > 0 ? (
+                <div className="text-xs text-center text-base-content/50">Streaming ends in {remaining} seconds</div>
+              ) : (
+                <div className="text-xs text-center text-base-content/50">Streaming ended</div>
+              );
+            })()}
             <div className="overflow-x-auto overflow-y-hidden">
               <table className="table table-sm w-full">
                 <thead>
@@ -1201,9 +1218,7 @@ export default function HomeClient() {
                         {String(tokenSymbol ?? "USDC")}
                       </div>
                     </div>
-                    <div className="text-xs text-base-content/50">
-                      {formatTimeAgoBrief(now, event.timestamp as number)}
-                    </div>
+                    <div className="text-xs text-base-content/50">{formatTimeAgo(event.timestamp as number)}</div>
                   </div>
                 </div>
               ))}
@@ -1230,7 +1245,7 @@ export default function HomeClient() {
                     </button>
                   )}
                 </div>
-                <div className="text-xs text-base-content/50">{formatTimeAgoBrief(now, event.timestamp as number)}</div>
+                <div className="text-xs text-base-content/50">{formatTimeAgo(event.timestamp as number)}</div>
               </div>
             </div>
           ))}
