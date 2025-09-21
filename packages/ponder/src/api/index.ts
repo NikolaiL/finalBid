@@ -3,7 +3,7 @@ import { db } from "ponder:api";
 import schema from "ponder:schema";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
-import { client, graphql, desc } from "ponder";
+import { client, graphql, desc, eq } from "ponder";
 import { replaceBigInts } from "@ponder/utils";
 import { streamSSE } from "hono/streaming";
 
@@ -93,11 +93,11 @@ async function ensureDataChangeObjects() {
     `);
   };
 
-  
-  await makeTrigger("auctionCreated");
-  await makeTrigger("bidPlaced");
-  await makeTrigger("auctionEnded");
-  console.log("triggers created");
+  // commented out trigger creation for now
+  // await makeTrigger("auctionCreated");
+  // await makeTrigger("bidPlaced");
+  // await makeTrigger("auctionEnded");
+  // console.log("triggers created");
 }
 
 let changeSignal = createSignal();
@@ -125,7 +125,8 @@ async function getTableCounts() {
   const ac = await query(`SELECT COUNT(*)::int AS c FROM "${viewsSchema}"."auctionCreated"`);
   const bp = await query(`SELECT COUNT(*)::int AS c FROM "${viewsSchema}"."bidPlaced"`);
   const ae = await query(`SELECT COUNT(*)::int AS c FROM "${viewsSchema}"."auctionEnded"`);
-  return { auctionCreated: ac, bidPlaced: bp, auctionEnded: ae };
+  const sd = await query(`SELECT COUNT(*)::int AS c FROM "${viewsSchema}"."streamingData"`);
+  return { auctionCreated: ac, bidPlaced: bp, auctionEnded: ae, streamingData: sd };
 }
 
 async function maybeEmitChange() {
@@ -224,6 +225,120 @@ app.get("/latest-auction", async (c) => {
     const row = rows?.[0] ?? null;
     const safe = replaceBigInts(row, (v) => v.toString());
     return c.json(safe);
+  } catch (e) {
+    return c.json({ error: e.message }, 500);
+  }
+});
+
+app.get("/streaming-data/:auctionId", async (c) => {
+  try {
+    const auctionId = c.req.param("auctionId");
+    const rows = await db
+      .select()
+      .from((schema as any).streamingData)
+      .where(eq((schema as any).streamingData.auctionId, auctionId))
+      .orderBy(desc((schema as any).streamingData.timestamp));
+    const safe = replaceBigInts(rows, (v) => v.toString());
+    return c.json(safe);
+  } catch (e) {
+    return c.json({ error: e.message }, 500);
+  }
+});
+
+app.get("/table-counts", async (c) => {
+  try {
+    const counts = await getTableCounts();
+    return c.json(counts);
+  } catch (e) {
+    return c.json({ error: e.message }, 500);
+  }
+});
+
+app.get("/tables", async (c) => {
+  try {
+    const driver = (globalThis as any).PONDER_DATABASE.driver;
+    
+    if (driver.dialect === "pglite") {
+      // Get all tables from information_schema
+      const tablesResult = await driver.instance.query(`
+        SELECT table_name, table_schema 
+        FROM information_schema.tables 
+        WHERE table_schema NOT IN ('information_schema', 'pg_catalog')
+        ORDER BY table_schema, table_name
+      `);
+      
+      // Get record counts for each table
+      const tablesWithCounts = await Promise.all(
+        (tablesResult.rows || []).map(async (table) => {
+          try {
+            const countResult = await driver.instance.query(`
+              SELECT COUNT(*)::int AS count 
+              FROM "${table.table_schema}"."${table.table_name}"
+            `);
+            return {
+              table_name: table.table_name,
+              table_schema: table.table_schema,
+              row_count: countResult.rows?.[0]?.count || 0
+            };
+          } catch (countError) {
+            // If we can't count records (e.g., view or permission issue), return -1
+            return {
+              table_name: table.table_name,
+              table_schema: table.table_schema,
+              row_count: -1
+            };
+          }
+        })
+      );
+      
+      return c.json({
+        dialect: "pglite",
+        tables: tablesWithCounts
+      });
+    } else {
+      // For PostgreSQL, use the same approach
+      const admin = driver.admin;
+      const conn = await admin.connect();
+      try {
+        const tablesResult = await conn.query(`
+          SELECT table_name, table_schema 
+          FROM information_schema.tables 
+          WHERE table_schema NOT IN ('information_schema', 'pg_catalog')
+          ORDER BY table_schema, table_name
+        `);
+        
+        // Get record counts for each table
+        const tablesWithCounts = await Promise.all(
+          (tablesResult.rows || []).map(async (table) => {
+            try {
+              const countResult = await conn.query(`
+                SELECT COUNT(*)::int AS count 
+                FROM "${table.table_schema}"."${table.table_name}"
+              `);
+              return {
+                table_name: table.table_name,
+                table_schema: table.table_schema,
+                row_count: countResult.rows?.[0]?.count || 0
+              };
+            } catch (countError) {
+              // If we can't count records (e.g., view or permission issue), return -1
+              return {
+                table_name: table.table_name,
+                table_schema: table.table_schema,
+                row_count: -1
+              };
+            }
+          })
+        );
+        
+        return c.json({
+          dialect: "postgresql",
+          tables: tablesWithCounts
+        });
+      } finally {
+        conn.release();
+      }
+    }
   } catch (e) {
     return c.json({ error: e.message }, 500);
   }

@@ -128,13 +128,13 @@ export const AddressFarcaster = ({
         {user.pfp_url && !imageFailed ? (
           <Image
             src={user.pfp_url}
-            alt="Farcaster avatar"
+            alt={user.username + " Farcaster avatar"}
             width={avatarSize}
             height={avatarSize}
             className="rounded-full object-cover cursor-pointer w-6 h-6"
             onClick={() => openProfile({ fid: user.fid, username: user.username })}
             onError={() => setImageFailed(true)}
-            unoptimized={user.pfp_url.includes("imgur.com")}
+            unoptimized={true}
           />
         ) : (
           <BlockieAvatar address={checksum} size={avatarSize} />

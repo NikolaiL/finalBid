@@ -73,7 +73,9 @@ ponder.on("FinalBidContract:StreamingBatchUpdate", async ({ event, context }) =>
     const id = `${auctionId}-${address.toLowerCase()}`;
     
     // Insert or update streaming data for this participant
-    const row = await context.db.insert(streamingData).values({
+    const row =await context.db
+    .insert(streamingData)
+    .values({
       id,
       auctionId,
       address: address.toLowerCase() as `0x${string}`,
@@ -83,31 +85,22 @@ ponder.on("FinalBidContract:StreamingBatchUpdate", async ({ event, context }) =>
       lastUpdated,
       blockNumber: BigInt(event.block.number as any),
       timestamp: BigInt(event.block.timestamp),
-    }).onConflictDoNothing();
+    })
+    .onConflictDoUpdate({
+      auctionId,
+      address: address.toLowerCase() as `0x${string}`,
+      units: units[i],
+      balance: balances[i],
+      flowRate: flowRates[i],
+      lastUpdated,
+      blockNumber: BigInt(event.block.number as any),
+      timestamp: BigInt(event.block.timestamp),
+    });
 
-    if (!row) {
-      await context.db.update(streamingData, {id}, {
-        units: units[i],
-        balance: balances[i],
-        flowRate: flowRates[i],
-        lastUpdated,
-        blockNumber: BigInt(event.block.number as any),
-        timestamp: BigInt(event.block.timestamp),
-      });
-      console.log("Updated streaming data for", address);
-    } else {
-      console.log("Inserted streaming data for", address);
-    }
+    //here we need to delete the temp table pg_temp_1.streamingData
+    
   }
 
-
-  
-  console.log("StreamingBatchUpdate", {
-    auctionId,
-    participantsCount: participants.length,
-    totalUnits,
-    lastUpdated,
-  });
 });
 
 
