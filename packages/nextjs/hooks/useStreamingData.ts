@@ -39,7 +39,7 @@ export const useStreamingData = (address: string, auctionId: bigint | undefined)
     const streamingEndTime = auctionData?.streamingEndTime;
 
     // Validate that we have all required data
-    if (!streamingEndTime || !lastUpdated || !flowRate || !balance) {
+    if (!streamingEndTime || !lastUpdated || !flowRate) {
       return balance || 0n;
     }
 
