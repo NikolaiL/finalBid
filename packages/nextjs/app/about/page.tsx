@@ -82,7 +82,7 @@ export default function AboutPage() {
               <span className="font-bold mx-1">
                 {formatToken(platformFee || 0n, tokenDecimals)} {String(tokenSymbol ?? "")}
               </span>
-              per bid. This fee is not refunded. 65% of the fee is used to provide the next auction prize. 25% is paid
+              per bid. This fee is not refunded. 80% of the fee is used to provide the next auction prize. 10% is paid
               to referrals. 10% is used to pay for the platform, server costs, and other expenses.
             </li>
             <li>
