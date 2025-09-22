@@ -159,11 +159,11 @@ export const useAllStreamingData = (auctionId: bigint | undefined) => {
       .sort((a: any, b: any) => Number(b.calculatedAmount - a.calculatedAmount)); // Sort by amount descending
   }, [allStreamingDataQuery?.data, auctionDataQuery?.data, currentTime]);
 
-  // Update current time every 1000ms with blockchain synchronization
+  // Update current time every 100ms with blockchain synchronization
   useEffect(() => {
     const interval = setInterval(() => {
       setCurrentTime(getServerTime());
-    }, 1000);
+    }, 100);
     return () => clearInterval(interval);
   }, []);
 

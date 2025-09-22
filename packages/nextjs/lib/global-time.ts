@@ -41,7 +41,8 @@ async function globalSyncTime() {
     const clientTime = Date.now();
     const drift = serverTime - clientTime;
 
-    globalTimeDrift = drift;
+    // If drift is under 1000ms, set it to 0 as it's negligible
+    globalTimeDrift = Math.abs(drift) < 1000 ? 0 : drift;
     globalScheduler.lastSyncTime = serverTime;
 
     // Log all drift updates for debugging
@@ -56,6 +57,8 @@ async function globalSyncTime() {
       console.warn(
         `⚠️ Significant time drift detected: ${Math.round(drift / 1000)}s difference between server and client time`,
       );
+    } else if (Math.abs(drift) < 1000) {
+      console.log(`✅ Time drift is negligible (${Math.round(drift)}ms), using client time`);
     }
 
     // Schedule next sync based on server time (immune to local time changes)

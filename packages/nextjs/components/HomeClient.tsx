@@ -12,7 +12,7 @@ import {
   useScaffoldWriteContract,
   useTransactor,
 } from "~~/hooks/scaffold-eth";
-import { useStreamingData } from "~~/hooks/useStreamingData";
+import { useAllStreamingData, useStreamingData } from "~~/hooks/useStreamingData";
 import {
   auctionCreatedQueryOptions,
   auctionEndedQueryOptions,
@@ -38,17 +38,20 @@ const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
 
 // formatTimeAgoBrief function removed - now using blockchain-synchronized formatTimeAgo
 
-// Component for displaying real-time streaming amounts
-const StreamingAmount = ({ address, auctionId }: { address: string; auctionId: bigint | undefined }) => {
-  const { streamingAmountDisplay } = useStreamingData(address, auctionId);
+// Component for displaying real-time streaming amounts with pre-fetched data
+const StreamingAmountWithData = ({ address, allStreamingData }: { address: string; allStreamingData: any[] }) => {
+  // Find streaming data for the specific address
+  const streamingData = allStreamingData.find((data: any) => data.address?.toLowerCase() === address.toLowerCase());
 
-  if (streamingAmountDisplay === 0) return <div className="text-base-content/50">&nbsp;</div>;
+  if (!streamingData || streamingData.streamingAmountDisplay === 0) {
+    return <div className="text-base-content/50">&nbsp;</div>;
+  }
 
   return (
     <div className="text-success font-mono">
       +
       <NumberFlow
-        value={streamingAmountDisplay}
+        value={streamingData.streamingAmountDisplay}
         format={{
           notation: "standard",
           minimumFractionDigits: 2,
@@ -82,6 +85,131 @@ const PotentialAmounts = ({
   tokenSymbol?: string;
 }) => {
   const { streamingAmount } = useStreamingData(address, auctionId);
+
+  // Calculate potential loss and profit with streaming
+  const actualLoss = useMemo(() => {
+    return streamingAmount - totalFees;
+  }, [totalFees, streamingAmount]);
+
+  const actualProfit = useMemo(() => {
+    return BigInt(Math.floor(Number(auctionValue) / 2)) - totalFees - nextBidAmount + streamingAmount;
+  }, [auctionValue, totalFees, nextBidAmount, streamingAmount]);
+
+  // Convert to display values
+  const lossValue = Number(actualLoss) / 10 ** TOKEN_DECIMALS;
+  const profitValue = Number(actualProfit) / 10 ** TOKEN_DECIMALS;
+
+  if (showOnlyLoss) {
+    return (
+      <NumberFlow
+        value={Math.abs(lossValue)}
+        format={{
+          notation: "standard",
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2,
+        }}
+      />
+    );
+  }
+
+  if (showOnlyProfit) {
+    return (
+      <NumberFlow
+        value={profitValue}
+        format={{
+          notation: "standard",
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2,
+        }}
+        prefix={actualProfit > 0n ? "+" : ""}
+      />
+    );
+  }
+
+  if (showStopNowOutcome) {
+    const isWinning = actualLoss > 0n;
+    return (
+      <>
+        <div className="text-base font-bold text-base-content/90">Stop Now </div>
+        <div className="text-sm text-base-content/70">and you {isWinning ? "win" : "lose"}</div>
+        <div className={`text-xl font-bold font-mono ${isWinning ? "text-success" : "text-error"}`}>
+          <NumberFlow
+            value={Math.abs(lossValue)}
+            format={{
+              notation: "standard",
+              minimumFractionDigits: 2,
+              maximumFractionDigits: 2,
+            }}
+            prefix={actualLoss > 0n ? "+" : ""}
+          />
+        </div>
+        <div className="text-xs text-base-content/50">{tokenSymbol}</div>
+      </>
+    );
+  }
+
+  return (
+    <>
+      <div
+        className={
+          actualLoss === 0n
+            ? "text-base-content/50"
+            : actualLoss > 0n
+              ? "font-bold text-success"
+              : "font-bold text-error"
+        }
+      >
+        <NumberFlow
+          value={Math.abs(lossValue)}
+          format={{
+            notation: "standard",
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+          }}
+          prefix={actualLoss > 0n ? "+" : "-"}
+        />
+      </div>
+      <div className={actualProfit > 0n ? "font-bold text-success" : "font-bold text-error"}>
+        <NumberFlow
+          value={profitValue}
+          format={{
+            notation: "standard",
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+          }}
+          prefix={actualProfit > 0n ? "+" : ""}
+        />
+      </div>
+    </>
+  );
+};
+
+// Component for displaying potential loss/profit with pre-fetched streaming data
+const PotentialAmountsWithData = ({
+  address,
+  allStreamingData,
+  totalFees,
+  auctionValue,
+  nextBidAmount,
+  showOnlyLoss = false,
+  showOnlyProfit = false,
+  showStopNowOutcome = false,
+  tokenSymbol = "",
+}: {
+  address: string;
+  allStreamingData: any[];
+  totalFees: bigint;
+  auctionValue: bigint;
+  nextBidAmount: bigint;
+  showOnlyLoss?: boolean;
+  showOnlyProfit?: boolean;
+  showStopNowOutcome?: boolean;
+  tokenSymbol?: string;
+}) => {
+  // Find streaming data for the specific address
+  const streamingData = allStreamingData.find((data: any) => data.address?.toLowerCase() === address.toLowerCase());
+
+  const streamingAmount = streamingData?.calculatedAmount || 0n;
 
   // Calculate potential loss and profit with streaming
   const actualLoss = useMemo(() => {
@@ -364,6 +492,9 @@ export default function HomeClient() {
 
   // Initialize blockchain time drift calculation
   useServerTimeDrift();
+
+  // Get all streaming data once at the top level
+  const { streamingData: allStreamingData } = useAllStreamingData(latestAuction?.auctionId);
 
   // Local timer for frequent updates (every second)
   const [now, setNow] = useState<number>(() => Date.now());
@@ -1177,12 +1308,12 @@ export default function HomeClient() {
                         <div className="text-base-content/70">
                           {stat.numBids > 0 ? stat.numBids + " / " + formatToken(stat.lastBidAmount) : " "}
                         </div>
-                        <StreamingAmount address={stat.address} auctionId={latestAuction?.auctionId} />
+                        <StreamingAmountWithData address={stat.address} allStreamingData={allStreamingData} />
                       </td>
                       <td className="p-1 text-right font-mono text-xs whitespace-nowrap">
-                        <PotentialAmounts
+                        <PotentialAmountsWithData
                           address={stat.address}
-                          auctionId={latestAuction?.auctionId}
+                          allStreamingData={allStreamingData}
                           totalFees={BigInt(stat.numBids) * ((latestAuction?.platformFee as bigint) || 0n)}
                           auctionValue={latestAuction?.auctionAmount as bigint}
                           nextBidAmount={
