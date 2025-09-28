@@ -21,6 +21,11 @@ function formatToken(amount: bigint | 0n, decimals: number): string {
 
 export default function AboutPage() {
   // Read token address from contract
+  const { data: deployerFee } = useScaffoldReadContract({
+    contractName: "FinalBidContract",
+    functionName: "deployerFee",
+  });
+
   const { data: tokenAddress } = useScaffoldReadContract({
     contractName: "FinalBidContract",
     functionName: "tokenAddress",
@@ -48,6 +53,10 @@ export default function AboutPage() {
   // Fallback to contract-level values if event missing
   const platformFee = (latestAuction?.platformFee as bigint) ?? (0n as bigint);
   const referralFee = (latestAuction?.referralFee as bigint) ?? (0n as bigint);
+
+  const referralFeePercentage = Math.round((Number(referralFee) / Number(platformFee)) * 100);
+  const deployerFeePercentage = Math.round((Number(deployerFee) / Number(platformFee)) * 100);
+  const nextPrizePercentage = Math.round(100 - referralFeePercentage - deployerFeePercentage);
 
   // Read auctionDurationIncrease directly from contract (seconds)
   const { data: auctionDurationIncrease } = useScaffoldReadContract({
@@ -82,8 +91,9 @@ export default function AboutPage() {
               <span className="font-bold mx-1">
                 {formatToken(platformFee || 0n, tokenDecimals)} {String(tokenSymbol ?? "")}
               </span>
-              per bid. This fee is not refunded. 80% of the fee is used to provide the next auction prize. 10% is paid
-              to referrals. 10% is used to pay for the platform, server costs, and other expenses.
+              per bid. This fee is not refunded. {nextPrizePercentage}% of the fee is used to provide the next auction
+              prize. {referralFeePercentage}% is paid to referrals. {deployerFeePercentage}% is used to pay for the
+              platform, server costs, and other expenses.
             </li>
             <li>
               Share your link and earn a referral reward of
