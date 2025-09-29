@@ -54,8 +54,8 @@ async function verifyRecaptcha(token: string): Promise<boolean> {
     }
 
     // Check the score (0.0 = bot, 1.0 = human)
-    // Using 0.4 as the default threshold a bit lower than recommended by Google
-    const scoreThreshold = 0.4;
+    // Using 0.3 as the default threshold a bit lower than recommended by Google
+    const scoreThreshold = 0.3;
     const score = data.score || 0;
 
     console.log(`reCAPTCHA score: ${score} (threshold: ${scoreThreshold})`);
