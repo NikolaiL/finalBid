@@ -3,109 +3,21 @@ import { getServerTime, useServerTimeDrift } from "~~/lib/global-time";
 import { createAllStreamingDataQueryOptions, createAuctionDataQueryOptions } from "~~/lib/streaming-query";
 import { useDataLiveQuery } from "~~/lib/useDataLiveQuery";
 
-const TOKEN_DECIMALS = Number(process.env.NEXT_PUBLIC_TOKEN_DECIMALS) ?? 18;
+const TOKEN_DECIMALS = (() => {
+  const parsed = parseInt(process.env.NEXT_PUBLIC_TOKEN_DECIMALS ?? "", 10);
+  return Number.isFinite(parsed) ? parsed : 18;
+})();
 
-export const useStreamingData = (address: string, auctionId: bigint | undefined) => {
-  // Initialize server time drift calculation
+// Centralized computation for an auction: calculates all participants once per tick
+const useComputedStreamingForAuction = (auctionId: bigint | undefined) => {
   useServerTimeDrift();
 
   const [currentTime, setCurrentTime] = useState(Date.now());
 
-  // Query all streaming data for the auction (single query)
   const allStreamingDataQuery = useDataLiveQuery(createAllStreamingDataQueryOptions(auctionId ?? null));
-
-  // Find streaming data for the specific address
-  const streamingData = useMemo(() => {
-    const allData = (allStreamingDataQuery?.data as any) || [];
-    return allData.find((data: any) => data.address.toLowerCase() === address.toLowerCase());
-  }, [allStreamingDataQuery?.data, address]);
-
-  // Get auction data to access streamingEndTime
   const auctionDataQuery = useDataLiveQuery(createAuctionDataQueryOptions(auctionId ?? null));
 
-  const auctionData = (auctionDataQuery?.data as any)?.[0];
-
-  // Calculate the actual streaming amount with millisecond precision
-  const streamingAmount = useMemo(() => {
-    if (!streamingData) return 0n;
-
-    // Use the streaming data from Ponder to calculate current amount
-    const { units, balance, flowRate, lastUpdated } = streamingData;
-
-    // If no streaming units, return balance
-    if (units === 0n) return balance;
-
-    // Get streaming end time from auction data
-    const streamingEndTime = auctionData?.streamingEndTime;
-
-    // Validate that we have all required data
-    if (!streamingEndTime || !lastUpdated || !flowRate) {
-      return balance || 0n;
-    }
-
-    // Calculate additional streaming since last update, but cap at streaming end time
-    const streamingEndTimeMs = Number(streamingEndTime) * 1000;
-    const lastUpdatedMs = Number(lastUpdated) * 1000;
-
-    // Validate that the numbers are valid
-    if (isNaN(streamingEndTimeMs) || isNaN(lastUpdatedMs)) {
-      return balance || 0n;
-    }
-
-    // Calculate until current time or streaming end time, whichever is earlier
-    const calculateUntilMs = Math.min(currentTime, streamingEndTimeMs);
-    const timeSinceUpdateMs = Math.max(0, calculateUntilMs - lastUpdatedMs);
-
-    const flowRatePerMs = Number(flowRate) / 1000;
-    const additionalStreaming = flowRatePerMs * timeSinceUpdateMs;
-
-    // Current balance plus accumulated streaming since last update
-    const currentStreamingAmount = Number(balance) * 1000 + additionalStreaming;
-
-    // Validate the final calculation
-    if (isNaN(currentStreamingAmount)) {
-      return balance || 0n;
-    }
-
-    // Divide by 1000 to account for the precision multiplier used in the contract
-    return BigInt(Math.floor(currentStreamingAmount / 1000));
-  }, [streamingData, currentTime, auctionData]);
-
-  // Convert to display value
-  const streamingAmountDisplay = useMemo(() => {
-    return Number(streamingAmount) / 10 ** TOKEN_DECIMALS;
-  }, [streamingAmount]);
-
-  // Update current time every 100ms with blockchain synchronization
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setCurrentTime(getServerTime());
-    }, 100);
-    return () => clearInterval(interval);
-  }, []);
-
-  return {
-    streamingAmount,
-    streamingAmountDisplay,
-    streamingData,
-  };
-};
-
-// Hook to get all streaming data for an auction (useful for leaderboards, etc.)
-export const useAllStreamingData = (auctionId: bigint | undefined) => {
-  // Initialize server time drift calculation
-  useServerTimeDrift();
-
-  const [currentTime, setCurrentTime] = useState(Date.now());
-
-  // Query all streaming data for the auction
-  const allStreamingDataQuery = useDataLiveQuery(createAllStreamingDataQueryOptions(auctionId ?? null));
-
-  // Get auction data to access streamingEndTime
-  const auctionDataQuery = useDataLiveQuery(createAuctionDataQueryOptions(auctionId ?? null));
-
-  // Calculate streaming amounts for all participants
-  const streamingDataWithAmounts = useMemo(() => {
+  const computedArray = useMemo(() => {
     const allStreamingData = (allStreamingDataQuery?.data as any) || [];
     const auctionData = (auctionDataQuery?.data as any)?.[0];
 
@@ -113,36 +25,30 @@ export const useAllStreamingData = (auctionId: bigint | undefined) => {
       .map((data: any) => {
         const { units, balance, flowRate, lastUpdated } = data;
 
-        let calculatedAmount = 0n;
+        let calculatedAmount = 0n as bigint;
         if (units === 0n) {
-          calculatedAmount = balance;
+          calculatedAmount = balance ?? 0n;
         } else {
-          // Get streaming end time from auction data
           const streamingEndTime = auctionData?.streamingEndTime;
 
-          // Validate that we have all required data
-          if (!streamingEndTime || !lastUpdated || !flowRate || !balance) {
-            calculatedAmount = balance || 0n;
+          if (!streamingEndTime || !lastUpdated || !flowRate) {
+            calculatedAmount = balance ?? 0n;
           } else {
-            // Calculate additional streaming since last update, but cap at streaming end time
             const streamingEndTimeMs = Number(streamingEndTime) * 1000;
             const lastUpdatedMs = Number(lastUpdated) * 1000;
 
-            // Validate that the numbers are valid
             if (isNaN(streamingEndTimeMs) || isNaN(lastUpdatedMs)) {
-              calculatedAmount = balance || 0n;
+              calculatedAmount = balance ?? 0n;
             } else {
-              // Calculate until current time or streaming end time, whichever is earlier
               const calculateUntilMs = Math.min(currentTime, streamingEndTimeMs);
               const timeSinceUpdateMs = Math.max(0, calculateUntilMs - lastUpdatedMs);
 
               const flowRatePerMs = Number(flowRate) / 1000;
               const additionalStreaming = flowRatePerMs * timeSinceUpdateMs;
-              const currentStreamingAmount = Number(balance) * 1000 + additionalStreaming;
+              const currentStreamingAmount = Number(balance ?? 0n) * 1000 + additionalStreaming;
 
-              // Validate the final calculation
               if (isNaN(currentStreamingAmount)) {
-                calculatedAmount = balance || 0n;
+                calculatedAmount = balance ?? 0n;
               } else {
                 calculatedAmount = BigInt(Math.floor(currentStreamingAmount / 1000));
               }
@@ -156,10 +62,21 @@ export const useAllStreamingData = (auctionId: bigint | undefined) => {
           streamingAmountDisplay: Number(calculatedAmount) / 10 ** TOKEN_DECIMALS,
         };
       })
-      .sort((a: any, b: any) => Number(b.calculatedAmount - a.calculatedAmount)); // Sort by amount descending
+      .sort((a: any, b: any) => {
+        if (a.calculatedAmount === b.calculatedAmount) return 0;
+        return a.calculatedAmount > b.calculatedAmount ? -1 : 1;
+      });
   }, [allStreamingDataQuery?.data, auctionDataQuery?.data, currentTime]);
 
-  // Update current time every 100ms with blockchain synchronization
+  const addressMap = useMemo(() => {
+    const map: Record<string, any> = {};
+    for (const entry of computedArray) {
+      const key = (entry.address as string)?.toLowerCase?.() ?? "";
+      if (key) map[key] = entry;
+    }
+    return map;
+  }, [computedArray]);
+
   useEffect(() => {
     const interval = setInterval(() => {
       setCurrentTime(getServerTime());
@@ -167,8 +84,32 @@ export const useAllStreamingData = (auctionId: bigint | undefined) => {
     return () => clearInterval(interval);
   }, []);
 
+  return { computedArray, addressMap } as const;
+};
+
+export const useStreamingData = (address: string, auctionId: bigint | undefined) => {
+  const { addressMap } = useComputedStreamingForAuction(auctionId);
+
+  const key = address?.toLowerCase?.() ?? "";
+  const entry = key ? addressMap[key] : undefined;
+
+  const streamingAmount = entry?.calculatedAmount ?? 0n;
+  const streamingAmountDisplay = entry?.streamingAmountDisplay ?? 0;
+  const streamingData = entry;
+
   return {
-    streamingData: streamingDataWithAmounts,
-    totalParticipants: streamingDataWithAmounts.length,
+    streamingAmount,
+    streamingAmountDisplay,
+    streamingData,
+  };
+};
+
+// Hook to get all streaming data for an auction (useful for leaderboards, etc.)
+export const useAllStreamingData = (auctionId: bigint | undefined) => {
+  const { computedArray } = useComputedStreamingForAuction(auctionId);
+
+  return {
+    streamingData: computedArray,
+    totalParticipants: computedArray.length,
   };
 };
