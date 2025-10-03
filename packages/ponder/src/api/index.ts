@@ -3,7 +3,7 @@ import { db } from "ponder:api";
 import schema from "ponder:schema";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
-import { client, graphql, desc, eq } from "ponder";
+import { client, graphql, desc, eq, gte, and, count } from "ponder";
 import { replaceBigInts } from "@ponder/utils";
 import { streamSSE } from "hono/streaming";
 
@@ -240,6 +240,21 @@ app.get("/streaming-data/:auctionId", async (c) => {
       .orderBy(desc((schema as any).streamingData.timestamp));
     const safe = replaceBigInts(rows, (v) => v.toString());
     return c.json(safe);
+  } catch (e) {
+    return c.json({ error: e.message }, 500);
+  }
+});
+
+app.get("/user-stats/:address/:fromTimestamp?", async (c) => {
+  try {
+    const address = c.req.param("address").toLowerCase();
+    const fromTimestamp = Number(c.req.param("fromTimestamp")) || 0;
+    const result = await db
+      .select({ count: count() })
+      .from((schema as any).bidPlaced)
+      .where(and(eq((schema as any).bidPlaced.bidder, address), gte((schema as any).bidPlaced.timestamp, fromTimestamp)));
+    //const safe = replaceBigInts(rows, (v) => v.toString());
+    return c.json({ address, fromTimestamp, numberOfBids: result[0].count });
   } catch (e) {
     return c.json({ error: e.message }, 500);
   }

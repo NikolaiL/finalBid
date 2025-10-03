@@ -1,9 +1,11 @@
 import type { Metadata } from "next";
 import HomeClient from "~~/components/HomeClient";
+import { readTokenMeta } from "~~/lib/tokenMeta";
 import { getMetadata } from "~~/utils/scaffold-eth/getMetadata";
 
-export default function Page() {
-  return <HomeClient />;
+export default async function Page() {
+  const tokenMeta = await readTokenMeta();
+  return <HomeClient tokenAddress={tokenMeta?.tokenAddress as any} tokenSymbol={tokenMeta?.symbol} />;
 }
 
 export async function generateMetadata({

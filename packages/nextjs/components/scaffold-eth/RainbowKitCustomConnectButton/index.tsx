@@ -1,7 +1,7 @@
 "use client";
 
 // @refresh reset
-import { Balance } from "../Balance";
+//import { Balance } from "../Balance";
 import { AddressInfoDropdown } from "./AddressInfoDropdown";
 import { AddressQRCodeModal } from "./AddressQRCodeModal";
 import { RevealBurnerPKModal } from "./RevealBurnerPKModal";
@@ -49,7 +49,6 @@ export const RainbowKitCustomConnectButton = ({ className }: RainbowKitCustomCon
               return (
                 <>
                   <div className="hidden flex flex-col items-center mr-1">
-                    <Balance address={account.address as Address} className="min-h-0 h-auto" />
                     <span className="text-xs" style={{ color: networkColor }}>
                       {chain.name}
                     </span>

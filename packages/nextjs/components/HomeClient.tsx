@@ -336,7 +336,13 @@ const UrlCopyIcon = ({ className = "w-5 h-5" }) => (
   </svg>
 );
 
-export default function HomeClient() {
+export default function HomeClient({
+  tokenAddress: tokenAddressProp,
+  tokenSymbol: tokenSymbolProp,
+}: {
+  tokenAddress?: `0x${string}`;
+  tokenSymbol?: string;
+}) {
   const { address: connectedAddress, isConnecting, isReconnecting } = useAccount();
   const { composeCast } = useMiniapp();
 
@@ -377,14 +383,8 @@ export default function HomeClient() {
     contractName: "FinalBidContract",
   });
 
-  // Get token address from FinalBidContract
-  const { data: tokenAddress } = useScaffoldReadContract({
-    contractName: "FinalBidContract",
-    functionName: "tokenAddress",
-    query: {
-      staleTime: 30000, // 30 seconds stale time for token address
-    },
-  });
+  // Token address sourced from server (token-meta.json via readTokenMeta)
+  const tokenAddress = tokenAddressProp;
 
   // Check if new auction is allowed
   const { data: newAuctionIsAllowed } = useScaffoldReadContract({
@@ -471,12 +471,13 @@ export default function HomeClient() {
   // Constants
 
   // Read token symbol (for rendering)
-  const { data: tokenSymbol } = useReadContract({
+  const { data: tokenSymbolRpc } = useReadContract({
     address: tokenAddress as `0x${string}`,
     abi: ERC20_METADATA_ABI,
     functionName: "symbol",
-    query: { enabled: !!tokenAddress },
+    query: { enabled: !!tokenAddress && !tokenSymbolProp },
   });
+  const tokenSymbol = tokenSymbolProp ?? tokenSymbolRpc;
 
   const latestAuction = AuctionCreatedEvents[0];
   const bidIncrement = latestAuction?.bidIncrement;
