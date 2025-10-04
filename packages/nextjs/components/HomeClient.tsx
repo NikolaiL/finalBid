@@ -1119,11 +1119,11 @@ export default function HomeClient({
                         </>
                       ) : (
                         <>
-                          {isTimeRunningOut && (
-                            <div className="mt-1 text-base-content/70 text-sm font-bold mb-4 animate-pulse text-warning">
-                              Time is running out! Bid Now!
-                            </div>
-                          )}
+                          <div
+                            className={`mt-0 text-base-content/70 text-sm font-bold mb-2 animate-pulse text-warning ${isTimeRunningOut ? "" : "invisible"}`}
+                          >
+                            Time is running out! Bid Now!
+                          </div>
                           <button
                             className={
                               "btn btn-primary text-xl transition-all h-14 px-6 " +
