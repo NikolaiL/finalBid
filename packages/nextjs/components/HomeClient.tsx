@@ -28,10 +28,7 @@ const TOKEN_DECIMALS = Number(process.env.NEXT_PUBLIC_TOKEN_DECIMALS) ?? 18;
 const formatToken = (amount: bigint | 0n, decimals: number = DISPLAY_DECIMALS): string => {
   const amountNumber = Number(amount);
   const tokenAmount = amountNumber / 10 ** TOKEN_DECIMALS;
-  return tokenAmount.toLocaleString("en-US", {
-    minimumFractionDigits: decimals,
-    maximumFractionDigits: decimals,
-  });
+  return tokenAmount.toFixed(decimals);
 };
 
 const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
@@ -54,6 +51,7 @@ const StreamingAmountWithData = ({ address, allStreamingData }: { address: strin
         value={streamingData.streamingAmountDisplay}
         format={{
           notation: "standard",
+          useGrouping: false,
           minimumFractionDigits: 2,
           maximumFractionDigits: 2,
         }}
@@ -105,6 +103,7 @@ const PotentialAmounts = ({
         value={Math.abs(lossValue)}
         format={{
           notation: "standard",
+          useGrouping: false,
           minimumFractionDigits: 2,
           maximumFractionDigits: 2,
         }}
@@ -118,6 +117,7 @@ const PotentialAmounts = ({
         value={profitValue}
         format={{
           notation: "standard",
+          useGrouping: false,
           minimumFractionDigits: 2,
           maximumFractionDigits: 2,
         }}
@@ -137,6 +137,7 @@ const PotentialAmounts = ({
             value={Math.abs(lossValue)}
             format={{
               notation: "standard",
+              useGrouping: false,
               minimumFractionDigits: 2,
               maximumFractionDigits: 2,
             }}
@@ -163,6 +164,7 @@ const PotentialAmounts = ({
           value={Math.abs(lossValue)}
           format={{
             notation: "standard",
+            useGrouping: false,
             minimumFractionDigits: 2,
             maximumFractionDigits: 2,
           }}
@@ -230,6 +232,7 @@ const PotentialAmountsWithData = ({
         value={Math.abs(lossValue)}
         format={{
           notation: "standard",
+          useGrouping: false,
           minimumFractionDigits: 2,
           maximumFractionDigits: 2,
         }}
@@ -243,6 +246,7 @@ const PotentialAmountsWithData = ({
         value={profitValue}
         format={{
           notation: "standard",
+          useGrouping: false,
           minimumFractionDigits: 2,
           maximumFractionDigits: 2,
         }}
@@ -262,6 +266,7 @@ const PotentialAmountsWithData = ({
             value={Math.abs(lossValue)}
             format={{
               notation: "standard",
+              useGrouping: false,
               minimumFractionDigits: 2,
               maximumFractionDigits: 2,
             }}
@@ -275,6 +280,19 @@ const PotentialAmountsWithData = ({
 
   return (
     <>
+      <div className={actualProfit > 0n ? "font-bold text-success" : "font-bold text-error"}>
+        <NumberFlow
+          value={profitValue}
+          format={{
+            notation: "standard",
+            useGrouping: false,
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+          }}
+          animated={false}
+          prefix={actualProfit > 0n ? "+" : ""}
+        />
+      </div>
       <div
         className={
           actualLoss === 0n
@@ -288,21 +306,12 @@ const PotentialAmountsWithData = ({
           value={Math.abs(lossValue)}
           format={{
             notation: "standard",
+            useGrouping: false,
             minimumFractionDigits: 2,
             maximumFractionDigits: 2,
           }}
+          animated={false}
           prefix={actualLoss > 0n ? "+" : "-"}
-        />
-      </div>
-      <div className={actualProfit > 0n ? "font-bold text-success" : "font-bold text-error"}>
-        <NumberFlow
-          value={profitValue}
-          format={{
-            notation: "standard",
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 2,
-          }}
-          prefix={actualProfit > 0n ? "+" : ""}
         />
       </div>
     </>
@@ -938,20 +947,60 @@ export default function HomeClient({
     <div className="w-full max-w-3xl mx-auto px-2 sm:px-4 lg:px-6">
       <div className="flex flex-col gap-1 py-4 px-2">
         {/* Auction info */}
-        <div className="bg-base-100 p-5 rounded-xl shadow-md shadow-secondary border border-base-300 flex flex-col gap-3">
+        <div className="bg-base-100 px-5 py-3 rounded-xl shadow-md shadow-secondary border border-base-300 flex flex-col gap-3">
           {latestAuction ? (
             <>
-              <div className="flex flex-col sm:flex-row flex-wrap gap-0 sm:gap-4 items-center">
-                <div className="text-center sm:text-right flex-1 text-2xl font-light items-end">Winning Pot</div>
-                <div className="flex-none items-center font-black text-6xl text-primary">
-                  {formatToken(latestAuction?.auctionAmount)}
+              <div className="flex flex-row gap-1 mb-2">
+                <div className="flex flex-1 flex-col gap-0 items-start">
+                  <div className="text-left flex-1 text-sm font-light text-base-content/70 items-start">
+                    Winning Pot
+                  </div>
+                  <div className="flex-none items-center font-mono font-black text-3xl text-primary">
+                    {formatToken(latestAuction?.auctionAmount)}
+                  </div>
+                  <div className="text-center sm:text-left flex-1 text-sm font-light items-start my-1">
+                    {String(tokenSymbol ?? "USDC")}
+                  </div>
                 </div>
-                <div className="text-center sm:text-left flex-1 text-2xl font-light items-start">
-                  {String(tokenSymbol ?? "USDC")}
+
+                <div className="flex flex-1 flex-col gap-0 items-end">
+                  <div className="text-center">
+                    {isAcutionReadytoBeOver ? (
+                      <>
+                        <div className="text-sm text-right font-light text-base-content/70 items-end">&nbsp;</div>
+                        <div className="text-2xl text-right text-[#9ae600] font-black text-2xl font-mono">
+                          Auction Ended
+                        </div>
+                      </>
+                    ) : isAuctionOver ? (
+                      <>
+                        <div className="text-sm text-right font-light text-base-content/70 items-end">&nbsp;</div>
+                        <div className="text-2xl text-right text-[#9ae600] font-black text-2xl font-mono">
+                          Auction Ended
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <div className="text-sm text-right font-light text-base-content/70 items-end">
+                          Auction ends in
+                        </div>
+                        <div className="text-2xl text-right text-[#9ae600] font-black text-3xl font-mono">
+                          <NumberFlow
+                            value={secondsRemaining}
+                            format={{
+                              notation: "standard",
+                              useGrouping: false,
+                            }}
+                          />
+                        </div>
+                        <div className="text-sm text-right text-base-content/70">seconds</div>
+                      </>
+                    )}
+                  </div>
                 </div>
               </div>
-              <div className="text-xs text-base-content/50 text-center w-full -mt-4">
-                50% goes to the winner. 50% is streamed to the last 10 bidders, based on their bid size.
+              <div className="text-xs text-base-content/50 text-left w-full -mt-4">
+                <sup>*</sup>50% goes to the winner. 50% is streamed to the last 10 bidders, based on their bid size.
               </div>
               <div className="grid grid-cols-2 gap-4 items-center">
                 <div className="text-left">
@@ -968,34 +1017,6 @@ export default function HomeClient({
                       <div className="flex justify-end">
                         <AddressFarcaster address={topBidderAddress} />
                       </div>
-                    </>
-                  )}
-                </div>
-              </div>
-              <div>
-                <div className="text-center">
-                  {isAcutionReadytoBeOver ? (
-                    <>
-                      <div className="text-sm text-base-content/70">&nbsp;</div>
-                      <div className="text-lg font-semibold">Auction Ended</div>
-                    </>
-                  ) : isAuctionOver ? (
-                    <>
-                      <div className="text-sm text-base-content/70">&nbsp;</div>
-                      <div className="text-lg font-semibold">Auction Ended</div>
-                    </>
-                  ) : (
-                    <>
-                      <div className="text-sm text-base-content/70">Auction ends in</div>
-                      <div className="text-2xl text-[#9ae600] font-black font-mono">
-                        <NumberFlow
-                          value={secondsRemaining}
-                          format={{
-                            notation: "standard",
-                          }}
-                        />
-                      </div>
-                      <div className="text-sm text-base-content/70">seconds</div>
                     </>
                   )}
                 </div>
@@ -1291,9 +1312,9 @@ export default function HomeClient({
                       Streamed
                     </th>
                     <th className="py-1 pr-1 pl-px text-xs text-right font-light">
-                      Potential Loss
-                      <br />
                       Potential Win
+                      <br />
+                      Potential Loss
                     </th>
                   </tr>
                 </thead>
