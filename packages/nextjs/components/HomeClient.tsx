@@ -1120,7 +1120,7 @@ export default function HomeClient({
                       ) : (
                         <>
                           <div
-                            className={`mt-0 text-base-content/70 text-sm font-bold mb-2 animate-pulse text-warning ${isTimeRunningOut ? "" : "invisible"}`}
+                            className={`mt-0 text-base-content/70 text-sm font-bold mb-2 animate-pulse text-success ${isTimeRunningOut ? "" : "invisible"}`}
                           >
                             Time is running out! Bid Now!
                           </div>
