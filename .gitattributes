@@ -1,2 +1,2 @@
-packages/hardhat/deployments/* merge=ours
+packages/hardhat/deployments/** merge=ours
 packages/nextjs/public/token-meta.json merge=ours
