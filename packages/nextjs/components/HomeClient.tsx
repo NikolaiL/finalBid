@@ -22,7 +22,7 @@ import { getAddressDisplayName } from "~~/lib/farcaster";
 import { formatTimeAgo, getServerTime, useServerTimeDrift } from "~~/lib/global-time";
 import { useDataLiveQuery } from "~~/lib/useDataLiveQuery";
 
-const DISPLAY_DECIMALS = Number(process.env.NEXT_PUBLIC_DISPLAY_DECIMALS) ?? 0;
+const DISPLAY_DECIMALS = Number(process.env.NEXT_PUBLIC_DISPLAY_DECIMALS) ?? 2;
 const TOKEN_DECIMALS = Number(process.env.NEXT_PUBLIC_TOKEN_DECIMALS) ?? 18;
 
 const formatToken = (amount: bigint | 0n, decimals: number = DISPLAY_DECIMALS): string => {
@@ -52,8 +52,8 @@ const StreamingAmountWithData = ({ address, allStreamingData }: { address: strin
         format={{
           notation: "standard",
           useGrouping: false,
-          minimumFractionDigits: 2,
-          maximumFractionDigits: 2,
+          minimumFractionDigits: 5,
+          maximumFractionDigits: 5,
         }}
       />
     </div>
@@ -1339,9 +1339,7 @@ export default function HomeClient({
                           totalFees={BigInt(stat.numBids) * ((latestAuction?.platformFee as bigint) || 0n)}
                           auctionValue={latestAuction?.auctionAmount as bigint}
                           nextBidAmount={
-                            stat.isHighestBidder
-                              ? stat.lastBidAmount
-                              : (nextBid as bigint) + ((platformFee as bigint) || 0n)
+                            stat.isHighestBidder ? 0n : (nextBid as bigint) + ((platformFee as bigint) || 0n)
                           }
                         />
                       </td>

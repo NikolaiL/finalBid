@@ -9,11 +9,11 @@ import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
 /**
- * A dummy USDC-like ERC20 token contract for testing purposes
+ * A dummy TOKEN-like ERC20 token contract for testing purposes
  * @author BuidlGuidl
  */
-contract DummyUsdcContract is ERC20, Ownable {
-    // USDC has 6 decimals
+contract DummyTokenContract is ERC20, Ownable {
+    // TOKEN has 6 decimals
     uint8 private constant DECIMALS = 18;
 
     // Events
@@ -25,7 +25,7 @@ contract DummyUsdcContract is ERC20, Ownable {
      * @param initialOwner The address that will receive the initial supply
      * @param initialSupply The initial supply of tokens (in smallest units)
      */
-    constructor(address initialOwner, uint256 initialSupply) ERC20("Dummy Degen", "dDEGEN") Ownable(initialOwner) {
+    constructor(address initialOwner, uint256 initialSupply, string memory name, string memory symbol) ERC20(name, symbol) Ownable(initialOwner) {
         _mint(initialOwner, initialSupply);
     }
 
@@ -48,7 +48,7 @@ contract DummyUsdcContract is ERC20, Ownable {
     }
 
     function grab() public {
-        _mint(msg.sender, 10000 * 10 ** DECIMALS); // 10 USDC
+        _mint(msg.sender, 10000 * 10 ** DECIMALS); // 10 TOKEN
         emit Minted(msg.sender, 10000 * 10 ** DECIMALS);
     }
 

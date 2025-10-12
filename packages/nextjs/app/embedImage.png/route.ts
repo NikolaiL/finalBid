@@ -491,7 +491,7 @@ export async function GET(req: NextRequest) {
               },
             },
             React.createElement("img", {
-              src: `${baseUrl}/firebid-degen.svg`,
+              src: `${baseUrl}/firebid-celo.svg`,
               width: 45,
               height: 45,
               style: { marginRight: "8px" },

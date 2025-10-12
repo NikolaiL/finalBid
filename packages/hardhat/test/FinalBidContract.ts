@@ -1,6 +1,6 @@
 import { expect } from "chai";
 import hre from "hardhat";
-import { FinalBidContract, DummyUsdcContract } from "../typechain-types";
+import { FinalBidContract, DummyTokenContract } from "../typechain-types";
 
 const { ethers } = hre;
 
@@ -47,7 +47,7 @@ async function generateAccessToken(
 
 describe("FinalBidContract", function () {
   let finalBidContract: FinalBidContract;
-  let dummyUsdcContract: DummyUsdcContract;
+  let dummyTokenContract: DummyTokenContract;
   let owner: any;
   let user1: any;
   let user2: any;
@@ -64,11 +64,16 @@ describe("FinalBidContract", function () {
   beforeEach(async () => {
     const initialSupply = 1000;
 
-    const dummyUsdcContractFactory = await ethers.getContractFactory("DummyUsdcContract");
-    dummyUsdcContract = (await dummyUsdcContractFactory.deploy(owner.address, initialSupply)) as DummyUsdcContract;
-    await dummyUsdcContract.waitForDeployment();
+    const dummyTokenContractFactory = await ethers.getContractFactory("DummyTokenContract");
+    dummyTokenContract = (await dummyTokenContractFactory.deploy(
+      owner.address,
+      initialSupply,
+      "Dummy Token",
+      "dTOKEN",
+    )) as DummyTokenContract;
+    await dummyTokenContract.waitForDeployment();
 
-    const tokenAddress = await dummyUsdcContract.getAddress();
+    const tokenAddress = await dummyTokenContract.getAddress();
 
     serverPrivateKey = process.env.SERVER_PRIVATE_KEY as string;
     const validSigner = new ethers.Wallet(serverPrivateKey).address;
@@ -85,15 +90,15 @@ describe("FinalBidContract", function () {
     await finalBidContract.setNewAuctionIsAllowed();
 
     // mint 1000 USDC to user1, user2, user3, contract
-    await dummyUsdcContract.mint(user1.address, ethers.parseEther("1000000")); // 1,000 USDC
-    await dummyUsdcContract.mint(user2.address, ethers.parseEther("1000000")); // 1,000 USDC
-    await dummyUsdcContract.mint(user3.address, ethers.parseEther("1000000")); // 1,000 USDC
-    await dummyUsdcContract.mint(finalBidContract.target, ethers.parseEther("1000000"));
+    await dummyTokenContract.mint(user1.address, ethers.parseEther("1000000")); // 1,000 USDC
+    await dummyTokenContract.mint(user2.address, ethers.parseEther("1000000")); // 1,000 USDC
+    await dummyTokenContract.mint(user3.address, ethers.parseEther("1000000")); // 1,000 USDC
+    await dummyTokenContract.mint(finalBidContract.target, ethers.parseEther("1000000"));
 
     // allowance for users to spend 1,000 Degen
-    await dummyUsdcContract.connect(user1).approve(finalBidContract.target, ethers.parseEther("1000000"));
-    await dummyUsdcContract.connect(user2).approve(finalBidContract.target, ethers.parseEther("1000000"));
-    await dummyUsdcContract.connect(user3).approve(finalBidContract.target, ethers.parseEther("1000000"));
+    await dummyTokenContract.connect(user1).approve(finalBidContract.target, ethers.parseEther("1000000"));
+    await dummyTokenContract.connect(user2).approve(finalBidContract.target, ethers.parseEther("1000000"));
+    await dummyTokenContract.connect(user3).approve(finalBidContract.target, ethers.parseEther("1000000"));
   });
 
   describe("Start Auction", function () {
@@ -146,12 +151,12 @@ describe("FinalBidContract", function () {
 
     it("Should reduce the auction amount if the auction amount is greater than the available balance", async function () {
       // burn everything from the contract
-      const balanceBefore = await dummyUsdcContract.balanceOf(finalBidContract.target);
-      await dummyUsdcContract.connect(owner).burnFrom(finalBidContract.target, balanceBefore);
+      const balanceBefore = await dummyTokenContract.balanceOf(finalBidContract.target);
+      await dummyTokenContract.connect(owner).burnFrom(finalBidContract.target, balanceBefore);
 
       const balance = ethers.parseEther("50"); // 50 USDC
 
-      await dummyUsdcContract.mint(finalBidContract.target, balance);
+      await dummyTokenContract.mint(finalBidContract.target, balance);
 
       await finalBidContract.startAuction();
       expect(await finalBidContract.auctionId()).to.equal(1);
@@ -162,11 +167,11 @@ describe("FinalBidContract", function () {
     });
     it("Should revert if the balance is below the minimum amount", async function () {
       // burn everything from the contract
-      const balanceBefore = await dummyUsdcContract.balanceOf(finalBidContract.target);
-      await dummyUsdcContract.connect(owner).burnFrom(finalBidContract.target, balanceBefore);
+      const balanceBefore = await dummyTokenContract.balanceOf(finalBidContract.target);
+      await dummyTokenContract.connect(owner).burnFrom(finalBidContract.target, balanceBefore);
 
       const balance = ethers.parseEther("0.5"); // 0.5 USDC
-      await dummyUsdcContract.mint(finalBidContract.target, balance);
+      await dummyTokenContract.mint(finalBidContract.target, balance);
 
       await expect(finalBidContract.startAuction()).to.be.revertedWith("Insufficient balance to start auction");
     });
@@ -216,7 +221,7 @@ describe("FinalBidContract", function () {
       const deployerFee = await finalBidContract.deployerFee();
       const expectedPlatformFee = platformFee - referralFee - deployerFee;
 
-      const balanceBefore = await dummyUsdcContract.balanceOf(finalBidContract.target);
+      const balanceBefore = await dummyTokenContract.balanceOf(finalBidContract.target);
 
       // Generate access token for user1
       const accessToken = await generateAccessToken(serverPrivateKey, user1.address, 1n);
@@ -230,7 +235,7 @@ describe("FinalBidContract", function () {
       expect(auction.bidCount).to.equal(1);
 
       // Calculate expected total: bid amount + platform fee
-      const actualBalanceIncrease = (await dummyUsdcContract.balanceOf(finalBidContract.target)) - balanceBefore;
+      const actualBalanceIncrease = (await dummyTokenContract.balanceOf(finalBidContract.target)) - balanceBefore;
       //const expectedTotal = 200000 + Number(platformFee);
       //console.log("Platform fee:", Number(platformFee));
       //console.log("Expected total:", expectedTotal);
@@ -315,12 +320,12 @@ describe("FinalBidContract", function () {
       const zeroAddress = "0x0000000000000000000000000000000000000000";
 
       // Increase allowance for this test since it does many bids
-      await dummyUsdcContract.connect(user1).approve(finalBidContract.target, ethers.parseEther("100000000"));
-      await dummyUsdcContract.connect(user2).approve(finalBidContract.target, ethers.parseEther("100000000"));
+      await dummyTokenContract.connect(user1).approve(finalBidContract.target, ethers.parseEther("100000000"));
+      await dummyTokenContract.connect(user2).approve(finalBidContract.target, ethers.parseEther("100000000"));
 
       // calculate what balance do we need to start auction with amoutn apprx 50 times higehr than the increase
       // and burn the rest
-      const currentBalance = await dummyUsdcContract.balanceOf(finalBidContract.target);
+      const currentBalance = await dummyTokenContract.balanceOf(finalBidContract.target);
       // balance required = starting amount + (50 * increase)
       const startingAmount = await finalBidContract.startingAmount();
       const bidIncrement = await finalBidContract.bidIncrement();
@@ -332,7 +337,7 @@ describe("FinalBidContract", function () {
 
       console.log("Amount to burn:", amountToBurn);
       if (amountToBurn > 0) {
-        await dummyUsdcContract.burnFrom(finalBidContract.target, amountToBurn);
+        await dummyTokenContract.burnFrom(finalBidContract.target, amountToBurn);
       }
 
       await finalBidContract.startAuction();
@@ -371,11 +376,11 @@ describe("FinalBidContract", function () {
 
       await finalBidContract.connect(user1).placeBid(accessToken1, zeroAddress);
 
-      const user1BalanceAfterBid = await dummyUsdcContract.balanceOf(user1.address);
+      const user1BalanceAfterBid = await dummyTokenContract.balanceOf(user1.address);
 
       await finalBidContract.connect(user2).placeBid(accessToken2, zeroAddress);
 
-      const user1BalanceAfterNextBid = await dummyUsdcContract.balanceOf(user1.address);
+      const user1BalanceAfterNextBid = await dummyTokenContract.balanceOf(user1.address);
 
       expect(user1BalanceAfterNextBid).to.be.greaterThan(user1BalanceAfterBid);
     });
@@ -395,11 +400,11 @@ describe("FinalBidContract", function () {
       await finalBidContract.connect(user2).placeBid(accessToken2, zeroAddress);
       await finalBidContract.connect(user3).placeBid(accessToken3, zeroAddress);
 
-      const ownerBalanceBeforeWithdraw = await dummyUsdcContract.balanceOf(owner.address);
+      const ownerBalanceBeforeWithdraw = await dummyTokenContract.balanceOf(owner.address);
 
       await finalBidContract.withdrawPlatformFees();
 
-      const ownerBalanceAfterWithdraw = await dummyUsdcContract.balanceOf(owner.address);
+      const ownerBalanceAfterWithdraw = await dummyTokenContract.balanceOf(owner.address);
 
       expect(ownerBalanceAfterWithdraw).to.be.greaterThan(ownerBalanceBeforeWithdraw);
     });
@@ -432,7 +437,7 @@ describe("FinalBidContract", function () {
       expect(auction.highestBid).to.equal(startingAmount + bidIncrement);
 
       // get user1 balance
-      const user1BalanceBefore = await dummyUsdcContract.balanceOf(user1.address);
+      const user1BalanceBefore = await dummyTokenContract.balanceOf(user1.address);
       // call as user3
       await finalBidContract.connect(user3).placeBid(accessToken3, user1);
 
@@ -440,7 +445,7 @@ describe("FinalBidContract", function () {
       expect(auction.highestBid).to.equal(startingAmount + bidIncrement * 2n);
 
       // check the user1 balance
-      const user1BalanceAfter = await dummyUsdcContract.balanceOf(user1.address);
+      const user1BalanceAfter = await dummyTokenContract.balanceOf(user1.address);
       expect(user1BalanceAfter).to.be.greaterThan(user1BalanceBefore);
     });
 
@@ -457,14 +462,14 @@ describe("FinalBidContract", function () {
           : Number(auction.highestBid) + Number(auction.bidIncrement) + Number(auction.platformFee);
 
       // get user1 balance
-      const user1BalanceBefore = await dummyUsdcContract.balanceOf(user1.address);
+      const user1BalanceBefore = await dummyTokenContract.balanceOf(user1.address);
 
       // Generate access token for user1
       const accessToken = await generateAccessToken(serverPrivateKey, user1.address, 1n);
       await finalBidContract.connect(user1).placeBid(accessToken, user1.address);
 
       // check the user1 balance
-      const user1BalanceAfter = await dummyUsdcContract.balanceOf(user1.address);
+      const user1BalanceAfter = await dummyTokenContract.balanceOf(user1.address);
 
       expect(Number(user1BalanceAfter)).to.equal(Number(user1BalanceBefore) - bidAmount);
     });
@@ -495,12 +500,12 @@ describe("FinalBidContract", function () {
       await ethers.provider.send("evm_increaseTime", [increaseTime]);
       await ethers.provider.send("evm_mine");
 
-      const ownerBalanceBefore = await dummyUsdcContract.balanceOf(owner.address);
+      const ownerBalanceBefore = await dummyTokenContract.balanceOf(owner.address);
 
       await finalBidContract.endAuction();
       await finalBidContract.startAuction();
 
-      const ownerBalanceAfter = await dummyUsdcContract.balanceOf(owner.address);
+      const ownerBalanceAfter = await dummyTokenContract.balanceOf(owner.address);
 
       expect(ownerBalanceAfter).to.be.greaterThan(ownerBalanceBefore);
     });
@@ -757,8 +762,8 @@ describe("FinalBidContract", function () {
       const accessToken2 = await generateAccessToken(serverPrivateKey, user2.address, 1n);
       await finalBidContract.connect(user2).placeBid(accessToken2, user2.address);
 
-      const initialBalance1 = await dummyUsdcContract.balanceOf(user1.address);
-      const initialBalance2 = await dummyUsdcContract.balanceOf(user2.address);
+      const initialBalance1 = await dummyTokenContract.balanceOf(user1.address);
+      const initialBalance2 = await dummyTokenContract.balanceOf(user2.address);
 
       // End the auction to trigger streaming finalization
       const auctionDuration = Number(await finalBidContract.auctionDuration());
@@ -767,8 +772,8 @@ describe("FinalBidContract", function () {
       await finalBidContract.endAuction();
 
       // Check that user received tokens
-      const finalBalance1 = await dummyUsdcContract.balanceOf(user1.address);
-      const finalBalance2 = await dummyUsdcContract.balanceOf(user2.address);
+      const finalBalance1 = await dummyTokenContract.balanceOf(user1.address);
+      const finalBalance2 = await dummyTokenContract.balanceOf(user2.address);
 
       expect(finalBalance1).to.be.gt(initialBalance1);
       expect(finalBalance2).to.be.gt(initialBalance2);

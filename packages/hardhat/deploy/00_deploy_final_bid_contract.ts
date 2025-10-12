@@ -22,39 +22,41 @@ const deployYourContract: DeployFunction = async function (hre: HardhatRuntimeEn
   const { deployer } = await hre.getNamedAccounts();
   const { deploy } = hre.deployments;
 
-  // USDC addresses for each network
-  // You can get some testnet USDC from the faucet here: https://faucet.circle.com/
-  const usdcAddressMap = {
+  // TOKEN addresses for each network
+  // You can get some testnet Tokens from the faucet here: https://faucet.circle.com/
+  const tokenAddressMap = {
     base: "0x4ed4e862860bed51a9570b96d89af5e1b0efefed",
+    celo: "0x471EcE3750Da237f93B8E339c536989b8978a438",
+    celoAlfajores: "0xF194afDf50B03e69Bd7D057c1Aa9e10c9954E4C9",
   };
 
   const networkName = await hre.network.name;
-  // if network is not in the map, deploy a dummy usdc erc20 contract
+  // if network is not in the map, deploy a dummy token erc20 contract
 
-  let usdcAddress = usdcAddressMap[networkName as keyof typeof usdcAddressMap];
-  console.log("👋 USDC Address:", usdcAddress);
+  let tokenAddress = tokenAddressMap[networkName as keyof typeof tokenAddressMap];
+  console.log("👋 TOKEN Address:", tokenAddress);
 
-  let mintUsdc = false;
-  let usdcContract: any;
+  let mintToken = false;
+  let tokenContract: any;
 
   // Get the deployer signer
   const deployerSigner = await hre.ethers.getSigner(deployer);
 
   // Mint with explicit nonce management
 
-  // if network is undefined we should deploy a dummy usdc erc20 contract
-  if (!usdcAddress) {
-    console.log("👋 Deploying dummy USDC ERC20 contract");
-    // deploy a dummy usdc erc20 contract
-    usdcContract = await deploy("DummyUsdcContract", {
+  // if network is undefined we should deploy a dummy token erc20 contract
+  if (!tokenAddress) {
+    console.log("👋 Deploying dummy TOKEN ERC20 contract");
+    // deploy a dummy token erc20 contract
+    tokenContract = await deploy("DummyTokenContract", {
       from: deployer,
-      args: [deployer, 1000000000000], // 1,000,000 USDC (with 6 decimals)
+      args: [deployer, 1000000000000, "Dummy Token", "dTOKEN"], // 1,000,000 TOKEN (with 6 decimals)
       log: true,
       autoMine: true,
     });
 
-    usdcAddress = usdcContract.address; // update the usdc address
-    mintUsdc = true;
+    tokenAddress = tokenContract.address; // update the token address
+    mintToken = true;
   }
 
   // wait for 3 seconds to avoid nonce error
@@ -67,7 +69,7 @@ const deployYourContract: DeployFunction = async function (hre: HardhatRuntimeEn
   const finalBidContract = await deploy("FinalBidContract", {
     from: deployer,
     // Contract constructor arguments
-    args: [deployer, usdcAddress, validSigner],
+    args: [deployer, tokenAddress, validSigner],
     log: true,
     // autoMine: can be passed to the deploy function to make the deployment process faster on local networks by
     // automatically mining the contract deployment transaction. There is no effect on live networks.
@@ -81,43 +83,49 @@ const deployYourContract: DeployFunction = async function (hre: HardhatRuntimeEn
   // wait for 3 seconds to avoid nonce error
   await new Promise(resolve => setTimeout(resolve, 3000));
 
-  if (mintUsdc) {
-    // Get the USDC contract instance for minting
+  if (mintToken) {
+    // Get the TOKEN contract instance for minting
 
-    const usdcContractInstance = await hre.ethers.getContractAt("DummyUsdcContract", usdcAddress);
-    console.log("👋 USDC Contract:", usdcAddress);
+    const tokenContractInstance = await hre.ethers.getContractAt("DummyTokenContract", tokenAddress);
+    console.log("👋 TOKEN Contract:", tokenAddress);
 
     const amountToMint = hre.ethers.parseUnits("1000000", 18);
 
     // wait for 3 seconds to avoid nonce error
     await new Promise(resolve => setTimeout(resolve, 3000));
 
-    await usdcContractInstance.connect(deployerSigner).mint(deployer, amountToMint);
-    console.log("👋 Minted USDC to deployer");
+    await tokenContractInstance.connect(deployerSigner).mint(deployer, amountToMint);
+    console.log("👋 Minted TOKEN to deployer");
 
     // wait for 3 seconds to avoid nonce error
     await new Promise(resolve => setTimeout(resolve, 3000));
 
-    await usdcContractInstance.connect(deployerSigner).mint(finalBidContract.address, amountToMint);
-    console.log("👋 Minted USDC to finalBidContract");
+    await tokenContractInstance.connect(deployerSigner).mint(finalBidContract.address, amountToMint);
+    console.log("👋 Minted TOKEN to finalBidContract");
 
     // wait for 3 seconds to avoid nonce error
     await new Promise(resolve => setTimeout(resolve, 3000));
 
-    await usdcContractInstance.connect(deployerSigner).mint("0x296b0874401a354aF58CAe1222ca7876601d2828", amountToMint);
-    console.log("👋 Minted USDC to 0x296b0874401a354aF58CAe1222ca7876601d2828");
+    await tokenContractInstance
+      .connect(deployerSigner)
+      .mint("0x296b0874401a354aF58CAe1222ca7876601d2828", amountToMint);
+    console.log("👋 Minted TOKEN to 0x296b0874401a354aF58CAe1222ca7876601d2828");
 
     // wait for 3 seconds to avoid nonce error
     await new Promise(resolve => setTimeout(resolve, 3000));
 
-    await usdcContractInstance.connect(deployerSigner).mint("0x4b7b07D8BAf51975eeAb0E1eb4B481A5aC691ED6", amountToMint);
-    console.log("👋 Minted USDC to 0x4b7b07D8BAf51975eeAb0E1eb4B481A5aC691ED6");
+    await tokenContractInstance
+      .connect(deployerSigner)
+      .mint("0x4b7b07D8BAf51975eeAb0E1eb4B481A5aC691ED6", amountToMint);
+    console.log("👋 Minted TOKEN to 0x4b7b07D8BAf51975eeAb0E1eb4B481A5aC691ED6");
 
     // wait for 3 seconds to avoid nonce error
     await new Promise(resolve => setTimeout(resolve, 3000));
 
-    await usdcContractInstance.connect(deployerSigner).mint("0x8D6230427a37986D25Fe4D5B3d0aaEF1b924fEd6", amountToMint);
-    console.log("👋 Minted USDC to 0x8D6230427a37986D25Fe4D5B3d0aaEF1b924fEd6");
+    await tokenContractInstance
+      .connect(deployerSigner)
+      .mint("0x8D6230427a37986D25Fe4D5B3d0aaEF1b924fEd6", amountToMint);
+    console.log("👋 Minted TOKEN to 0x8D6230427a37986D25Fe4D5B3d0aaEF1b924fEd6");
   }
 
   // ------------------------------------------------------------
@@ -131,7 +139,7 @@ const deployYourContract: DeployFunction = async function (hre: HardhatRuntimeEn
     const finalBid = await hre.ethers.getContractAt("FinalBidContract", finalBidContract.address);
     const resolvedTokenAddress: string = await finalBid.tokenAddress();
 
-    // Minimal ERC20 ABI for symbol/decimals (works for both Dummy and real USDC)
+    // Minimal ERC20 ABI for symbol/decimals (works for both Dummy and real TOKEN)
     const erc20Abi = ["function symbol() view returns (string)", "function decimals() view returns (uint8)"];
     const erc20 = await hre.ethers.getContractAt(erc20Abi, resolvedTokenAddress);
     const [symbol, decimals] = await Promise.all([erc20.symbol(), erc20.decimals()]);

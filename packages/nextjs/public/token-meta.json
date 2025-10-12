@@ -1,7 +1,7 @@
 {
-  "chainId": 8453,
-  "finalBidAddress": "0xADE7AD7A818785d3121e00C09b23B120118149c1",
-  "tokenAddress": "0x4ed4E862860beD51a9570b96d89aF5E1B0Efefed",
-  "symbol": "DEGEN",
+  "chainId": 44787,
+  "finalBidAddress": "0x227A344b9afb6612499B150dd80E5e8C39B4CF51",
+  "tokenAddress": "0xF194afDf50B03e69Bd7D057c1Aa9e10c9954E4C9",
+  "symbol": "CELO",
   "decimals": 18
 }
