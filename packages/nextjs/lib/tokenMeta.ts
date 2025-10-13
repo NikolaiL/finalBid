@@ -87,8 +87,9 @@ const TOKEN_DECIMALS = Number(process.env.NEXT_PUBLIC_TOKEN_DECIMALS) ?? 18;
 export function formatToken(amount: string | bigint, decimals: number = DISPLAY_DECIMALS): string {
   const amountNumber = Number(amount);
   const tokenAmount = amountNumber / 10 ** TOKEN_DECIMALS;
-  return tokenAmount.toLocaleString("en-US", {
-    minimumFractionDigits: decimals,
-    maximumFractionDigits: decimals,
-  });
+  // return tokenAmount.toLocaleString("en-US", {
+  //   minimumFractionDigits: decimals,
+  //   maximumFractionDigits: decimals,
+  // });
+  return tokenAmount.toFixed(decimals);
 }

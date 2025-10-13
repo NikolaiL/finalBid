@@ -39,7 +39,7 @@ const config: HardhatUserConfig = {
   },
   //defaultNetwork: "localhost",
   //defaultNetwork: "baseSepolia",
-  defaultNetwork: "celoAlfajores",
+  defaultNetwork: "celoSepolia",
   namedAccounts: {
     deployer: {
       // By default, it will take the first Hardhat account as the deployer
@@ -125,6 +125,10 @@ const config: HardhatUserConfig = {
     },
     celoAlfajores: {
       url: "https://alfajores-forno.celo-testnet.org",
+      accounts: [deployerPrivateKey],
+    },
+    celoSepolia: {
+      url: "https://forno.celo-sepolia.celo-testnet.org/",
       accounts: [deployerPrivateKey],
     },
   },

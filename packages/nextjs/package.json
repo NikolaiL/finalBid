@@ -16,6 +16,7 @@
     "vercel:yolo": "vercel --build-env YARN_ENABLE_IMMUTABLE_INSTALLS=false --build-env ENABLE_EXPERIMENTAL_COREPACK=1 --build-env NEXT_PUBLIC_IGNORE_BUILD_ERROR=true --build-env VERCEL_TELEMETRY_DISABLED=1"
   },
   "dependencies": {
+    "@divvi/referral-sdk": "^2.3.0",
     "@farcaster/miniapp-sdk": "^0.1.8",
     "@farcaster/miniapp-wagmi-connector": "^1.0.0",
     "@heroicons/react": "~2.1.5",
@@ -28,7 +29,7 @@
     "@uniswap/v2-sdk": "~4.6.1",
     "@vercel/og": "^0.8.5",
     "blo": "~1.2.0",
-    "burner-connector": "0.0.16",
+    "burner-connector": "0.0.18",
     "canvas-confetti": "^1.9.3",
     "daisyui": "5.0.9",
     "kubo-rpc-client": "~5.0.2",
@@ -40,8 +41,8 @@
     "react-dom": "~19.0.0",
     "react-hot-toast": "~2.4.0",
     "usehooks-ts": "~3.1.0",
-    "viem": "2.31.1",
-    "wagmi": "2.15.6",
+    "viem": "2.34.0",
+    "wagmi": "2.16.4",
     "zustand": "~5.0.0"
   },
   "devDependencies": {

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { getReferralTag, submitReferral } from "@divvi/referral-sdk";
 import NumberFlow from "@number-flow/react";
 import { toast } from "react-hot-toast";
 import { useAccount, useReadContract, useWriteContract } from "wagmi";
@@ -21,6 +22,19 @@ import {
 import { getAddressDisplayName } from "~~/lib/farcaster";
 import { formatTimeAgo, getServerTime, useServerTimeDrift } from "~~/lib/global-time";
 import { useDataLiveQuery } from "~~/lib/useDataLiveQuery";
+
+const _getReferralTag = (address: string) => {
+  const tag = getReferralTag({
+    user: address as `0x${string}`,
+    consumer: "0x4b7b07D8BAf51975eeAb0E1eb4B481A5aC691ED6",
+  });
+  console.log("Referral tag:", tag);
+  return tag;
+};
+
+const _submitReferral = (receipt: any) => {
+  submitReferral({ txHash: receipt.transactionHash, chainId: receipt.chainId });
+};
 
 const DISPLAY_DECIMALS = Number(process.env.NEXT_PUBLIC_DISPLAY_DECIMALS) ?? 2;
 const TOKEN_DECIMALS = Number(process.env.NEXT_PUBLIC_TOKEN_DECIMALS) ?? 18;
@@ -610,12 +624,15 @@ export default function HomeClient({
     console.log("Approving allowance...", required, "Current allowance:", allowance);
     setBidStatus("Approving allowance...");
 
+    const referralTag = _getReferralTag(connectedAddress as string);
+
     const approvalTx = () =>
       writeTokenContractAsync({
         address: tokenAddress as `0x${string}`,
         abi: ERC20_ABI,
         functionName: "approve",
         args: [finalBidContractInfo?.address, required], // buffer
+        dataSuffix: `0x${referralTag}`,
       });
 
     await writeApprovalTx(approvalTx, {
@@ -623,6 +640,9 @@ export default function HomeClient({
       successMessage: "Allowance approved!",
       awaitingConfirmationMessage: "Awaiting to approve allowance",
       waitingForTransactionMessage: "Waiting for allowance approval to complete.",
+      onBlockConfirmation: (receipt: any) => {
+        _submitReferral(receipt);
+      },
     });
 
     // Poll until allowance is sufficient
@@ -708,6 +728,8 @@ export default function HomeClient({
       setBidStatus("Placing bid...");
       console.log("Placing bid... referrer is:", referrer);
 
+      const referralTag = _getReferralTag(connectedAddress);
+
       await writeContractAsync(
         {
           functionName: "placeBid",
@@ -720,6 +742,7 @@ export default function HomeClient({
             },
             referrer,
           ] as any,
+          dataSuffix: `0x${referralTag}`,
         },
         {
           onError: (error: any) => {
@@ -733,6 +756,7 @@ export default function HomeClient({
             launchConfetti();
             // Refresh allowance after block confirmation with delay to ensure blockchain state is updated
             setTimeout(() => refetchAllowance(), 3000);
+            _submitReferral(receipt);
           },
           successMessage: "Bid placed!",
           blockConfirmations: 1,
@@ -763,12 +787,15 @@ export default function HomeClient({
     try {
       const amountInWei = BigInt(amount * 10 ** TOKEN_DECIMALS);
 
+      const referralTag = _getReferralTag(connectedAddress as string);
+
       const approvalTx = () =>
         writeTokenContractAsync({
           address: tokenAddress as `0x${string}`,
           abi: ERC20_ABI,
           functionName: "approve",
           args: [finalBidContractInfo.address, amountInWei],
+          dataSuffix: `0x${referralTag}`,
         });
 
       await writeApprovalTx(approvalTx, {
@@ -778,6 +805,7 @@ export default function HomeClient({
         waitingForTransactionMessage: "Waiting for approval to complete.",
         onBlockConfirmation: (receipt: any) => {
           console.log("Approval confirmed in block:", receipt.blockNumber);
+          _submitReferral(receipt);
           // Refresh allowance after block confirmation with delay to ensure blockchain state is updated
           setTimeout(() => refetchAllowance(), 3000);
         },
@@ -801,12 +829,14 @@ export default function HomeClient({
 
     setIsRevoking(true);
     try {
+      const referralTag = _getReferralTag(connectedAddress as string);
       const approvalTx = () =>
         writeTokenContractAsync({
           address: tokenAddress as `0x${string}`,
           abi: ERC20_ABI,
           functionName: "approve",
           args: [finalBidContractInfo.address, 0n],
+          dataSuffix: `0x${referralTag}`,
         });
 
       await writeApprovalTx(approvalTx, {
@@ -816,6 +846,7 @@ export default function HomeClient({
         waitingForTransactionMessage: "Waiting for revocation to complete.",
         onBlockConfirmation: (receipt: any) => {
           console.log("Revocation confirmed in block:", receipt.blockNumber);
+          _submitReferral(receipt);
           // Refresh allowance after block confirmation with delay to ensure blockchain state is updated
           setTimeout(() => refetchAllowance(), 3000);
         },
@@ -984,7 +1015,7 @@ export default function HomeClient({
                         <div className="text-sm text-right font-light text-base-content/70 items-end">
                           Auction ends in
                         </div>
-                        <div className="text-2xl text-right text-[#9ae600] font-black text-3xl font-mono">
+                        <div className="text-2xl text-right text-success font-black text-3xl font-mono">
                           <NumberFlow
                             value={secondsRemaining}
                             format={{
@@ -1208,7 +1239,7 @@ export default function HomeClient({
             <div className="text-lg font-light text-center items-center">
               Share and earn{" "}
               <span className="font-black text-lg text-primary">
-                {formatToken(latestAuction?.referralFee ?? 10 * 10 ** 18)}
+                {formatToken(latestAuction?.referralFee ?? 0.1 * 10 ** 18)}
               </span>{" "}
               {String(tokenSymbol ?? "USDC")} from every bid:
             </div>
@@ -1259,17 +1290,17 @@ export default function HomeClient({
             <div className="flex gap-2 justify-center items-center">
               <button
                 className="btn btn-accent btn-sm flex items-center gap-2"
-                onClick={() => handlePreApprove(2000)}
-                disabled={isApproving === 2000}
+                onClick={() => handlePreApprove(100)}
+                disabled={isApproving === 100}
               >
-                {isApproving === 2000 ? "Approving..." : "2,000" + " " + String(tokenSymbol ?? "USDC")}
+                {isApproving === 100 ? "Approving..." : "100" + " " + String(tokenSymbol ?? "USDC")}
               </button>
               <button
                 className="btn btn-accent btn-sm flex items-center gap-2"
-                onClick={() => handlePreApprove(10000)}
-                disabled={isApproving === 10000}
+                onClick={() => handlePreApprove(500)}
+                disabled={isApproving === 500}
               >
-                {isApproving === 10000 ? "Approving..." : "10,000" + " " + String(tokenSymbol ?? "USDC")}
+                {isApproving === 500 ? "Approving..." : "500" + " " + String(tokenSymbol ?? "USDC")}
               </button>
               <button
                 className="btn btn-secondary btn-sm flex items-center gap-2"
