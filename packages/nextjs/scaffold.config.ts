@@ -18,7 +18,7 @@ const scaffoldConfig = {
   //targetNetworks: [chains.hardhat],
   //targetNetworks: [chains.baseSepolia],
   //targetNetworks: [chains.celoAlfajores],
-  targetNetworks: [chains.celoSepolia],
+  targetNetworks: [chains.celo],
   // The interval at which your front-end polls the RPC servers for new data (it has no effect if you only target the local network (default is 4000))
   pollingInterval: 30000,
   // This is ours Alchemy's default API key.

@@ -1,6 +1,6 @@
 {
-  "chainId": 11142220,
-  "finalBidAddress": "0x0C24F09923116e6ECf0Acef2Edd175c58984A79E",
+  "chainId": 42220,
+  "finalBidAddress": "0x227A344b9afb6612499B150dd80E5e8C39B4CF51",
   "tokenAddress": "0x471EcE3750Da237f93B8E339c536989b8978a438",
   "symbol": "CELO",
   "decimals": 18
