@@ -844,7 +844,7 @@ export default function HomeClient({
                           await writeContractAsync({ functionName: "startAuction" });
                         }}
                       >
-                        Start a New Auction
+                        Start a New Game!
                       </button>
                     ) : (
                       <div className="text-xl sm:text-2xl font-black text-center py-8">Something is Cooking 🚀🚀🚀</div>
@@ -950,14 +950,13 @@ export default function HomeClient({
               <table className="table table-sm w-full">
                 <thead>
                   <tr>
-                    <th className="py-1 pl-1 pr-px text-xs font-light">Player</th>
-                    <th className="py-1 px-px text-xs text-right font-light">Clicks</th>
-                    <th className="py-1 pr-1 pl-px text-xs text-right font-light">Cost</th>
+                    <th className="py-1 pl-3 pr-px text-xs font-light">Player</th>
+                    <th className="py-1 pr-3 px-px text-xs text-right font-light">Clicks</th>
                   </tr>
                 </thead>
                 <tbody>
                   {userStats.map(stat => (
-                    <tr key={stat.address} className={stat.isHighestBidder ? "bg-success/10" : ""}>
+                    <tr key={stat.address} className={stat.isHighestBidder ? "bg-accent/20" : ""}>
                       <td className="p-1 text-xs">
                         <div className="flex items-center gap-2">
                           <AddressFarcaster size="xs" address={stat.address as `0x${string}`} />
@@ -966,11 +965,6 @@ export default function HomeClient({
                       </td>
                       <td className="p-1 text-right font-mono text-xs whitespace-nowrap">
                         <div className="text-base-content/70">{stat.numBids}</div>
-                      </td>
-                      <td className="p-1 text-right font-mono text-xs whitespace-nowrap">
-                        <div className="text-base-content/70">
-                          {formatToken(BigInt(stat.numBids) * ((latestAuction?.bidFee as bigint) || 0n))}
-                        </div>
                       </td>
                     </tr>
                   ))}
