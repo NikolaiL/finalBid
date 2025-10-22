@@ -311,6 +311,9 @@ export default function HomeClient({
   // Fetch allowance as bigint
   const fetchAllowanceBig = async (): Promise<bigint> => {
     const { data } = await refetchAllowance();
+    if (data === undefined || data === null) {
+      return 0n;
+    }
     return BigInt(data as string);
   };
 
