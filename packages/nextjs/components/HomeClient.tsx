@@ -750,7 +750,7 @@ export default function HomeClient({
                 <div className="flex flex-col items-center text-center">
                   {topBidderAddress !== ZERO_ADDRESS && (
                     <>
-                      <div className="text-sm text-base-content/70">Last click by</div>
+                      <div className="text-sm text-base-content/70">Current winning player:</div>
                       <div className="flex justify-center">
                         <AddressFarcaster address={topBidderAddress} />
                       </div>
