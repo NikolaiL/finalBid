@@ -3,6 +3,37 @@ import { ponder } from "ponder:registry";
 import { auctionCreated, auctionEnded, bidPlaced } from "ponder:schema";
 import { eq, and, gt } from "drizzle-orm";
 
+// Get or create global change emitter instance
+type Listener = () => void;
+
+class ChangeEmitter {
+  private listeners: Set<Listener> = new Set();
+
+  emit() {
+    this.listeners.forEach(listener => {
+      try {
+        listener();
+      } catch (e) {
+        console.error("Listener error:", e);
+      }
+    });
+  }
+
+  subscribe(listener: Listener) {
+    this.listeners.add(listener);
+    return () => this.listeners.delete(listener);
+  }
+}
+
+const getChangeEmitter = (): ChangeEmitter => {
+  if (!(globalThis as any).__PONDER_CHANGE_EMITTER__) {
+    (globalThis as any).__PONDER_CHANGE_EMITTER__ = new ChangeEmitter();
+  }
+  return (globalThis as any).__PONDER_CHANGE_EMITTER__;
+};
+
+const changeEmitter = getChangeEmitter();
+
 ponder.on("FinalBidContract:AuctionCreated", async ({ event, context }) => {
   await context.db.insert(auctionCreated).values({
     auctionId: event.args.auctionId,
@@ -20,6 +51,9 @@ ponder.on("FinalBidContract:AuctionCreated", async ({ event, context }) => {
     timestamp: BigInt(event.block.timestamp),
   });
   console.log("AuctionCreated", event.args.auctionId, event.args.auctionAmount, event.args.startTime, event.args.endTime);
+  
+  // Notify SSE clients of data change
+  changeEmitter.emit();
 });
 
 ponder.on("FinalBidContract:BidPlaced", async ({ event, context }) => {
@@ -44,6 +78,9 @@ ponder.on("FinalBidContract:BidPlaced", async ({ event, context }) => {
     bidCount: Number(event.args.bidCount),
   });
   console.log("BidPlaced", event.args.auctionId, event.args.bidder, event.args.auctionAmount, event.args.referral, event.args.endTime);
+  
+  // Notify SSE clients of data change
+  changeEmitter.emit();
 });
 
 ponder.on("FinalBidContract:AuctionEnded", async ({ event, context }) => {
@@ -60,6 +97,9 @@ ponder.on("FinalBidContract:AuctionEnded", async ({ event, context }) => {
     ended: true,
   });
   console.log("AuctionEnded", event.args.auctionId, event.args.winner, event.args.amount);
+  
+  // Notify SSE clients of data change
+  changeEmitter.emit();
 });
 
 
