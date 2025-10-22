@@ -691,10 +691,10 @@ export default function HomeClient({
             <>
               <div className="flex flex-row gap-1 mb-2">
                 <div className="flex flex-1 flex-col gap-0 items-start">
-                  <div className="text-left flex-1 text-sm font-light text-base-content/70 items-start">
+                  <div className="text-left flex-1 text-sm sm:text-lg font-light text-base-content/70 items-start">
                     Winning Pot
                   </div>
-                  <div className="flex-none items-center font-mono font-black text-6xl text-primary">
+                  <div className="flex-none items-center font-mono font-black text-5xl sm:text-6xl text-primary">
                     <NumberFlow
                       value={currentAuctionAmountNumber}
                       format={{
@@ -705,7 +705,7 @@ export default function HomeClient({
                       }}
                     />
                   </div>
-                  <div className="text-center sm:text-left flex-1 text-sm font-light items-start my-1">
+                  <div className="text-center sm:text-left flex-1 text-sm sm:text-lg font-light items-start text-base-content/70">
                     {String(tokenSymbol ?? "USDC")}
                   </div>
                 </div>
@@ -728,8 +728,10 @@ export default function HomeClient({
                       </>
                     ) : (
                       <>
-                        <div className="text-sm text-right font-light text-base-content/70 items-end">Game ends in</div>
-                        <div className="text-2xl text-right text-success font-black text-6xl font-mono">
+                        <div className="text-sm sm:text-lg text-right font-light text-base-content/70 items-end">
+                          Game ends in
+                        </div>
+                        <div className="text-2xl text-right text-success font-black text-5xl sm:text-6xl font-mono">
                           <NumberFlow
                             value={secondsRemaining}
                             format={{
@@ -738,7 +740,7 @@ export default function HomeClient({
                             }}
                           />
                         </div>
-                        <div className="text-sm text-right text-base-content/70">seconds</div>
+                        <div className="text-sm sm:text-lg font-light text-right text-base-content/70">seconds</div>
                       </>
                     )}
                   </div>
@@ -748,7 +750,7 @@ export default function HomeClient({
                 <div className="flex flex-col items-center text-center">
                   {topBidderAddress !== ZERO_ADDRESS && (
                     <>
-                      <div className="text-sm text-base-content/70">Last Clicked by</div>
+                      <div className="text-sm text-base-content/70">Last click by</div>
                       <div className="flex justify-center">
                         <AddressFarcaster address={topBidderAddress} />
                       </div>
@@ -776,12 +778,6 @@ export default function HomeClient({
                       {isUserHighestBidder ? (
                         <>
                           <div className="text-xl font-bold p-1">✅ You are the last clicker</div>
-                          <div className="mt-1 text-base-content/50 text-xs">
-                            {(() => {
-                              const remaining = secondsRemaining;
-                              return `Game ends in ${remaining} seconds`;
-                            })()}
-                          </div>
                         </>
                       ) : (
                         <>
@@ -798,13 +794,13 @@ export default function HomeClient({
                             onClick={handlePlaceBid}
                             disabled={isBidding}
                           >
-                            {isBidding ? bidStatus : `Place Bid`}
+                            {isBidding ? bidStatus : `Click to Win`}
                           </button>
                           {isBidding ? (
                             <div className="mt-1 text-gray-500 text-xs mb-4">Please wait...</div>
                           ) : bidFee ? (
-                            <div className="mt-1 text-base-content/70 text-xs mb-4">
-                              ({formatToken(bidFee as unknown as bigint)} {String(tokenSymbol ?? "")} bid fee)
+                            <div className="mt-1 text-base-content/60 text-xs mb-4 mt-1">
+                              Cost to click: {formatToken(bidFee as unknown as bigint)} {String(tokenSymbol ?? "")}
                             </div>
                           ) : null}
                         </>
