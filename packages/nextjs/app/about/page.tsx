@@ -54,9 +54,9 @@ export default function AboutPage() {
   const bidFee = (latestAuction?.bidFee as bigint) ?? (0n as bigint);
   const referralFee = (latestAuction?.referralFee as bigint) ?? (0n as bigint);
 
-  const referralFeePercentage = Math.round((Number(referralFee) / Number(bidFee)) * 100);
-  const deployerFeePercentage = Math.round((Number(deployerFee) / Number(bidFee)) * 100);
-  const nextPrizePercentage = Math.round(100 - referralFeePercentage - deployerFeePercentage);
+  //const referralFeePercentage = Math.round((Number(referralFee) / Number(bidFee)) * 100);
+  //const deployerFeePercentage = Math.round((Number(deployerFee) / Number(bidFee)) * 100);
+  const nextPrizeAmount = bidFee - referralFee - (deployerFee ?? 0n);
 
   // Read auctionDurationIncrease directly from contract (seconds)
   const { data: auctionDurationIncrease } = useScaffoldReadContract({
@@ -83,8 +83,10 @@ export default function AboutPage() {
               <span className="font-bold mx-1">
                 {formatToken(bidFee || 0n, tokenDecimals)} {String(tokenSymbol ?? "")}
               </span>
-              and increases the prize pot by {nextPrizePercentage}% of the fee. The rest goes to referrals (
-              {referralFeePercentage}%) and platform costs ({deployerFeePercentage}%).
+              and increases the prize pot by {formatToken(nextPrizeAmount || 0n, tokenDecimals)}{" "}
+              {String(tokenSymbol ?? "")}. The rest goes to referrals ({formatToken(referralFee || 0n, tokenDecimals)}{" "}
+              {String(tokenSymbol ?? "")}) and platform costs ({formatToken(deployerFee || 0n, tokenDecimals)}{" "}
+              {String(tokenSymbol ?? "")}).
             </li>
             <li>
               Share your link and earn a referral reward of
