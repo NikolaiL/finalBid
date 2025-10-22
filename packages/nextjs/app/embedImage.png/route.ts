@@ -418,7 +418,7 @@ export async function GET(req: NextRequest) {
                         marginRight: "8px",
                       },
                     },
-                    `Current top bidder is`,
+                    `Current winning player:`,
                   ),
                   React.createElement("img", {
                     src: winnerData.profilePicture,
