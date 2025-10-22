@@ -580,8 +580,6 @@ export default function HomeClient({
   };
 
   // Get the latest bid from BidEvents for the current auction
-  const latestBidEvent = CurrentBidEvents[0]; // Already sorted by block number desc
-  const currentBid = (latestBidEvent?.auctionAmount as bigint) || 0n;
   const topBidderAddress = (latestAuction?.highestBidder as `0x${string}`) || (ZERO_ADDRESS as `0x${string}`);
   const secondsRemaining = useMemo(() => {
     if (!latestAuction?.endTime) return 0;
@@ -717,15 +715,15 @@ export default function HomeClient({
                     {isAcutionReadytoBeOver ? (
                       <>
                         <div className="text-sm text-right font-light text-base-content/70 items-end">&nbsp;</div>
-                        <div className="text-2xl text-right text-[#9ae600] font-black text-2xl font-mono">
-                          Auction Ended
+                        <div className="text-3xl text-right text-[#9ae600] font-black text-2xl font-mono">
+                          Game Over!
                         </div>
                       </>
                     ) : isAuctionOver ? (
                       <>
                         <div className="text-sm text-right font-light text-base-content/70 items-end">&nbsp;</div>
-                        <div className="text-2xl text-right text-[#9ae600] font-black text-2xl font-mono">
-                          Auction Ended
+                        <div className="text-3xl text-right text-[#9ae600] font-black text-2xl font-mono">
+                          Game Over!
                         </div>
                       </>
                     ) : (
@@ -746,19 +744,12 @@ export default function HomeClient({
                   </div>
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-4 items-center">
-                <div className="text-left">
-                  <div className="text-sm text-base-content/70">
-                    {topBidderAddress !== ZERO_ADDRESS ? "Current top bid" : "Be the first to bid"}
-                  </div>
-                  <div className="text-2xl font-black">{formatToken(currentBid)}</div>
-                  <div className="text-sm text-base-content/70"> {String(tokenSymbol ?? "USDC")}</div>
-                </div>
-                <div className="text-right">
+              <div className="items-center">
+                <div className="flex flex-col items-center text-center">
                   {topBidderAddress !== ZERO_ADDRESS && (
                     <>
-                      <div className="text-sm text-base-content/70">Top bid by</div>
-                      <div className="flex justify-end">
+                      <div className="text-sm text-base-content/70">Last Clicked by</div>
+                      <div className="flex justify-center">
                         <AddressFarcaster address={topBidderAddress} />
                       </div>
                     </>
@@ -784,7 +775,7 @@ export default function HomeClient({
                     <>
                       {isUserHighestBidder ? (
                         <>
-                          <div className="text-xl font-bold p-1">✅ You are the highest bidder</div>
+                          <div className="text-xl font-bold p-1">✅ You are the last clicker</div>
                           <div className="mt-1 text-base-content/50 text-xs">
                             {(() => {
                               const remaining = secondsRemaining;
@@ -830,7 +821,7 @@ export default function HomeClient({
                             onBlockConfirmation: () => {
                               // no-op here; we'll launch confetti after success
                             },
-                            successMessage: "Auction finalized!",
+                            successMessage: "Game finalized!",
                             blockConfirmations: 1,
                           },
                         );
@@ -845,7 +836,7 @@ export default function HomeClient({
                           🎉 <span className="mx-2">Claim My Win!</span> 🎉
                         </span>
                       ) : (
-                        "Finalize the auction"
+                        "Finalize the game"
                       )}
                     </button>
                   ) : null}
@@ -883,7 +874,7 @@ export default function HomeClient({
               <span className="font-black text-lg text-primary">
                 {formatToken(latestAuction?.referralFee ?? 0.1 * 10 ** 18)}
               </span>{" "}
-              {String(tokenSymbol ?? "USDC")} from every bid:
+              {String(tokenSymbol ?? "USDC")} from every click:
             </div>
           ) : (
             <div className="text-lg font-light text-center items-center">Share FireBid:</div>
@@ -924,7 +915,7 @@ export default function HomeClient({
         {/* only show if wallet is connected */}
         {connectedAddress && (
           <div className="bg-base-100 p-4 rounded-xl shadow-md shadow-secondary border border-base-300 flex flex-col gap-1 mt-4">
-            <div className="text-lg font-light text-center items-center">Pre-Approve for faster bidding</div>
+            <div className="text-lg font-light text-center items-center">Pre-Approve for faster clicking</div>
             <div className="text-center items-center text-base-content/50 text-xs mb-2">
               Your current allowance is {allowance ? formatToken(allowance as bigint) : "0"}{" "}
               {String(tokenSymbol ?? "USDC")}.{" "}
@@ -955,17 +946,17 @@ export default function HomeClient({
           </div>
         )}
 
-        {/* Current Auction Stats */}
+        {/* Current Game Stats */}
         {latestAuction && userStats.length > 0 && (
           <div className="bg-base-100 mt-4 p-0 rounded-xl shadow-md shadow-secondary border border-base-300 flex flex-col">
-            <div className="text-lg font-light text-center mt-3 mb-2">Current Auction Stats</div>
+            <div className="text-lg font-light text-center mt-3 mb-2">Current Game Stats</div>
             <div className="overflow-x-auto overflow-y-hidden">
               <table className="table table-sm w-full">
                 <thead>
                   <tr>
-                    <th className="py-1 pl-1 pr-px text-xs font-light">User</th>
-                    <th className="py-1 px-px text-xs text-right font-light">Bids</th>
-                    <th className="py-1 pr-1 pl-px text-xs text-right font-light">Total Spent</th>
+                    <th className="py-1 pl-1 pr-px text-xs font-light">Player</th>
+                    <th className="py-1 px-px text-xs text-right font-light">Clicks</th>
+                    <th className="py-1 pr-1 pl-px text-xs text-right font-light">Cost</th>
                   </tr>
                 </thead>
                 <tbody>
