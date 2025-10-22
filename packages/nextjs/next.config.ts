@@ -66,6 +66,15 @@ const nextConfig: NextConfig = {
           { key: "Connection", value: "keep-alive" },
         ],
       },
+      {
+        source: "/ponder/sql/live",
+        headers: [
+          { key: "Cache-Control", value: "no-cache" },
+          { key: "X-Accel-Buffering", value: "no" },
+          { key: "Content-Type", value: "text/event-stream" },
+          { key: "Connection", value: "keep-alive" },
+        ],
+      },
     ];
   },
   webpack: config => {
