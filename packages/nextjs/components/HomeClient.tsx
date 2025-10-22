@@ -666,8 +666,8 @@ export default function HomeClient({
     );
   }
 
-  const signature = "🔥 @firebid by @nikolaii.eth";
-  const signatureTwitter = "🔥 @Firebid_eth by @NikolaiLeb";
+  const signature = "🔥 @firebid on $Celo by @nikolaii.eth";
+  const signatureTwitter = "🔥 @Firebid_eth on @Celo by @NikolaiLeb";
 
   // let change it to: The pot is 4.49 USDC—place a 0.03 bid and win half of it!
   //

@@ -102,7 +102,6 @@ export async function GET(req: NextRequest) {
     // Declare variables outside try block so they're accessible in the image generation
     let auctionAmountFormatted = "100";
     let timeRemainingFormatted = "300";
-    let nextBidFormatted = "1";
     let auction: any = null;
     let tokenMeta: { tokenAddress: `0x${string}`; symbol: string; decimals: number } | null = null;
     let isActive = false;
@@ -153,18 +152,15 @@ export async function GET(req: NextRequest) {
         auctionAmount: currentAuction[2] || "0",
         startTime: currentAuction[3] || "0",
         endTime: currentAuction[4] || "0",
-        streamingEndTime: currentAuction[5] || "0",
-        startingAmount: currentAuction[6] || "0",
-        bidIncrement: currentAuction[7] || "0",
-        referralFee: currentAuction[8] || "0",
-        platformFee: currentAuction[9] || "0",
-        bidCount: currentAuction[10] || 0,
-        highestBid: currentAuction[11] || "0",
-        highestBidder: currentAuction[12] || "",
-        blockNumber: currentAuction[13] || "0",
-        logIndex: currentAuction[14] || 0,
-        timestamp: currentAuction[15] || "0",
-        ended: currentAuction[16] || false,
+        referralFee: currentAuction[5] || "0",
+        deployerFee: currentAuction[6] || "0",
+        bidFee: currentAuction[7] || "0",
+        bidCount: currentAuction[8] || 0,
+        highestBidder: currentAuction[9] || "",
+        blockNumber: currentAuction[10] || "0",
+        logIndex: currentAuction[11] || 0,
+        timestamp: currentAuction[12] || "0",
+        ended: currentAuction[13] || false,
       };
 
       // Check if auction is still active
@@ -198,18 +194,10 @@ export async function GET(req: NextRequest) {
       // Safely format token amounts with fallbacks
       try {
         auctionAmountFormatted = formatToken(BigInt(auction.auctionAmount || "0"));
-        nextBidFormatted = formatToken(
-          BigInt(
-            BigInt(auction.highestBid) > 0
-              ? BigInt(auction.highestBid) + BigInt(auction.bidIncrement)
-              : BigInt(auction.startingAmount),
-          ),
-        );
       } catch (formatError) {
         console.error("Error formatting USDC amounts:", formatError);
         // Use fallback values
-        auctionAmountFormatted = "100.00";
-        nextBidFormatted = "1.00";
+        auctionAmountFormatted = "1.00";
       }
 
       // Validate auction data
@@ -286,7 +274,7 @@ export async function GET(req: NextRequest) {
               {
                 style: {
                   fontSize: "100px",
-                  fontFamily: "RubikBlack",
+                  fontFamily: "NotoSansBold",
                   color: "#fcff52",
                   marginRight: "8px",
                 },
@@ -339,7 +327,7 @@ export async function GET(req: NextRequest) {
                     style: {
                       fontSize: "36px",
                       fontWeight: "800",
-                      fontFamily: "RubikBlack",
+                      fontFamily: "NotoSansBold",
                       color: "#2FC61E",
                       paddingLeft: "10px",
                       paddingRight: "10px",
@@ -474,7 +462,7 @@ export async function GET(req: NextRequest) {
                   fontFamily: "RubikBold",
                 },
               },
-              isActive ? `Bid ${nextBidFormatted} ${tokenSymbol}` : `Start a New Auction`,
+              isActive ? `Click & Win!` : `Start a New Game`,
             ),
           ),
 
@@ -555,6 +543,11 @@ export async function GET(req: NextRequest) {
           {
             name: "RubikLight",
             data: await loadGoogleFont("Rubik:wght@300"),
+            style: "normal",
+          },
+          {
+            name: "NotoSansBold",
+            data: await loadGoogleFont("Noto+Sans+Mono:wght@700"),
             style: "normal",
           },
         ],
