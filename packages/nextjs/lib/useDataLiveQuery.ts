@@ -4,7 +4,8 @@ import { useEffect } from "react";
 import { QueryFunction, QueryKey, useQuery, useQueryClient } from "@tanstack/react-query";
 
 const baseUrl = (process.env.NEXT_PUBLIC_PONDER_URL ?? "http://localhost:42069").replace(/\/$/, "");
-const liveUrl = `${baseUrl}/live/data`;
+//const liveUrl = `${baseUrl}/live/data`;
+const liveUrl = `${baseUrl}/sql/live`;
 
 // Window-scoped singleton to avoid multiple EventSource connections across modules/chunks.
 type GlobalLive = {

@@ -7,9 +7,10 @@ export const bidPlaced = onchainTable("bidPlaced", (t) => ({
   hash: t.text().notNull(),
   auctionId: t.bigint().notNull(),
   bidder: t.hex().notNull(),
-  amount: t.bigint().notNull(),
   referral: t.hex().notNull(),
   endTime: t.bigint().notNull(),
+  auctionAmount: t.bigint().notNull(),
+  bidCount: t.bigint().notNull(),
   blockNumber: t.bigint().notNull(),
   logIndex: t.integer().notNull(),
   timestamp: t.bigint().notNull(),
@@ -24,14 +25,12 @@ export const auctionCreated = onchainTable("auctionCreated", (t) => ({
   auctionAmount: t.bigint().notNull(),
   startTime: t.bigint().notNull(),
   endTime: t.bigint().notNull(),
-  streamingEndTime: t.bigint().notNull(),
-  startingAmount: t.bigint().notNull(),
-  bidIncrement: t.bigint().notNull(),
   referralFee: t.bigint().notNull(),
-  platformFee: t.bigint().notNull(),
-  bidCount: t.integer().notNull(),
-  highestBid: t.bigint().notNull(),
-  highestBidder: t.hex().notNull(),
+  deployerFee: t.bigint().notNull(),
+  bidFee: t.bigint().notNull(),
+  // Computed fields that get updated by BidPlaced events
+  bidCount: t.integer().notNull().default(0),
+  highestBidder: t.hex().notNull().default("0x0000000000000000000000000000000000000000"),
   blockNumber: t.bigint().notNull(),
   logIndex: t.integer().notNull(),
   timestamp: t.bigint().notNull(),
@@ -45,41 +44,9 @@ export const auctionEnded = onchainTable("auctionEnded", (t) => ({
   hash: t.text().notNull(),
   winner: t.hex().notNull(),
   amount: t.bigint().notNull(),
-  highestBid: t.bigint().notNull(),
   blockNumber: t.bigint().notNull(),
   logIndex: t.integer().notNull(),
   timestamp: t.bigint().notNull(),
 }), (table) => ({
   winnerIdx: index().on(table.winner),
 }));
-
-// Streaming data table with unique key based on auctionId and address
-export const streamingData = onchainTable("streamingData", (t) => ({
-  id: t.text().primaryKey(), // `${auctionId}-${address}`
-  auctionId: t.bigint().notNull(),
-  address: t.hex().notNull(),
-  units: t.bigint().notNull(),
-  balance: t.bigint().notNull(),
-  flowRate: t.bigint().notNull(),
-  lastUpdated: t.bigint().notNull(),
-  blockNumber: t.bigint().notNull(),
-  timestamp: t.bigint().notNull(),
-}), (table) => ({
-  auctionIdx: index().on(table.auctionId),
-  addressIdx: index().on(table.address),
-  auctionAddressIdx: index().on(table.auctionId, table.address),
-}));
-
-
-//
-// uint256 auctionAmount;
-// uint256 startTime;
-// uint256 endTime;
-// uint256 startingAmount;
-// uint256 bidIncrement;
-// uint256 referralFee;
-// uint256 platformFee;
-// uint256 bidCount;
-// address highestBidder;
-// uint256 highestBid;
-// bool ended;

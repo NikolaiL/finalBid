@@ -46,7 +46,7 @@
     "ponder:db": "yarn workspace @se-2/ponder db",
     "ponder:lint": "yarn workspace @se-2/ponder lint",
     "ponder:serve": "yarn workspace @se-2/ponder serve",
-    "ponder:start": "yarn workspace @se-2/ponder start",
+    "ponder:start": "yarn workspace @se-2/ponder start -p 42072",
     "ponder:typecheck": "yarn workspace @se-2/ponder typecheck",
     "precommit": "lint-staged",
     "start": "yarn workspace @se-2/nextjs dev",
@@ -66,6 +66,6 @@
   },
   "dependencies": {
     "ethers": "^6.15.0",
-    "hardhat": "latest"
+    "hardhat": "^3.0.7"
   }
 }

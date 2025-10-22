@@ -23,8 +23,6 @@ type Query {
   auctionCreateds(where: auctionCreatedFilter, orderBy: String, orderDirection: String, before: String, after: String, limit: Int): auctionCreatedPage!
   auctionEnded(auctionId: BigInt!): auctionEnded
   auctionEndeds(where: auctionEndedFilter, orderBy: String, orderDirection: String, before: String, after: String, limit: Int): auctionEndedPage!
-  streamingData(id: String!): streamingData
-  streamingDatas(where: streamingDataFilter, orderBy: String, orderDirection: String, before: String, after: String, limit: Int): streamingDataPage!
   _meta: Meta
 }
 
@@ -33,9 +31,10 @@ type bidPlaced {
   hash: String!
   auctionId: BigInt!
   bidder: String!
-  amount: BigInt!
   referral: String!
   endTime: BigInt!
+  auctionAmount: BigInt!
+  bidCount: BigInt!
   blockNumber: BigInt!
   logIndex: Int!
   timestamp: BigInt!
@@ -88,14 +87,6 @@ input bidPlacedFilter {
   bidder_ends_with: String
   bidder_not_starts_with: String
   bidder_not_ends_with: String
-  amount: BigInt
-  amount_not: BigInt
-  amount_in: [BigInt]
-  amount_not_in: [BigInt]
-  amount_gt: BigInt
-  amount_lt: BigInt
-  amount_gte: BigInt
-  amount_lte: BigInt
   referral: String
   referral_not: String
   referral_in: [String]
@@ -114,6 +105,22 @@ input bidPlacedFilter {
   endTime_lt: BigInt
   endTime_gte: BigInt
   endTime_lte: BigInt
+  auctionAmount: BigInt
+  auctionAmount_not: BigInt
+  auctionAmount_in: [BigInt]
+  auctionAmount_not_in: [BigInt]
+  auctionAmount_gt: BigInt
+  auctionAmount_lt: BigInt
+  auctionAmount_gte: BigInt
+  auctionAmount_lte: BigInt
+  bidCount: BigInt
+  bidCount_not: BigInt
+  bidCount_in: [BigInt]
+  bidCount_not_in: [BigInt]
+  bidCount_gt: BigInt
+  bidCount_lt: BigInt
+  bidCount_gte: BigInt
+  bidCount_lte: BigInt
   blockNumber: BigInt
   blockNumber_not: BigInt
   blockNumber_in: [BigInt]
@@ -146,13 +153,10 @@ type auctionCreated {
   auctionAmount: BigInt!
   startTime: BigInt!
   endTime: BigInt!
-  streamingEndTime: BigInt!
-  startingAmount: BigInt!
-  bidIncrement: BigInt!
   referralFee: BigInt!
-  platformFee: BigInt!
+  deployerFee: BigInt!
+  bidFee: BigInt!
   bidCount: Int!
-  highestBid: BigInt!
   highestBidder: String!
   blockNumber: BigInt!
   logIndex: Int!
@@ -211,30 +215,6 @@ input auctionCreatedFilter {
   endTime_lt: BigInt
   endTime_gte: BigInt
   endTime_lte: BigInt
-  streamingEndTime: BigInt
-  streamingEndTime_not: BigInt
-  streamingEndTime_in: [BigInt]
-  streamingEndTime_not_in: [BigInt]
-  streamingEndTime_gt: BigInt
-  streamingEndTime_lt: BigInt
-  streamingEndTime_gte: BigInt
-  streamingEndTime_lte: BigInt
-  startingAmount: BigInt
-  startingAmount_not: BigInt
-  startingAmount_in: [BigInt]
-  startingAmount_not_in: [BigInt]
-  startingAmount_gt: BigInt
-  startingAmount_lt: BigInt
-  startingAmount_gte: BigInt
-  startingAmount_lte: BigInt
-  bidIncrement: BigInt
-  bidIncrement_not: BigInt
-  bidIncrement_in: [BigInt]
-  bidIncrement_not_in: [BigInt]
-  bidIncrement_gt: BigInt
-  bidIncrement_lt: BigInt
-  bidIncrement_gte: BigInt
-  bidIncrement_lte: BigInt
   referralFee: BigInt
   referralFee_not: BigInt
   referralFee_in: [BigInt]
@@ -243,14 +223,22 @@ input auctionCreatedFilter {
   referralFee_lt: BigInt
   referralFee_gte: BigInt
   referralFee_lte: BigInt
-  platformFee: BigInt
-  platformFee_not: BigInt
-  platformFee_in: [BigInt]
-  platformFee_not_in: [BigInt]
-  platformFee_gt: BigInt
-  platformFee_lt: BigInt
-  platformFee_gte: BigInt
-  platformFee_lte: BigInt
+  deployerFee: BigInt
+  deployerFee_not: BigInt
+  deployerFee_in: [BigInt]
+  deployerFee_not_in: [BigInt]
+  deployerFee_gt: BigInt
+  deployerFee_lt: BigInt
+  deployerFee_gte: BigInt
+  deployerFee_lte: BigInt
+  bidFee: BigInt
+  bidFee_not: BigInt
+  bidFee_in: [BigInt]
+  bidFee_not_in: [BigInt]
+  bidFee_gt: BigInt
+  bidFee_lt: BigInt
+  bidFee_gte: BigInt
+  bidFee_lte: BigInt
   bidCount: Int
   bidCount_not: Int
   bidCount_in: [Int]
@@ -259,14 +247,6 @@ input auctionCreatedFilter {
   bidCount_lt: Int
   bidCount_gte: Int
   bidCount_lte: Int
-  highestBid: BigInt
-  highestBid_not: BigInt
-  highestBid_in: [BigInt]
-  highestBid_not_in: [BigInt]
-  highestBid_gt: BigInt
-  highestBid_lt: BigInt
-  highestBid_gte: BigInt
-  highestBid_lte: BigInt
   highestBidder: String
   highestBidder_not: String
   highestBidder_in: [String]
@@ -312,7 +292,6 @@ type auctionEnded {
   hash: String!
   winner: String!
   amount: BigInt!
-  highestBid: BigInt!
   blockNumber: BigInt!
   logIndex: Int!
   timestamp: BigInt!
@@ -363,14 +342,6 @@ input auctionEndedFilter {
   amount_lt: BigInt
   amount_gte: BigInt
   amount_lte: BigInt
-  highestBid: BigInt
-  highestBid_not: BigInt
-  highestBid_in: [BigInt]
-  highestBid_not_in: [BigInt]
-  highestBid_gt: BigInt
-  highestBid_lt: BigInt
-  highestBid_gte: BigInt
-  highestBid_lte: BigInt
   blockNumber: BigInt
   blockNumber_not: BigInt
   blockNumber_in: [BigInt]
@@ -387,105 +358,6 @@ input auctionEndedFilter {
   logIndex_lt: Int
   logIndex_gte: Int
   logIndex_lte: Int
-  timestamp: BigInt
-  timestamp_not: BigInt
-  timestamp_in: [BigInt]
-  timestamp_not_in: [BigInt]
-  timestamp_gt: BigInt
-  timestamp_lt: BigInt
-  timestamp_gte: BigInt
-  timestamp_lte: BigInt
-}
-
-type streamingData {
-  id: String!
-  auctionId: BigInt!
-  address: String!
-  units: BigInt!
-  balance: BigInt!
-  flowRate: BigInt!
-  lastUpdated: BigInt!
-  blockNumber: BigInt!
-  timestamp: BigInt!
-}
-
-type streamingDataPage {
-  items: [streamingData!]!
-  pageInfo: PageInfo!
-  totalCount: Int!
-}
-
-input streamingDataFilter {
-  AND: [streamingDataFilter]
-  OR: [streamingDataFilter]
-  id: String
-  id_not: String
-  id_in: [String]
-  id_not_in: [String]
-  id_contains: String
-  id_not_contains: String
-  id_starts_with: String
-  id_ends_with: String
-  id_not_starts_with: String
-  id_not_ends_with: String
-  auctionId: BigInt
-  auctionId_not: BigInt
-  auctionId_in: [BigInt]
-  auctionId_not_in: [BigInt]
-  auctionId_gt: BigInt
-  auctionId_lt: BigInt
-  auctionId_gte: BigInt
-  auctionId_lte: BigInt
-  address: String
-  address_not: String
-  address_in: [String]
-  address_not_in: [String]
-  address_contains: String
-  address_not_contains: String
-  address_starts_with: String
-  address_ends_with: String
-  address_not_starts_with: String
-  address_not_ends_with: String
-  units: BigInt
-  units_not: BigInt
-  units_in: [BigInt]
-  units_not_in: [BigInt]
-  units_gt: BigInt
-  units_lt: BigInt
-  units_gte: BigInt
-  units_lte: BigInt
-  balance: BigInt
-  balance_not: BigInt
-  balance_in: [BigInt]
-  balance_not_in: [BigInt]
-  balance_gt: BigInt
-  balance_lt: BigInt
-  balance_gte: BigInt
-  balance_lte: BigInt
-  flowRate: BigInt
-  flowRate_not: BigInt
-  flowRate_in: [BigInt]
-  flowRate_not_in: [BigInt]
-  flowRate_gt: BigInt
-  flowRate_lt: BigInt
-  flowRate_gte: BigInt
-  flowRate_lte: BigInt
-  lastUpdated: BigInt
-  lastUpdated_not: BigInt
-  lastUpdated_in: [BigInt]
-  lastUpdated_not_in: [BigInt]
-  lastUpdated_gt: BigInt
-  lastUpdated_lt: BigInt
-  lastUpdated_gte: BigInt
-  lastUpdated_lte: BigInt
-  blockNumber: BigInt
-  blockNumber_not: BigInt
-  blockNumber_in: [BigInt]
-  blockNumber_not_in: [BigInt]
-  blockNumber_gt: BigInt
-  blockNumber_lt: BigInt
-  blockNumber_gte: BigInt
-  blockNumber_lte: BigInt
   timestamp: BigInt
   timestamp_not: BigInt
   timestamp_in: [BigInt]

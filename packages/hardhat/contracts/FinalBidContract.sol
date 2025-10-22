@@ -22,27 +22,18 @@ contract FinalBidContract is Ownable, Pausable, ReentrancyGuard {
     // State Variables
     address public tokenAddress;
     uint256 public auctionId;
-    uint256 public auctionAmount = 100 * 10 ** 18; // 100 Celo
-    uint256 public auctionDuration = 14_400; // 4 hour
-    uint256 public auctionDurationIncrease = 45; // 45 seconds
-    uint256 public startingAmount = 0.01 * 10 ** 18; // 0.01 Celo
-    uint256 public bidIncrement = 0.01 * 10 ** 18; // 0.01 Celo
-    uint256 public referralFee = 0.1 * 10 ** 18; // 10 Celo
-    uint256 public platformFee = 1 * 10 ** 18; // 1 Celo
-    uint256 public deployerFee = 0.1 * 10 ** 18; // 0.1 Celo
-    uint256 public platformFeesCollected;
-    uint256 public platformFeesClaimed;
+    uint256 public auctionDuration = 600; // 600 seconds
+    uint256 public auctionDurationIncrease = 300; // 300 seconds
+    uint256 public startingAmount = 1 ether; // 1 Token
+    uint256 public referralFee = 0.1 ether; // 0.1 Token
+    uint256 public deployerFee = 0.1 ether; // 0.1 Token
+    uint256 public bidFee = 1 ether; // 1 Token
     uint256 public totalReferralRewardsCollected;
-    uint256 public percentageToWithdraw = 1;
-    uint256 public percentageToUse = 40;
     bool public newAuctionIsAllowed = false;
-    //uint256 public totalReferralRewardsClaimed;
     
     // Signature verification for bot prevention
     address public validSigner;
     uint256 public accessTokenValidity = 60; // 30 seconds
-
-    uint256 public streamingUnits = 0;
 
     struct AccessToken {
         address wallet;
@@ -55,60 +46,26 @@ contract FinalBidContract is Ownable, Pausable, ReentrancyGuard {
         uint256 auctionAmount;
         uint256 startTime;
         uint256 endTime;
-        uint256 streamingEndTime;
-        uint256 startingAmount;
-        uint256 bidIncrement;
         uint256 referralFee;
-        uint256 platformFee;
+        uint256 deployerFee;
+        uint256 bidFee;
         uint256 bidCount;
         address highestBidder;
-        uint256 highestBid;
         bool ended;
     }
 
-    struct Streaming {
-        uint256 units;
-        uint256 balance;
-        uint256 flowRate;
-        uint256 lastUpdated;
-    }
-
     mapping(uint256 => Auction) public auctions;
-
-    mapping(address => Streaming) public streamings;
-    address[] public streamingAddresses;
-
-    // mapping(address => uint256) public referralRewards;
-
-    event AuctionCreated(uint256 indexed auctionId, uint256 auctionAmount, uint256 startTime, uint256 endTime, uint256 streamingEndTime, uint256 startingAmount, uint256 bidIncrement, uint256 referralFee, uint256 platformFee);
-    event BidPlaced(uint256 indexed auctionId, address indexed bidder, uint256 amount, address indexed referral, uint256 endTime);
-    event AuctionEnded(uint256 indexed auctionId, address indexed winner, uint256 amount, uint256 highestBid);
+    event AuctionCreated(uint256 indexed auctionId, uint256 auctionAmount, uint256 startTime, uint256 endTime, uint256 referralFee, uint256 deployerFee, uint256 bidFee);
+    event BidPlaced(uint256 indexed auctionId, address indexed bidder, address indexed referral, uint256 endTime, uint256 auctionAmount, uint256 bidCount);
+    event AuctionEnded(uint256 indexed auctionId, address indexed winner, uint256 amount);
 
     // Admin update events
-    event AuctionAmountUpdated(uint256 oldAmount, uint256 newAmount);
     event AuctionDurationUpdated(uint256 oldDuration, uint256 newDuration);
-
-    // Function to get the length of streamingAddresses array
-    function getStreamingAddressesLength() public view returns (uint256) {
-        return streamingAddresses.length;
-    }
     event AuctionDurationIncreaseUpdated(uint256 oldIncrease, uint256 newIncrease);
     event StartingAmountUpdated(uint256 oldAmount, uint256 newAmount);
-    event BidIncrementUpdated(uint256 oldAmount, uint256 newAmount);
     event ReferralFeeUpdated(uint256 oldAmount, uint256 newAmount);
-    event PlatformFeeUpdated(uint256 oldAmount, uint256 newAmount);
+    event BidFeeUpdated(uint256 oldAmount, uint256 newAmount);
     event DeployerFeeUpdated(uint256 oldAmount, uint256 newAmount);
-
-    event StreamingBatchUpdate(
-        uint256 auctionId,
-        address[] participants,
-        uint256[] units,
-        uint256[] balances,
-        uint256[] flowRates,
-        uint256 lastUpdated,
-        uint256 totalUnits
-    );
-
     // Constructor: Called once on contract deployment
     // Check packages/hardhat/deploy/00_deploy_your_contract.ts
     constructor(address _owner, address _tokenAddress, address _validSigner) Ownable(_owner) {
@@ -117,150 +74,25 @@ contract FinalBidContract is Ownable, Pausable, ReentrancyGuard {
         validSigner = _validSigner;
     }
 
-    function _emitStreamingBatchUpdate() internal {
-        uint256 length = streamingAddresses.length;
-
-        address[] memory participants = new address[](length);
-        uint256[] memory units = new uint256[](length);
-        uint256[] memory balances = new uint256[](length);
-        uint256[] memory flowRates = new uint256[](length);
-        uint256 lastUpdated;
-        
-        
-
-        for (uint256 i = 0; i < length; i++) {
-            auctionId;
-            address addr = streamingAddresses[i];
-            Streaming storage s = streamings[addr];
-            participants[i] = addr;
-            units[i] = s.units;
-            balances[i] = s.balance;
-            flowRates[i] = s.flowRate;
-            lastUpdated = s.lastUpdated;
-        }
-
-        uint256 totalUnits = streamingUnits;
-
-        emit StreamingBatchUpdate(auctionId, participants, units, balances, flowRates, lastUpdated, totalUnits);
-    }
-
-    function _calculateFlowRatePerUnit() internal view returns (uint256) {
-        // calculate streaming per unit
-        // we need to calculate total length of the current auction
-        // then calculate total flow rate per second
-        // then divide it by streamingUnits
-        if (streamingUnits == 0) {
-            return 0;
-        }
-        uint256 auctionLength = auctions[auctionId].streamingEndTime - auctions[auctionId].startTime;
-        if (auctionLength == 0) {
-            return 0;
-        }
-        // Use a larger multiplier to avoid precision loss
-        uint256 totalFlowRate = (auctions[auctionId].auctionAmount / 2) * 1000 / auctionLength;
-        uint256 flowRatePerUnit = totalFlowRate / streamingUnits;
-        return flowRatePerUnit;
-    }
-
-    function _recalculateFlowRate() internal {
-        // recalculate streaming per unit
-        uint256 flowRatePerUnit = _calculateFlowRatePerUnit();
-
-        uint256 calculateUntil = auctions[auctionId].streamingEndTime;
-        if (block.timestamp < calculateUntil) {
-            calculateUntil = block.timestamp;
-        }
-
-        for (uint256 i = 0; i < streamingAddresses.length; i++) {
-            address streamingAddress = streamingAddresses[i];
-            Streaming storage streaming = streamings[streamingAddress];
-            // Accumulate balance using the flow rate
-            uint256 streamingTime = calculateUntil > streaming.lastUpdated ? calculateUntil - streaming.lastUpdated : 0;
-            streaming.balance += streaming.flowRate * streamingTime / 1000;
-            streaming.flowRate = flowRatePerUnit * streaming.units;
-            streaming.lastUpdated = calculateUntil;
-        }
-        _emitStreamingBatchUpdate();
-    }
-
-    function _finalizeStreaming() internal {
-        // recalculate first
-        _recalculateFlowRate();
-        // then send the balance to the streaming address
-        for (uint256 i = 0; i < streamingAddresses.length; i++) {
-            address streamingAddress = streamingAddresses[i];
-            Streaming storage streaming = streamings[streamingAddress];
-            if (streaming.balance > 0) {
-                IERC20(tokenAddress).safeTransfer(streamingAddress, streaming.balance);
-            }
-        }
-
-        
-        // delete streamings
-        for (uint256 i = 0; i < streamingAddresses.length; i++) {
-            address streamingAddress = streamingAddresses[i];
-            delete streamings[streamingAddress];
-        }
-        
-        // delete streamingAddresses
-        delete streamingAddresses;
-
-        // reset streamingUnits
-        streamingUnits = 0;
-    }
-
-    function _addStreamingUnits(address _address, uint256 _units) internal {
-
-        // first we will halfve all existing units and calculate total units in the system
-        uint256 totalUnits = 0;
-        bool addressExists = false;
-        for (uint256 i = 0; i < streamingAddresses.length; i++) {
-            address streamingAddress = streamingAddresses[i];
-            streamings[streamingAddress].units /= 2;
-            totalUnits += streamings[streamingAddress].units;
-            if (streamingAddress == _address) {
-                addressExists = true;
-            }
-        }
-        // Add address to array if it's the first time
-        if (!addressExists) {
-            streamingAddresses.push(_address);
-        }
-        streamings[_address].units += _units;
-        totalUnits += _units;
-        streamingUnits = totalUnits;
-        _recalculateFlowRate();
-    }
-
-    function _createAuction(uint256 _auctionId, address _tokenAddress, uint256 _startTime, uint256 _endTime, uint256 _startingAmount, uint256 _bidIncrement, uint256 _referralFee, uint256 _platformFee) internal {
+    function _createAuction(uint256 _auctionId, address _tokenAddress, uint256 _startTime, uint256 _endTime, uint256 _startingAmount, uint256 _referralFee, uint256 _deployerFee, uint256 _bidFee) internal {
         // check if _auctionAmount is available
         uint256 availableAmount = IERC20(_tokenAddress).balanceOf(address(this));
         //uint256 totalReferralFees = totalReferralRewardsCollected - totalReferralRewardsClaimed;
-        require (availableAmount * percentageToUse / 100 > _startingAmount + _bidIncrement, "Insufficient balance to start auction");
-        uint256 auctionAmountToUse = availableAmount * percentageToUse / 100;
-
-        
-        if (availableAmount > auctionAmountToUse && percentageToWithdraw > 0) {
-            uint256 amountToWithdraw = availableAmount * percentageToWithdraw / 100;
-            _withdrawExcess(amountToWithdraw);
-        }
+        require (availableAmount > _startingAmount, "Insufficient balance to start auction");
 
         auctions[_auctionId] = Auction({
-            auctionAmount: auctionAmountToUse,
+            auctionAmount: _startingAmount,
             startTime: _startTime,
             endTime: _endTime,
-            streamingEndTime: _endTime,
-            startingAmount: _startingAmount,
-            bidIncrement: _bidIncrement,
             referralFee: _referralFee,
-            platformFee: _platformFee,
+            deployerFee: _deployerFee,
+            bidFee: _bidFee,
             bidCount: 0,
             highestBidder: address(0),
-            highestBid: 0,
             ended: false
         });
 
-        emit AuctionCreated(auctionId, auctionAmountToUse, _startTime, _endTime, _endTime, _startingAmount, _bidIncrement, _referralFee, _platformFee);
+        emit AuctionCreated(auctionId, _startingAmount, _startTime, _endTime, _referralFee, _deployerFee, _bidFee);
 
 
     }
@@ -282,19 +114,16 @@ contract FinalBidContract is Ownable, Pausable, ReentrancyGuard {
         Auction storage auction = auctions[_auctionId];
         require (_auctionId > 0 && _auctionId <= auctionId, "Auction not found");
         require(auction.ended == false, "Auction already ended");
-        require(auction.endTime < block.timestamp || auction.highestBid >= auction.auctionAmount, "Auction not ended");
+        require(auction.endTime < block.timestamp, "Auction not ended");
 
         auction.ended = true;
-        
-        // Finalize streaming before paying the winner
-        _finalizeStreaming();
         
         if (auction.highestBidder != address(0)) {
             // pay the winner
             IERC20 token = IERC20(tokenAddress);
-            token.safeTransfer(auction.highestBidder, auction.auctionAmount / 2);
+            token.safeTransfer(auction.highestBidder, auction.auctionAmount);
         }
-        emit AuctionEnded(_auctionId, auction.highestBidder, auction.auctionAmount, auction.highestBid);
+        emit AuctionEnded(_auctionId, auction.highestBidder, auction.auctionAmount);
     }
 
     function startAuction() public whenNotPaused nonReentrant {
@@ -305,14 +134,14 @@ contract FinalBidContract is Ownable, Pausable, ReentrancyGuard {
         // if auctionId > 0, we need to finalize the old auction, pay the winner etc...
         auctionId ++;
         // create new auction
-        _createAuction(auctionId, tokenAddress, block.timestamp, block.timestamp + auctionDuration, startingAmount, bidIncrement, referralFee, platformFee);
+        _createAuction(auctionId, tokenAddress, block.timestamp, block.timestamp + auctionDuration, startingAmount, referralFee, deployerFee, bidFee);
         
     }
 
     function endAuction() public whenNotPaused nonReentrant {
         Auction storage auction = auctions[auctionId];
         require(auction.ended == false, "Auction already ended");
-        require(auction.endTime < block.timestamp || auction.highestBid >= auction.auctionAmount, "Auction not ended");
+        require(auction.endTime < block.timestamp, "Auction not ended");
         _finalizeAuction(auctionId);
     }
 
@@ -323,8 +152,7 @@ contract FinalBidContract is Ownable, Pausable, ReentrancyGuard {
         Auction storage auction = auctions[auctionId];
         require(auction.startTime <= block.timestamp && auction.endTime > block.timestamp && auction.ended == false, "Auction not active");
         require(auction.highestBidder != msg.sender, "You are already the highest bidder");
-        uint256 _bidAmount = (auction.highestBid == 0) ? auction.startingAmount : auction.highestBid + auction.bidIncrement;
-        uint256 _totalBidAmount = _bidAmount + platformFee;
+        uint256 _totalBidAmount = auction.bidFee;
 
         IERC20 token = IERC20(tokenAddress);
 
@@ -333,10 +161,6 @@ contract FinalBidContract is Ownable, Pausable, ReentrancyGuard {
         require(balance >= _totalBidAmount, "Insufficient balance");
         uint256 allowance = token.allowance(msg.sender, address(this));
         require(allowance >= _totalBidAmount, "Insufficient allowance");
-
-        // Snapshot previous highest
-        address previousHighestBidder = auction.highestBidder;
-        uint256 previousHighestBid = auction.highestBid;
 
         // Interactions
         token.safeTransferFrom(msg.sender, address(this), _totalBidAmount);
@@ -348,30 +172,24 @@ contract FinalBidContract is Ownable, Pausable, ReentrancyGuard {
 
         // Effects
         auction.highestBidder = msg.sender;
-        auction.highestBid = _bidAmount;
         auction.bidCount++;
-        if (auction.endTime - block.timestamp < auctionDurationIncrease && _bidAmount < auction.auctionAmount) {
-            auction.endTime += auctionDurationIncrease;
+        if (auction.endTime - block.timestamp < auctionDurationIncrease) {
+            auction.endTime = block.timestamp +auctionDurationIncrease;
         }
 
-        // send previous highest bidder their bid back
-        if (previousHighestBidder != address(0)) {
-            token.safeTransfer(previousHighestBidder, previousHighestBid);
-        }
+        auction.auctionAmount += (bidFee - referralFee - deployerFee);
+
+        // pay the referral and deployer fees
         if (_referral != address(0)) {
             token.safeTransfer(_referral, referralFee);
-            token.safeTransfer(owner(), deployerFee);
+            //token.safeTransfer(owner(), deployerFee);
             totalReferralRewardsCollected += referralFee;
         } else {
-            token.safeTransfer(owner(), referralFee+deployerFee);
+            //token.safeTransfer(owner(), referralFee+deployerFee);
         }
 
-        // add streamin units
-        _addStreamingUnits(msg.sender, 1024);
-
-        platformFeesCollected += (platformFee - referralFee - deployerFee);
-
-        emit BidPlaced(auctionId, msg.sender, _bidAmount, _referral, auction.endTime);
+        // emit event
+        emit BidPlaced(auctionId, msg.sender, _referral, auction.endTime, auction.auctionAmount, auction.bidCount);
     }
 
     function pause() public onlyOwner {
@@ -383,13 +201,6 @@ contract FinalBidContract is Ownable, Pausable, ReentrancyGuard {
     }
 
     // --- Admin setters ---
-
-    function setAuctionAmount(uint256 _auctionAmount) external onlyOwner {
-        require(_auctionAmount > 0, "auctionAmount must be > 0");
-        uint256 old = auctionAmount;
-        auctionAmount = _auctionAmount;
-        emit AuctionAmountUpdated(old, _auctionAmount);
-    }
 
     function setAuctionDuration(uint256 _auctionDuration) external onlyOwner {
         require(_auctionDuration > 0, "auctionDuration must be > 0");
@@ -411,50 +222,26 @@ contract FinalBidContract is Ownable, Pausable, ReentrancyGuard {
         emit StartingAmountUpdated(old, _startingAmount);
     }
 
-    function setBidIncrement(uint256 _bidIncrement) external onlyOwner {
-        require(_bidIncrement > 0, "bidIncrement must be > 0");
-        uint256 old = bidIncrement;
-        bidIncrement = _bidIncrement;
-        emit BidIncrementUpdated(old, _bidIncrement);
-    }
-
     function setReferralFee(uint256 _referralFee) external onlyOwner {
-        require(_referralFee <= platformFee-deployerFee, "referralFee + deployerFee cannot exceed platformFee");
+        require(_referralFee <= bidFee-deployerFee, "referralFee + deployerFee cannot exceed bidFee");
         uint256 old = referralFee;
         referralFee = _referralFee;
         emit ReferralFeeUpdated(old, _referralFee);
     }
 
     function setDeployerFee(uint256 _deployerFee) external onlyOwner {
-        require(_deployerFee <= platformFee-referralFee, "referralFee + deployerFee cannot exceed platformFee");
+        require(_deployerFee <= bidFee-referralFee, "referralFee + deployerFee cannot exceed bidFee");
         uint256 old = deployerFee;
         deployerFee = _deployerFee;
         emit DeployerFeeUpdated(old, _deployerFee);
     }
 
-    function setPlatformFee(uint256 _platformFee) external onlyOwner {
-        require(_platformFee > 0, "platformFee must be > 0");
-        require(referralFee + deployerFee <= _platformFee, "referralFee + deployerFee cannot exceed platformFee");
-        uint256 old = platformFee;
-        platformFee = _platformFee;
-        // Ensure referralFee is not larger than platformFee after update
-        if (referralFee > platformFee) {
-            referralFee = platformFee;
-        }
-        emit PlatformFeeUpdated(old, _platformFee);
-    }
-
-    function setPercentageToWithdraw(uint256 _percentageToWithdraw) external onlyOwner {
-        require(_percentageToWithdraw <= 100, "percentageToWithdraw must be <= 100");
-        require(_percentageToWithdraw + percentageToUse <= 100, "percentageToWithdraw + percentageToUse cannot exceed 100");
-        percentageToWithdraw = _percentageToWithdraw;
-    }
-
-    function setPercentageToUse(uint256 _percentageToUse) external onlyOwner {
-        require(_percentageToUse > 0, "percentageToUse must be > 0");
-        require(_percentageToUse <= 100, "percentageToUse must be <= 100");
-        require(_percentageToUse + percentageToWithdraw <= 100, "percentageToUse + percentageToWithdraw cannot exceed 100");
-        percentageToUse = _percentageToUse;
+    function setBidFee(uint256 _bidFee) external onlyOwner {
+        require(_bidFee > 0, "bidFee must be > 0");
+        require(referralFee + deployerFee <= _bidFee, "referralFee + deployerFee cannot exceed bidFee");
+        uint256 old = bidFee;
+        bidFee = _bidFee;
+        emit BidFeeUpdated(old, _bidFee);
     }
 
     function setNewAuctionIsAllowed() external onlyOwner {
@@ -474,37 +261,6 @@ contract FinalBidContract is Ownable, Pausable, ReentrancyGuard {
         require(success, "Failed to send Ether");
     }
 
-    function withdrawPlatformFees() public onlyOwner nonReentrant {
-        // withdraw from token contract
-        require(platformFeesCollected > platformFeesClaimed, "No fees to claim");
-        IERC20 token = IERC20(tokenAddress);
-        //get balance of token
-        uint256 tokenBalance = token.balanceOf(address(this));
-        uint256 platfromFeesToClaim = platformFeesCollected - platformFeesClaimed;
-        if (platfromFeesToClaim > tokenBalance) {
-            platfromFeesToClaim = tokenBalance;
-        }
-        // Effects
-        platformFeesClaimed += platfromFeesToClaim;
-        // Interactions
-        token.safeTransfer(owner(), platfromFeesToClaim);
-    }
-
-    /**
-     * function that allows a referral to withdraw his referral fees
-     * removed as we will pay the referral fee to the referral directly
-     */
-    // function withdrawReferralRewards() public {
-    //     require(referralRewards[msg.sender] > 0, "No rewards to claim");
-    //     IERC20 token = IERC20(tokenAddress);
-    //     token.transfer(msg.sender, referralRewards[msg.sender]);
-    //     totalReferralRewardsClaimed += referralRewards[msg.sender];
-    //     referralRewards[msg.sender] = 0;
-    // }
-
-    /**
-     * Function that allows the contract to receive ETH
-     */
     receive() external payable {}
     
     // Signature verification functions for bot prevention
@@ -559,6 +315,4 @@ contract FinalBidContract is Ownable, Pausable, ReentrancyGuard {
         require(_accessTokenValidity > 0, "Access token validity must be greater than 0");
         accessTokenValidity = _accessTokenValidity;
     }
-
-
 }

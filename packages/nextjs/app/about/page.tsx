@@ -46,16 +46,16 @@ export default function AboutPage() {
   });
   const tokenDecimals = Number(tokenDecimalsRaw ?? 6);
 
-  // Live: latest auction (to get platformFee & referralFee values currently in-play)
+  // Live: latest auction (to get bidFee & referralFee values currently in-play)
   const latestAuctionQuery: any = useDataLiveQuery(latestAuctionCreatedQueryOptions as any);
   const latestAuction = useMemo(() => (latestAuctionQuery?.data ?? [])[0], [latestAuctionQuery?.data]);
 
   // Fallback to contract-level values if event missing
-  const platformFee = (latestAuction?.platformFee as bigint) ?? (0n as bigint);
+  const bidFee = (latestAuction?.bidFee as bigint) ?? (0n as bigint);
   const referralFee = (latestAuction?.referralFee as bigint) ?? (0n as bigint);
 
-  const referralFeePercentage = Math.round((Number(referralFee) / Number(platformFee)) * 100);
-  const deployerFeePercentage = Math.round((Number(deployerFee) / Number(platformFee)) * 100);
+  const referralFeePercentage = Math.round((Number(referralFee) / Number(bidFee)) * 100);
+  const deployerFeePercentage = Math.round((Number(deployerFee) / Number(bidFee)) * 100);
   const nextPrizePercentage = Math.round(100 - referralFeePercentage - deployerFeePercentage);
 
   // Read auctionDurationIncrease directly from contract (seconds)
@@ -76,24 +76,16 @@ export default function AboutPage() {
           <h3 className="text-xl font-bold mt-8 mb-4 text-primary">How it works</h3>
           <ul className="list-disc ml-6 space-y-2">
             <li>
-              <span className="font-semibold">Highest bid wins 1/2 of the prize pot</span> — the final top bidder
-              receives 1/2 of the prize pot.
+              <span className="font-semibold">Highest bidder wins the entire prize pot</span> — the final top bidder
+              receives the full auction amount when time runs out!
             </li>
             <li>
-              <span className="font-semibold">
-                The other 1/2 of the prize pot is streamed to the last 10 bidders, based on their bid amount -{" "}
-              </span>
-              bid early to start your stream, bid often to increase it.
-            </li>
-            <li>If you’re outbid, your bid is immediately returned to you on the next bid.</li>
-            <li>
-              There’s a bidding fee of
+              Each bid costs
               <span className="font-bold mx-1">
-                {formatToken(platformFee || 0n, tokenDecimals)} {String(tokenSymbol ?? "")}
+                {formatToken(bidFee || 0n, tokenDecimals)} {String(tokenSymbol ?? "")}
               </span>
-              per bid. This fee is not refunded. {nextPrizePercentage}% of the fee is used to provide the next auction
-              prize. {referralFeePercentage}% is paid to referrals. {deployerFeePercentage}% is used to pay for the
-              platform, server costs, and other expenses.
+              and increases the prize pot by {nextPrizePercentage}% of the fee. The rest goes to referrals (
+              {referralFeePercentage}%) and platform costs ({deployerFeePercentage}%).
             </li>
             <li>
               Share your link and earn a referral reward of

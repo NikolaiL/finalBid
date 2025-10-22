@@ -13,7 +13,7 @@ import {
   useScaffoldWriteContract,
   useTransactor,
 } from "~~/hooks/scaffold-eth";
-import { useAllStreamingData, useStreamingData } from "~~/hooks/useStreamingData";
+// Streaming data hooks removed - not in current contract
 import {
   auctionCreatedQueryOptions,
   auctionEndedQueryOptions,
@@ -22,6 +22,7 @@ import {
 import { getAddressDisplayName } from "~~/lib/farcaster";
 import { formatTimeAgo, getServerTime, useServerTimeDrift } from "~~/lib/global-time";
 import { useDataLiveQuery } from "~~/lib/useDataLiveQuery";
+import scaffoldConfig from "~~/scaffold.config";
 
 const _getReferralTag = (address: string) => {
   const tag = getReferralTag({
@@ -33,7 +34,9 @@ const _getReferralTag = (address: string) => {
 };
 
 const _submitReferral = (receipt: any) => {
-  submitReferral({ txHash: receipt.transactionHash, chainId: receipt.chainId });
+  const chainId = scaffoldConfig.targetNetworks[0].id;
+  //console.log("Submitting referral...", receipt.transactionHash, chainId);
+  submitReferral({ txHash: receipt.transactionHash, chainId: chainId });
 };
 
 const DISPLAY_DECIMALS = Number(process.env.NEXT_PUBLIC_DISPLAY_DECIMALS) ?? 2;
@@ -48,289 +51,6 @@ const formatToken = (amount: bigint | 0n, decimals: number = DISPLAY_DECIMALS): 
 const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
 
 // formatTimeAgoBrief function removed - now using blockchain-synchronized formatTimeAgo
-
-// Component for displaying real-time streaming amounts with pre-fetched data
-const StreamingAmountWithData = ({ address, allStreamingData }: { address: string; allStreamingData: any[] }) => {
-  // Find streaming data for the specific address
-  const streamingData = allStreamingData.find((data: any) => data.address?.toLowerCase() === address.toLowerCase());
-
-  if (!streamingData || streamingData.streamingAmountDisplay === 0) {
-    return <div className="text-base-content/50">&nbsp;</div>;
-  }
-
-  return (
-    <div className="text-success font-mono">
-      +
-      <NumberFlow
-        value={streamingData.streamingAmountDisplay}
-        format={{
-          notation: "standard",
-          useGrouping: false,
-          minimumFractionDigits: 5,
-          maximumFractionDigits: 5,
-        }}
-      />
-    </div>
-  );
-};
-
-// Component for displaying potential loss/profit with streaming amounts
-const PotentialAmounts = ({
-  address,
-  auctionId,
-  totalFees,
-  auctionValue,
-  nextBidAmount,
-  showOnlyLoss = false,
-  showOnlyProfit = false,
-  showStopNowOutcome = false,
-  tokenSymbol = "",
-}: {
-  address: string;
-  auctionId: bigint | undefined;
-  totalFees: bigint;
-  auctionValue: bigint;
-  nextBidAmount: bigint;
-  showOnlyLoss?: boolean;
-  showOnlyProfit?: boolean;
-  showStopNowOutcome?: boolean;
-  tokenSymbol?: string;
-}) => {
-  const { streamingAmount } = useStreamingData(address, auctionId);
-
-  // Calculate potential loss and profit with streaming
-  const actualLoss = useMemo(() => {
-    return streamingAmount - totalFees;
-  }, [totalFees, streamingAmount]);
-
-  const actualProfit = useMemo(() => {
-    return BigInt(Math.floor(Number(auctionValue) / 2)) - totalFees - nextBidAmount + streamingAmount;
-  }, [auctionValue, totalFees, nextBidAmount, streamingAmount]);
-
-  // Convert to display values
-  const lossValue = Number(actualLoss) / 10 ** TOKEN_DECIMALS;
-  const profitValue = Number(actualProfit) / 10 ** TOKEN_DECIMALS;
-
-  if (showOnlyLoss) {
-    return (
-      <NumberFlow
-        value={Math.abs(lossValue)}
-        format={{
-          notation: "standard",
-          useGrouping: false,
-          minimumFractionDigits: 2,
-          maximumFractionDigits: 2,
-        }}
-      />
-    );
-  }
-
-  if (showOnlyProfit) {
-    return (
-      <NumberFlow
-        value={profitValue}
-        format={{
-          notation: "standard",
-          useGrouping: false,
-          minimumFractionDigits: 2,
-          maximumFractionDigits: 2,
-        }}
-        prefix={actualProfit > 0n ? "+" : ""}
-      />
-    );
-  }
-
-  if (showStopNowOutcome) {
-    const isWinning = actualLoss > 0n;
-    return (
-      <>
-        <div className="text-base font-bold text-base-content/90">Stop Now </div>
-        <div className="text-sm text-base-content/70">and you {isWinning ? "win" : "lose"}</div>
-        <div className={`text-xl font-bold font-mono ${isWinning ? "text-success" : "text-error"}`}>
-          <NumberFlow
-            value={Math.abs(lossValue)}
-            format={{
-              notation: "standard",
-              useGrouping: false,
-              minimumFractionDigits: 2,
-              maximumFractionDigits: 2,
-            }}
-            prefix={actualLoss > 0n ? "+" : ""}
-          />
-        </div>
-        <div className="text-xs text-base-content/50">{tokenSymbol}</div>
-      </>
-    );
-  }
-
-  return (
-    <>
-      <div
-        className={
-          actualLoss === 0n
-            ? "text-base-content/50"
-            : actualLoss > 0n
-              ? "font-bold text-success"
-              : "font-bold text-error"
-        }
-      >
-        <NumberFlow
-          value={Math.abs(lossValue)}
-          format={{
-            notation: "standard",
-            useGrouping: false,
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 2,
-          }}
-          prefix={actualLoss > 0n ? "+" : "-"}
-        />
-      </div>
-      <div className={actualProfit > 0n ? "font-bold text-success" : "font-bold text-error"}>
-        <NumberFlow
-          value={profitValue}
-          format={{
-            notation: "standard",
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 2,
-          }}
-          prefix={actualProfit > 0n ? "+" : ""}
-        />
-      </div>
-    </>
-  );
-};
-
-// Component for displaying potential loss/profit with pre-fetched streaming data
-const PotentialAmountsWithData = ({
-  address,
-  allStreamingData,
-  totalFees,
-  auctionValue,
-  nextBidAmount,
-  showOnlyLoss = false,
-  showOnlyProfit = false,
-  showStopNowOutcome = false,
-  tokenSymbol = "",
-}: {
-  address: string;
-  allStreamingData: any[];
-  totalFees: bigint;
-  auctionValue: bigint;
-  nextBidAmount: bigint;
-  showOnlyLoss?: boolean;
-  showOnlyProfit?: boolean;
-  showStopNowOutcome?: boolean;
-  tokenSymbol?: string;
-}) => {
-  // Find streaming data for the specific address
-  const streamingData = allStreamingData.find((data: any) => data.address?.toLowerCase() === address.toLowerCase());
-
-  const streamingAmount = streamingData?.calculatedAmount || 0n;
-
-  // Calculate potential loss and profit with streaming
-  const actualLoss = useMemo(() => {
-    return streamingAmount - totalFees;
-  }, [totalFees, streamingAmount]);
-
-  const actualProfit = useMemo(() => {
-    return BigInt(Math.floor(Number(auctionValue) / 2)) - totalFees - nextBidAmount + streamingAmount;
-  }, [auctionValue, totalFees, nextBidAmount, streamingAmount]);
-
-  // Convert to display values
-  const lossValue = Number(actualLoss) / 10 ** TOKEN_DECIMALS;
-  const profitValue = Number(actualProfit) / 10 ** TOKEN_DECIMALS;
-
-  if (showOnlyLoss) {
-    return (
-      <NumberFlow
-        value={Math.abs(lossValue)}
-        format={{
-          notation: "standard",
-          useGrouping: false,
-          minimumFractionDigits: 2,
-          maximumFractionDigits: 2,
-        }}
-      />
-    );
-  }
-
-  if (showOnlyProfit) {
-    return (
-      <NumberFlow
-        value={profitValue}
-        format={{
-          notation: "standard",
-          useGrouping: false,
-          minimumFractionDigits: 2,
-          maximumFractionDigits: 2,
-        }}
-        prefix={actualProfit > 0n ? "+" : ""}
-      />
-    );
-  }
-
-  if (showStopNowOutcome) {
-    const isWinning = actualLoss > 0n;
-    return (
-      <>
-        <div className="text-base font-bold text-base-content/90">Stop Now </div>
-        <div className="text-sm text-base-content/70">and you {isWinning ? "win" : "lose"}</div>
-        <div className={`text-xl font-bold font-mono ${isWinning ? "text-success" : "text-error"}`}>
-          <NumberFlow
-            value={Math.abs(lossValue)}
-            format={{
-              notation: "standard",
-              useGrouping: false,
-              minimumFractionDigits: 2,
-              maximumFractionDigits: 2,
-            }}
-            prefix={actualLoss > 0n ? "+" : ""}
-          />
-        </div>
-        <div className="text-xs text-base-content/50">{tokenSymbol}</div>
-      </>
-    );
-  }
-
-  return (
-    <>
-      <div className={actualProfit > 0n ? "font-bold text-success" : "font-bold text-error"}>
-        <NumberFlow
-          value={profitValue}
-          format={{
-            notation: "standard",
-            useGrouping: false,
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 2,
-          }}
-          animated={false}
-          prefix={actualProfit > 0n ? "+" : ""}
-        />
-      </div>
-      <div
-        className={
-          actualLoss === 0n
-            ? "text-base-content/50"
-            : actualLoss > 0n
-              ? "font-bold text-success"
-              : "font-bold text-error"
-        }
-      >
-        <NumberFlow
-          value={Math.abs(lossValue)}
-          format={{
-            notation: "standard",
-            useGrouping: false,
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 2,
-          }}
-          animated={false}
-          prefix={actualLoss > 0n ? "+" : "-"}
-        />
-      </div>
-    </>
-  );
-};
 
 // Inline brand icons
 const XIcon = ({ className = "w-5 h-5" }: { className?: string }) => (
@@ -503,22 +223,17 @@ export default function HomeClient({
   const tokenSymbol = tokenSymbolProp ?? tokenSymbolRpc;
 
   const latestAuction = AuctionCreatedEvents[0];
-  const bidIncrement = latestAuction?.bidIncrement;
-  const platformFee = latestAuction?.platformFee;
+  const bidFee = latestAuction?.bidFee;
 
   const auctionId = latestAuction?.auctionId ?? 0;
 
-  const nextBid = latestAuction?.highestBid
-    ? (latestAuction.highestBid as bigint) + ((bidIncrement as bigint) || 0n)
-    : (latestAuction?.startingAmount as bigint) || 0n;
+  // In the current contract, there's no separate nextBid calculation
+  // The current auction amount IS what's displayed, and bidFee is what users pay to bid
 
   const isAuctionOver = latestAuction?.ended;
 
   // Initialize blockchain time drift calculation
   useServerTimeDrift();
-
-  // Get all streaming data once at the top level
-  const { streamingData: allStreamingData } = useAllStreamingData(latestAuction?.auctionId);
 
   // Local timer for frequent updates (every second)
   const [now, setNow] = useState<number>(() => Date.now());
@@ -541,10 +256,9 @@ export default function HomeClient({
       const resultsPromises = latestResults.map(async event => {
         const winner = event.winner as string;
         const displayName = await getAddressDisplayName(winner);
-        const amount = formatToken((event.amount / 2n) as unknown as bigint);
-        const bid = formatToken(event.highestBid as bigint);
+        const amount = formatToken(event.amount as bigint);
         const token = String(tokenSymbol ?? "USDC");
-        return `${displayName} bids ${bid} wins ${amount} ${token}`;
+        return `${displayName} wins ${amount} ${token}`;
       });
 
       const results = await Promise.all(resultsPromises);
@@ -562,10 +276,7 @@ export default function HomeClient({
     const currentSeconds = Math.floor(serverTime / 1000);
     const endTimePassed = latestAuction.endTime ? Number(latestAuction.endTime) <= currentSeconds : false;
 
-    // Check if highest bid reached auction amount
-    const highestBidReached = (latestAuction.highestBid as bigint) >= (latestAuction.auctionAmount as bigint);
-
-    return endTimePassed || highestBidReached;
+    return endTimePassed;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [latestAuction, now]);
   const isAuctionActive = !isAcutionReadytoBeOver && !isAuctionOver && auctionId > 0;
@@ -592,15 +303,9 @@ export default function HomeClient({
     return (BidEvents || []).filter((e: any) => String(e.auctionId) === currentId);
   }, [BidEvents, latestAuction?.auctionId]);
 
-  // Compute required token amount for the next bid (includes platform fee)
+  // Compute required token amount for the next bid (just the bidFee)
   const calcRequiredAmount = () => {
-    const nextBid = latestAuction?.highestBid
-      ? (latestAuction.highestBid as bigint) + ((bidIncrement as bigint) || 0n)
-      : (latestAuction?.startingAmount as bigint) || 0n;
-    const required = nextBid + ((platformFee as bigint) || 0n);
-    // Buffer like before to avoid tight allowances
-    //return required + (((bidIncrement as bigint) || 0n) + ((platformFee as bigint) || 0n));
-    return required + ((platformFee as bigint) || 0n);
+    return (bidFee as bigint) || 0n;
   };
 
   // Fetch allowance as bigint
@@ -863,7 +568,9 @@ export default function HomeClient({
     }
   };
 
-  const currentBid = (latestAuction?.highestBid as bigint) || (latestAuction?.startingAmount as bigint) || 0n;
+  // Get the latest bid from BidEvents for the current auction
+  const latestBidEvent = CurrentBidEvents[0]; // Already sorted by block number desc
+  const currentBid = (latestBidEvent?.auctionAmount as bigint) || 0n;
   const topBidderAddress = (latestAuction?.highestBidder as `0x${string}`) || (ZERO_ADDRESS as `0x${string}`);
   const secondsRemaining = useMemo(() => {
     if (!latestAuction?.endTime) return 0;
@@ -897,25 +604,18 @@ export default function HomeClient({
     const stats = Array.from(userBidMap.entries()).map(([address, bids]) => {
       const numBids = bids.length;
       const lastBid = bids.length > 0 ? bids.sort((a, b) => Number(b.timestamp) - Number(a.timestamp))[0] : null;
-      const lastBidAmount = lastBid ? (lastBid.amount as bigint) : 0n;
+      const lastBidAmount = lastBid ? (lastBid.auctionAmount as bigint) : 0n;
 
-      // Calculate total cost (sum of all bids + fees)
-      const platformFeePerBid = (latestAuction.platformFee as bigint) || 0n;
-      const totalFees = BigInt(numBids) * platformFeePerBid;
+      // Calculate total cost (bidFee * number of bids)
+      const bidFeePerBid = (latestAuction.bidFee as bigint) || 0n;
+      const totalFees = BigInt(numBids) * bidFeePerBid;
 
-      // For now, we'll calculate streaming amount as a placeholder
-      // This will be updated by the StreamingAmount component
-      const streamingAmount = 0n; // Placeholder - actual streaming will be calculated per user
+      // Calculate potential loss (total cost if they don't win)
+      const potentialLoss = -totalFees;
 
-      // Calculate potential loss (total cost if they don't win) - subtract streaming amount
-      const potentialLoss = streamingAmount - totalFees;
-
-      // Calculate potential profit (auction value - total cost - next bid if they're not highest) + streaming amount
+      // Calculate potential profit (auction value - total cost if they win)
       const auctionValue = latestAuction.auctionAmount as bigint;
-      const isHighestBidder = address.toLowerCase() === topBidderAddress.toLowerCase();
-      const nextBidAmount = isHighestBidder ? lastBidAmount : (nextBid as bigint) + (platformFee as bigint);
-      const potentialProfit =
-        BigInt(Math.floor(Number(auctionValue) / 2)) - totalFees - nextBidAmount + streamingAmount;
+      const potentialProfit = auctionValue - totalFees;
 
       return {
         address,
@@ -923,17 +623,16 @@ export default function HomeClient({
         lastBidAmount,
         potentialLoss,
         potentialProfit,
-        streamingAmount,
         isCurrentUser: connectedAddress && address.toLowerCase() === connectedAddress.toLowerCase(),
         isHighestBidder: address.toLowerCase() === topBidderAddress.toLowerCase(),
       };
     });
 
-    // Sort by number of bids (descending), then by last bid amount (descending)
+    // Sort by last bid amount (descending)
     return stats.sort((a, b) => {
       return Number(b.lastBidAmount) - Number(a.lastBidAmount);
     });
-  }, [BidEvents, latestAuction, connectedAddress, topBidderAddress, nextBid, platformFee]);
+  }, [BidEvents, latestAuction, connectedAddress, topBidderAddress, bidFee]);
 
   const sharingUrl =
     (process.env.NEXT_PUBLIC_URL ?? "http://localhost:3000") +
@@ -965,7 +664,7 @@ export default function HomeClient({
   //
 
   const baseText = isAuctionActive
-    ? `The pot is ${formatToken(latestAuction?.auctionAmount)} $${String(tokenSymbol ?? "")} - place a ${formatToken(nextBid as unknown as bigint)} $${String(tokenSymbol ?? "")} bid and win half of it!\nPlus, everyone wins: the other half gets streamed to all bidders!`
+    ? `The pot is ${formatToken(latestAuction?.auctionAmount)} $${String(tokenSymbol ?? "")} - place a ${formatToken(bidFee as unknown as bigint)} $${String(tokenSymbol ?? "")} bid and win it all!`
     : `Win on FireBid`;
 
   const sharingText = latestResults ? `${baseText}\n\n${latestResults}\n\n${signature}` : `${baseText}\n${signature}`;
@@ -1031,7 +730,7 @@ export default function HomeClient({
                 </div>
               </div>
               <div className="text-xs text-base-content/50 text-left w-full -mt-4">
-                <sup>*</sup>50% goes to the winner. 50% is streamed to the last 10 bidders, based on their bid size.
+                <sup>*</sup>Winner takes all the pot!
               </div>
               <div className="grid grid-cols-2 gap-4 items-center">
                 <div className="text-left">
@@ -1061,75 +760,6 @@ export default function HomeClient({
         </div>
 
         <div className="min-h-36 flex flex-col justify-center">
-          {/* Potential amounts section - only show if auction is active and user is connected */}
-          {connectedAddress && latestAuction?.auctionId && isAuctionActive && !isUserHighestBidder && (
-            <div className="mb-2">
-              {(() => {
-                const currentUserStats = userStats.find(stat => stat.isCurrentUser);
-                const hasPlacedBids = currentUserStats && currentUserStats.numBids > 0;
-
-                if (hasPlacedBids) {
-                  // Show both columns when user has placed bids
-                  const totalFees =
-                    BigInt(currentUserStats?.numBids || 0) * ((latestAuction?.platformFee as bigint) || 0n);
-
-                  return (
-                    <div className="grid grid-cols-2 gap-4">
-                      {/* Stop Now - Left column, left aligned */}
-                      <div className="text-left p-3">
-                        <PotentialAmounts
-                          address={connectedAddress}
-                          auctionId={latestAuction?.auctionId}
-                          totalFees={totalFees}
-                          auctionValue={latestAuction?.auctionAmount as bigint}
-                          nextBidAmount={(nextBid as bigint) + ((platformFee as bigint) || 0n)}
-                          showStopNowOutcome={true}
-                          tokenSymbol={String(tokenSymbol ?? "")}
-                        />
-                      </div>
-
-                      {/* Bid Now - Right column, right aligned */}
-                      <div className="text-right p-3">
-                        <div className="text-base font-bold text-base-content/90">Bid Now </div>
-                        <div className="text-sm text-base-content/70">and you could win</div>
-                        <div className="text-xl font-bold text-success font-mono">
-                          <PotentialAmounts
-                            address={connectedAddress}
-                            auctionId={latestAuction?.auctionId}
-                            totalFees={totalFees}
-                            auctionValue={latestAuction?.auctionAmount as bigint}
-                            nextBidAmount={(nextBid as bigint) + ((platformFee as bigint) || 0n)}
-                            showOnlyProfit={true}
-                          />
-                        </div>
-                        <div className="text-xs text-base-content/50">{String(tokenSymbol ?? "")}</div>
-                      </div>
-                    </div>
-                  );
-                } else {
-                  // Show only Bid Now centered when user hasn't placed bids
-                  return (
-                    <div className="text-center p-3 hidden">
-                      <div className="text-base font-bold text-base-content/90">Bid Now </div>
-                      <div className="text-sm text-base-content/70">and you could win</div>
-                      <div className="text-xl font-bold text-success font-mono">
-                        <PotentialAmounts
-                          address={connectedAddress}
-                          auctionId={latestAuction?.auctionId}
-                          totalFees={0n}
-                          auctionValue={latestAuction?.auctionAmount as bigint}
-                          nextBidAmount={(nextBid as bigint) + ((platformFee as bigint) || 0n)}
-                          showOnlyProfit={true}
-                        />
-                      </div>
-                      <div className="text-xs text-base-content/50">{String(tokenSymbol ?? "")}</div>
-                    </div>
-                  );
-                }
-              })()}
-            </div>
-          )}
-
           <div className="items-center justify-center flex">
             {/* Bid action */}
             {/* if address is connected */}
@@ -1163,15 +793,13 @@ export default function HomeClient({
                             onClick={handlePlaceBid}
                             disabled={isBidding}
                           >
-                            {isBidding
-                              ? bidStatus
-                              : `Bid ${formatToken(nextBid as unknown as bigint)} ${String(tokenSymbol ?? "")}`}
+                            {isBidding ? bidStatus : `Place Bid`}
                           </button>
                           {isBidding ? (
                             <div className="mt-1 text-gray-500 text-xs mb-4">Please wait...</div>
-                          ) : platformFee ? (
+                          ) : bidFee ? (
                             <div className="mt-1 text-base-content/70 text-xs mb-4">
-                              ({formatToken(platformFee as unknown as bigint)} {String(tokenSymbol ?? "")} fee applies)
+                              ({formatToken(bidFee as unknown as bigint)} {String(tokenSymbol ?? "")} bid fee)
                             </div>
                           ) : null}
                         </>
@@ -1316,63 +944,32 @@ export default function HomeClient({
         {/* Current Auction Stats */}
         {latestAuction && userStats.length > 0 && (
           <div className="bg-base-100 mt-4 p-0 rounded-xl shadow-md shadow-secondary border border-base-300 flex flex-col">
-            <div className="text-lg font-light text-center mt-3">Current Auction Stats</div>
-            {(() => {
-              const streamingEndTime = latestAuction?.streamingEndTime;
-              if (!streamingEndTime)
-                return <div className="text-xs text-center text-base-content/50">Streaming ended</div>;
-
-              const serverTime = getServerTime();
-              const currentSeconds = Math.floor(serverTime / 1000);
-              const remaining = Math.max(0, Number(streamingEndTime) - currentSeconds);
-
-              return remaining > 0 ? (
-                <div className="text-xs text-center text-base-content/50">Streaming ends in {remaining} seconds</div>
-              ) : (
-                <div className="text-xs text-center text-base-content/50">Streaming ended</div>
-              );
-            })()}
+            <div className="text-lg font-light text-center mt-3 mb-2">Current Auction Stats</div>
             <div className="overflow-x-auto overflow-y-hidden">
               <table className="table table-sm w-full">
                 <thead>
                   <tr>
                     <th className="py-1 pl-1 pr-px text-xs font-light">User</th>
-                    <th className="py-1 px-px text-xs text-right font-light">
-                      Bids / Last
-                      <br />
-                      Streamed
-                    </th>
-                    <th className="py-1 pr-1 pl-px text-xs text-right font-light">
-                      Potential Win
-                      <br />
-                      Potential Loss
-                    </th>
+                    <th className="py-1 px-px text-xs text-right font-light">Bids</th>
+                    <th className="py-1 pr-1 pl-px text-xs text-right font-light">Total Spent</th>
                   </tr>
                 </thead>
                 <tbody>
                   {userStats.map(stat => (
-                    <tr key={stat.address}>
+                    <tr key={stat.address} className={stat.isHighestBidder ? "bg-success/10" : ""}>
                       <td className="p-1 text-xs">
                         <div className="flex items-center gap-2">
                           <AddressFarcaster size="xs" address={stat.address as `0x${string}`} />
+                          {stat.isHighestBidder && <span className="text-success">👑</span>}
                         </div>
+                      </td>
+                      <td className="p-1 text-right font-mono text-xs whitespace-nowrap">
+                        <div className="text-base-content/70">{stat.numBids}</div>
                       </td>
                       <td className="p-1 text-right font-mono text-xs whitespace-nowrap">
                         <div className="text-base-content/70">
-                          {stat.numBids > 0 ? stat.numBids + " / " + formatToken(stat.lastBidAmount) : " "}
+                          {formatToken(BigInt(stat.numBids) * ((latestAuction?.bidFee as bigint) || 0n))}
                         </div>
-                        <StreamingAmountWithData address={stat.address} allStreamingData={allStreamingData} />
-                      </td>
-                      <td className="p-1 text-right font-mono text-xs whitespace-nowrap">
-                        <PotentialAmountsWithData
-                          address={stat.address}
-                          allStreamingData={allStreamingData}
-                          totalFees={BigInt(stat.numBids) * ((latestAuction?.platformFee as bigint) || 0n)}
-                          auctionValue={latestAuction?.auctionAmount as bigint}
-                          nextBidAmount={
-                            stat.isHighestBidder ? 0n : (nextBid as bigint) + ((platformFee as bigint) || 0n)
-                          }
-                        />
                       </td>
                     </tr>
                   ))}
@@ -1396,7 +993,8 @@ export default function HomeClient({
                     <div className="flex flex-col sm:flex-row items-center gap-2 text-sm">
                       <AddressFarcaster size="sm" address={event.bidder as `0x${string}`} />
                       <div className="">
-                        bids <span className="font-black">{formatToken(event.amount as bigint)}</span>{" "}
+                        placed a bid - pot now at{" "}
+                        <span className="font-black">{formatToken(event.auctionAmount as bigint)}</span>{" "}
                         {String(tokenSymbol ?? "USDC")}
                       </div>
                     </div>
@@ -1415,11 +1013,8 @@ export default function HomeClient({
                 <div className="flex flex-col sm:flex-row items-center gap-2 text-sm">
                   <AddressFarcaster size="sm" address={event.winner as `0x${string}`} />
                   <div className="text-sm">
-                    wins <span className="font-black">{formatToken((event.amount / 2n) as bigint)}</span>{" "}
+                    wins <span className="font-black">{formatToken(event.amount as bigint)}</span>{" "}
                     {String(tokenSymbol ?? "USDC")}
-                  </div>
-                  <div className="text-sm">
-                    with a <span className="font-black">{formatToken(event.highestBid as bigint)}</span> bid
                   </div>
                   {event.winner.toLowerCase() === connectedAddress?.toLowerCase() && (
                     <button onClick={() => launchConfetti()} className="absolute top-2 right-2 btn btn-accent btn-sm">
