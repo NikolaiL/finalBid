@@ -163,7 +163,7 @@ export async function GET(req: NextRequest) {
         ended: currentAuction[13] || false,
       };
 
-      console.log("auction", auction);
+      //console.log("auction", auction);
 
       // Check if auction is still active
       const now = Math.floor(Date.now() / 1000);
