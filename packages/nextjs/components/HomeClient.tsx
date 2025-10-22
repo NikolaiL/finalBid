@@ -988,7 +988,7 @@ export default function HomeClient({
                     <div className="flex flex-col sm:flex-row items-center gap-2 text-sm">
                       <AddressFarcaster size="sm" address={event.bidder as `0x${string}`} />
                       <div className="">
-                        placed a bid - pot now at{" "}
+                        clicked and increased the pot to{" "}
                         <span className="font-black">{formatToken(event.auctionAmount as bigint)}</span>{" "}
                         {String(tokenSymbol ?? "USDC")}
                       </div>
