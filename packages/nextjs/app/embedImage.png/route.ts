@@ -163,10 +163,11 @@ export async function GET(req: NextRequest) {
         ended: currentAuction[13] || false,
       };
 
+      console.log("auction", auction);
+
       // Check if auction is still active
       const now = Math.floor(Date.now() / 1000);
-      isActive =
-        !auction.ended && Number(auction.endTime) > now && Number(auction.highestBid) < Number(auction.auctionAmount);
+      isActive = !auction.ended && Number(auction.endTime) > now;
       //isActive = false;
       isWinner = auction.highestBidder && auction.highestBidder !== "0x0000000000000000000000000000000000000000";
       //isWinner = false;

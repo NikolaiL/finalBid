@@ -777,7 +777,7 @@ export default function HomeClient({
                     <>
                       {isUserHighestBidder ? (
                         <>
-                          <div className="text-xl font-bold p-1">✅ You are the last clicker</div>
+                          <div className="text-xl font-bold p-1">✅ You are winning the game!</div>
                         </>
                       ) : (
                         <>
