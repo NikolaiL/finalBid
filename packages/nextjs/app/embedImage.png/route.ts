@@ -331,7 +331,7 @@ export async function GET(req: NextRequest) {
                       marginRight: "8px",
                     },
                   },
-                  "Auction ends in",
+                  "Game ends in",
                 ),
                 React.createElement(
                   "span",

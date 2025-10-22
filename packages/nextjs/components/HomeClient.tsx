@@ -222,10 +222,18 @@ export default function HomeClient({
   });
   const tokenSymbol = tokenSymbolProp ?? tokenSymbolRpc;
 
-  const latestAuction = AuctionCreatedEvents[0];
+  const latestAuction = useMemo(() => AuctionCreatedEvents[0], [AuctionCreatedEvents]);
   const bidFee = latestAuction?.bidFee;
 
   const auctionId = latestAuction?.auctionId ?? 0;
+
+  // Extract auctionAmount as a number for NumberFlow component
+  const currentAuctionAmountNumber = useMemo(() => {
+    if (!latestAuction?.auctionAmount) return 0;
+    const amount = Number(latestAuction.auctionAmount) / 10 ** TOKEN_DECIMALS;
+    console.log("🔄 Auction amount updated:", amount);
+    return amount;
+  }, [latestAuction?.auctionAmount]);
 
   // In the current contract, there's no separate nextBid calculation
   // The current auction amount IS what's displayed, and bidFee is what users pay to bid
@@ -688,8 +696,16 @@ export default function HomeClient({
                   <div className="text-left flex-1 text-sm font-light text-base-content/70 items-start">
                     Winning Pot
                   </div>
-                  <div className="flex-none items-center font-mono font-black text-3xl text-primary">
-                    {formatToken(latestAuction?.auctionAmount)}
+                  <div className="flex-none items-center font-mono font-black text-6xl text-primary">
+                    <NumberFlow
+                      value={currentAuctionAmountNumber}
+                      format={{
+                        notation: "standard",
+                        useGrouping: false,
+                        maximumFractionDigits: DISPLAY_DECIMALS,
+                        minimumFractionDigits: DISPLAY_DECIMALS,
+                      }}
+                    />
                   </div>
                   <div className="text-center sm:text-left flex-1 text-sm font-light items-start my-1">
                     {String(tokenSymbol ?? "USDC")}
@@ -714,10 +730,8 @@ export default function HomeClient({
                       </>
                     ) : (
                       <>
-                        <div className="text-sm text-right font-light text-base-content/70 items-end">
-                          Auction ends in
-                        </div>
-                        <div className="text-2xl text-right text-success font-black text-3xl font-mono">
+                        <div className="text-sm text-right font-light text-base-content/70 items-end">Game ends in</div>
+                        <div className="text-2xl text-right text-success font-black text-6xl font-mono">
                           <NumberFlow
                             value={secondsRemaining}
                             format={{
@@ -731,9 +745,6 @@ export default function HomeClient({
                     )}
                   </div>
                 </div>
-              </div>
-              <div className="text-xs text-base-content/50 text-left w-full -mt-4">
-                <sup>*</sup>Winner takes all the pot!
               </div>
               <div className="grid grid-cols-2 gap-4 items-center">
                 <div className="text-left">
@@ -777,7 +788,7 @@ export default function HomeClient({
                           <div className="mt-1 text-base-content/50 text-xs">
                             {(() => {
                               const remaining = secondsRemaining;
-                              return `Auction ends in ${remaining} seconds`;
+                              return `Game ends in ${remaining} seconds`;
                             })()}
                           </div>
                         </>

@@ -21,6 +21,10 @@ interface AccessToken {
 async function verifyRecaptcha(token: string): Promise<boolean> {
   const secretKey = process.env.RECAPTCHA_SECRET_KEY;
 
+  if (process.env.NODE_ENV === "development") {
+    return true;
+  }
+
   if (!secretKey) {
     console.error("RECAPTCHA_SECRET_KEY not found in environment variables");
     return false;
