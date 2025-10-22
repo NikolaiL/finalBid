@@ -68,19 +68,18 @@ export default function AboutPage() {
     <div className="w-full max-w-3xl mx-auto px-2 sm:px-4 lg:px-6">
       <div className="flex flex-col gap-4 py-6">
         <div className="bg-base-100 p-6 rounded-3xl shadow-md shadow-secondary border border-base-300">
-          <h2 className="text-2xl font-extrabold mb-2 text-primary">About FireBid</h2>
+          <h2 className="text-2xl font-extrabold mb-2 text-primary">About FireBid on Celo</h2>
           <p className="text-base leading-relaxed mb-3">
-            FireBid is an experiment miniApp, an implementation of penny auction, powered by a smart contract on the
+            FireBid on Celo is an experiment miniApp, an implementation of fomo3d, powered by a smart contract on the
             Celo network. It’s built with Scaffold-ETH 2 and designed to run as a Farcaster Mini App.
           </p>
           <h3 className="text-xl font-bold mt-8 mb-4 text-primary">How it works</h3>
           <ul className="list-disc ml-6 space-y-2">
             <li>
-              <span className="font-semibold">Highest bidder wins the entire prize pot</span> — the final top bidder
-              receives the full auction amount when time runs out!
+              <span className="font-semibold">Latest person to click the button wins the entire prize pot</span>
             </li>
             <li>
-              Each bid costs
+              Each click costs
               <span className="font-bold mx-1">
                 {formatToken(bidFee || 0n, tokenDecimals)} {String(tokenSymbol ?? "")}
               </span>
@@ -92,12 +91,12 @@ export default function AboutPage() {
               <span className="font-bold mx-1">
                 {formatToken(referralFee || 0n, tokenDecimals)} {String(tokenSymbol ?? "")}
               </span>
-              for every bid placed through it.
+              for every button click made through it.
             </li>
             <li>
               If the remaining time is below
               <span className="font-bold mx-1">{Number(auctionDurationIncrease ?? 0)} seconds</span>
-              when a new bid arrives, the auction extends by {Number(auctionDurationIncrease ?? 0)} seconds to keep
+              when a new bid arrives, the auction timer is set to {Number(auctionDurationIncrease ?? 0)} seconds to keep
               things exciting.
             </li>
           </ul>

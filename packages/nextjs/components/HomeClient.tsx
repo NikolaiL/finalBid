@@ -800,7 +800,8 @@ export default function HomeClient({
                             <div className="mt-1 text-gray-500 text-xs mb-4">Please wait...</div>
                           ) : bidFee ? (
                             <div className="mt-1 text-base-content/60 text-xs mb-4 mt-1">
-                              Cost to click: {formatToken(bidFee as unknown as bigint)} {String(tokenSymbol ?? "")}
+                              Cost to click: {formatToken(bidFee as unknown as bigint)} {String(tokenSymbol ?? "")}.
+                              Timer will reset to 300 on new click.
                             </div>
                           ) : null}
                         </>
