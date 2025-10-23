@@ -127,7 +127,7 @@ export async function GET(req: NextRequest) {
         `);
 
       if (!response || response.length === 0) {
-        console.error("No auction data found in Ponder");
+        console.error("No auction data found in Ponder", process.env.NEXT_PUBLIC_PONDER_URL);
         return generateDefaultImage();
       }
 
