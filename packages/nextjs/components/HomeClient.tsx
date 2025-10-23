@@ -715,16 +715,12 @@ export default function HomeClient({
                     {isAcutionReadytoBeOver ? (
                       <>
                         <div className="text-sm text-right font-light text-base-content/70 items-end">&nbsp;</div>
-                        <div className="text-3xl text-right text-[#9ae600] font-black text-2xl font-mono">
-                          Game Over!
-                        </div>
+                        <div className="text-3xl text-right text-success font-black text-2xl font-mono">Game Over!</div>
                       </>
                     ) : isAuctionOver ? (
                       <>
                         <div className="text-sm text-right font-light text-base-content/70 items-end">&nbsp;</div>
-                        <div className="text-3xl text-right text-[#9ae600] font-black text-2xl font-mono">
-                          Game Over!
-                        </div>
+                        <div className="text-3xl text-right text-success font-black text-2xl font-mono">Game Over!</div>
                       </>
                     ) : (
                       <>
