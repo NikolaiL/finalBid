@@ -76,7 +76,7 @@ contract FinalBidContract is Ownable, Pausable, ReentrancyGuard {
 
     function _createAuction(uint256 _auctionId, address _tokenAddress, uint256 _startTime, uint256 _endTime, uint256 _startingAmount, uint256 _referralFee, uint256 _deployerFee, uint256 _bidFee) internal {
         // check if _auctionAmount is available
-        uint256 availableAmount = IERC20(_tokenAddress).balanceOf(address(this));
+        uint256 availableAmount = IERC20(_tokenAddress).balanceOf(msg.sender);
         //uint256 totalReferralFees = totalReferralRewardsCollected - totalReferralRewardsClaimed;
         require (availableAmount > _startingAmount, "Insufficient balance to start auction");
 
@@ -135,6 +135,7 @@ contract FinalBidContract is Ownable, Pausable, ReentrancyGuard {
         auctionId ++;
         // create new auction
         _createAuction(auctionId, tokenAddress, block.timestamp, block.timestamp + auctionDuration, startingAmount, referralFee, deployerFee, bidFee);
+        _placeBid(address(0));
         
     }
 
@@ -149,6 +150,10 @@ contract FinalBidContract is Ownable, Pausable, ReentrancyGuard {
     function placeBid(AccessToken calldata accessToken, address _referral) public whenNotPaused nonReentrant {
         // Verify access token
         require(verifyAccessToken(accessToken, msg.sender), "Invalid access token");
+        _placeBid(_referral);
+    }
+
+    function _placeBid(address _referral) internal {
         Auction storage auction = auctions[auctionId];
         require(auction.startTime <= block.timestamp && auction.endTime > block.timestamp && auction.ended == false, "Auction not active");
         require(auction.highestBidder != msg.sender, "You are already the highest bidder");
@@ -171,13 +176,17 @@ contract FinalBidContract is Ownable, Pausable, ReentrancyGuard {
         }
 
         // Effects
-        auction.highestBidder = msg.sender;
-        auction.bidCount++;
-        if (auction.endTime - block.timestamp < auctionDurationIncrease) {
-            auction.endTime = block.timestamp +auctionDurationIncrease;
-        }
 
-        auction.auctionAmount += (bidFee - referralFee - deployerFee);
+        // logic for the first bid (aka start aution)
+
+        if (auction.bidCount == 0) {
+            // start auction
+            auction.auctionAmount = _totalBidAmount;
+        } else {
+            // place bid
+            auction.auctionAmount += (bidFee - referralFee - deployerFee);
+        }
+        
 
         // pay the referral and deployer fees
         if (_referral != address(0)) {
@@ -186,6 +195,12 @@ contract FinalBidContract is Ownable, Pausable, ReentrancyGuard {
             totalReferralRewardsCollected += referralFee;
         } else {
             //token.safeTransfer(owner(), referralFee+deployerFee);
+        }
+
+        auction.highestBidder = msg.sender;
+        auction.bidCount++;
+        if (auction.endTime - block.timestamp < auctionDurationIncrease) {
+            auction.endTime = block.timestamp +auctionDurationIncrease;
         }
 
         // emit event

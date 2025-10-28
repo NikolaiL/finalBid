@@ -1255,7 +1255,7 @@ const deployedContracts = {
   },
   31337: {
     DummyTokenContract: {
-      address: "0x5FbDB2315678afecb367f032d93F642f64180aa3",
+      address: "0x67d269191c92Caf3cD7723F116c85e6E9bf55933",
       abi: [
         {
           inputs: [
@@ -1792,10 +1792,10 @@ const deployedContracts = {
         renounceOwnership: "@openzeppelin/contracts/access/Ownable.sol",
         transferOwnership: "@openzeppelin/contracts/access/Ownable.sol",
       },
-      deployedOnBlock: 1,
+      deployedOnBlock: 53,
     },
     FinalBidContract: {
-      address: "0x09635F643e140090A9A8Dcd712eD6285858ceBef",
+      address: "0xE6E340D132b5f46d1e472DebcD681B2aBc16e57E",
       abi: [
         {
           inputs: [
@@ -2708,12 +2708,12 @@ const deployedContracts = {
         transferOwnership: "@openzeppelin/contracts/access/Ownable.sol",
         paused: "@openzeppelin/contracts/utils/Pausable.sol",
       },
-      deployedOnBlock: 31,
+      deployedOnBlock: 55,
     },
   },
   42220: {
     FinalBidContract: {
-      address: "0xc8270bab6Fb8035eCe604Af42f200eE02C56a916",
+      address: "0x4127b3e3Cbf3f1BC01b9eE50f5a77EFcD795322e",
       abi: [
         {
           inputs: [
@@ -3626,7 +3626,7 @@ const deployedContracts = {
         transferOwnership: "@openzeppelin/contracts/access/Ownable.sol",
         paused: "@openzeppelin/contracts/utils/Pausable.sol",
       },
-      deployedOnBlock: 49208039,
+      deployedOnBlock: 49749353,
     },
   },
   44787: {
@@ -7698,7 +7698,7 @@ const deployedContracts = {
   },
   11142220: {
     FinalBidContract: {
-      address: "0x0C24F09923116e6ECf0Acef2Edd175c58984A79E",
+      address: "0xCD66820Cd90542f756389a947a2c197969763d09",
       abi: [
         {
           inputs: [
@@ -7827,25 +7827,6 @@ const deployedContracts = {
           anonymous: false,
           inputs: [
             {
-              indexed: false,
-              internalType: "uint256",
-              name: "oldAmount",
-              type: "uint256",
-            },
-            {
-              indexed: false,
-              internalType: "uint256",
-              name: "newAmount",
-              type: "uint256",
-            },
-          ],
-          name: "AuctionAmountUpdated",
-          type: "event",
-        },
-        {
-          anonymous: false,
-          inputs: [
-            {
               indexed: true,
               internalType: "uint256",
               name: "auctionId",
@@ -7872,31 +7853,19 @@ const deployedContracts = {
             {
               indexed: false,
               internalType: "uint256",
-              name: "streamingEndTime",
-              type: "uint256",
-            },
-            {
-              indexed: false,
-              internalType: "uint256",
-              name: "startingAmount",
-              type: "uint256",
-            },
-            {
-              indexed: false,
-              internalType: "uint256",
-              name: "bidIncrement",
-              type: "uint256",
-            },
-            {
-              indexed: false,
-              internalType: "uint256",
               name: "referralFee",
               type: "uint256",
             },
             {
               indexed: false,
               internalType: "uint256",
-              name: "platformFee",
+              name: "deployerFee",
+              type: "uint256",
+            },
+            {
+              indexed: false,
+              internalType: "uint256",
+              name: "bidFee",
               type: "uint256",
             },
           ],
@@ -7962,12 +7931,6 @@ const deployedContracts = {
               name: "amount",
               type: "uint256",
             },
-            {
-              indexed: false,
-              internalType: "uint256",
-              name: "highestBid",
-              type: "uint256",
-            },
           ],
           name: "AuctionEnded",
           type: "event",
@@ -7988,7 +7951,7 @@ const deployedContracts = {
               type: "uint256",
             },
           ],
-          name: "BidIncrementUpdated",
+          name: "BidFeeUpdated",
           type: "event",
         },
         {
@@ -8007,12 +7970,6 @@ const deployedContracts = {
               type: "address",
             },
             {
-              indexed: false,
-              internalType: "uint256",
-              name: "amount",
-              type: "uint256",
-            },
-            {
               indexed: true,
               internalType: "address",
               name: "referral",
@@ -8022,6 +7979,18 @@ const deployedContracts = {
               indexed: false,
               internalType: "uint256",
               name: "endTime",
+              type: "uint256",
+            },
+            {
+              indexed: false,
+              internalType: "uint256",
+              name: "auctionAmount",
+              type: "uint256",
+            },
+            {
+              indexed: false,
+              internalType: "uint256",
+              name: "bidCount",
               type: "uint256",
             },
           ],
@@ -8095,25 +8064,6 @@ const deployedContracts = {
               type: "uint256",
             },
           ],
-          name: "PlatformFeeUpdated",
-          type: "event",
-        },
-        {
-          anonymous: false,
-          inputs: [
-            {
-              indexed: false,
-              internalType: "uint256",
-              name: "oldAmount",
-              type: "uint256",
-            },
-            {
-              indexed: false,
-              internalType: "uint256",
-              name: "newAmount",
-              type: "uint256",
-            },
-          ],
           name: "ReferralFeeUpdated",
           type: "event",
         },
@@ -8141,55 +8091,6 @@ const deployedContracts = {
           inputs: [
             {
               indexed: false,
-              internalType: "uint256",
-              name: "auctionId",
-              type: "uint256",
-            },
-            {
-              indexed: false,
-              internalType: "address[]",
-              name: "participants",
-              type: "address[]",
-            },
-            {
-              indexed: false,
-              internalType: "uint256[]",
-              name: "units",
-              type: "uint256[]",
-            },
-            {
-              indexed: false,
-              internalType: "uint256[]",
-              name: "balances",
-              type: "uint256[]",
-            },
-            {
-              indexed: false,
-              internalType: "uint256[]",
-              name: "flowRates",
-              type: "uint256[]",
-            },
-            {
-              indexed: false,
-              internalType: "uint256",
-              name: "lastUpdated",
-              type: "uint256",
-            },
-            {
-              indexed: false,
-              internalType: "uint256",
-              name: "totalUnits",
-              type: "uint256",
-            },
-          ],
-          name: "StreamingBatchUpdate",
-          type: "event",
-        },
-        {
-          anonymous: false,
-          inputs: [
-            {
-              indexed: false,
               internalType: "address",
               name: "account",
               type: "address",
@@ -8201,19 +8102,6 @@ const deployedContracts = {
         {
           inputs: [],
           name: "accessTokenValidity",
-          outputs: [
-            {
-              internalType: "uint256",
-              name: "",
-              type: "uint256",
-            },
-          ],
-          stateMutability: "view",
-          type: "function",
-        },
-        {
-          inputs: [],
-          name: "auctionAmount",
           outputs: [
             {
               internalType: "uint256",
@@ -8290,27 +8178,17 @@ const deployedContracts = {
             },
             {
               internalType: "uint256",
-              name: "streamingEndTime",
-              type: "uint256",
-            },
-            {
-              internalType: "uint256",
-              name: "startingAmount",
-              type: "uint256",
-            },
-            {
-              internalType: "uint256",
-              name: "bidIncrement",
-              type: "uint256",
-            },
-            {
-              internalType: "uint256",
               name: "referralFee",
               type: "uint256",
             },
             {
               internalType: "uint256",
-              name: "platformFee",
+              name: "deployerFee",
+              type: "uint256",
+            },
+            {
+              internalType: "uint256",
+              name: "bidFee",
               type: "uint256",
             },
             {
@@ -8324,11 +8202,6 @@ const deployedContracts = {
               type: "address",
             },
             {
-              internalType: "uint256",
-              name: "highestBid",
-              type: "uint256",
-            },
-            {
               internalType: "bool",
               name: "ended",
               type: "bool",
@@ -8339,7 +8212,7 @@ const deployedContracts = {
         },
         {
           inputs: [],
-          name: "bidIncrement",
+          name: "bidFee",
           outputs: [
             {
               internalType: "uint256",
@@ -8368,19 +8241,6 @@ const deployedContracts = {
           name: "endAuction",
           outputs: [],
           stateMutability: "nonpayable",
-          type: "function",
-        },
-        {
-          inputs: [],
-          name: "getStreamingAddressesLength",
-          outputs: [
-            {
-              internalType: "uint256",
-              name: "",
-              type: "uint256",
-            },
-          ],
-          stateMutability: "view",
           type: "function",
         },
         {
@@ -8464,32 +8324,6 @@ const deployedContracts = {
           type: "function",
         },
         {
-          inputs: [],
-          name: "percentageToUse",
-          outputs: [
-            {
-              internalType: "uint256",
-              name: "",
-              type: "uint256",
-            },
-          ],
-          stateMutability: "view",
-          type: "function",
-        },
-        {
-          inputs: [],
-          name: "percentageToWithdraw",
-          outputs: [
-            {
-              internalType: "uint256",
-              name: "",
-              type: "uint256",
-            },
-          ],
-          stateMutability: "view",
-          type: "function",
-        },
-        {
           inputs: [
             {
               components: [
@@ -8531,45 +8365,6 @@ const deployedContracts = {
         },
         {
           inputs: [],
-          name: "platformFee",
-          outputs: [
-            {
-              internalType: "uint256",
-              name: "",
-              type: "uint256",
-            },
-          ],
-          stateMutability: "view",
-          type: "function",
-        },
-        {
-          inputs: [],
-          name: "platformFeesClaimed",
-          outputs: [
-            {
-              internalType: "uint256",
-              name: "",
-              type: "uint256",
-            },
-          ],
-          stateMutability: "view",
-          type: "function",
-        },
-        {
-          inputs: [],
-          name: "platformFeesCollected",
-          outputs: [
-            {
-              internalType: "uint256",
-              name: "",
-              type: "uint256",
-            },
-          ],
-          stateMutability: "view",
-          type: "function",
-        },
-        {
-          inputs: [],
           name: "referralFee",
           outputs: [
             {
@@ -8605,19 +8400,6 @@ const deployedContracts = {
           inputs: [
             {
               internalType: "uint256",
-              name: "_auctionAmount",
-              type: "uint256",
-            },
-          ],
-          name: "setAuctionAmount",
-          outputs: [],
-          stateMutability: "nonpayable",
-          type: "function",
-        },
-        {
-          inputs: [
-            {
-              internalType: "uint256",
               name: "_auctionDuration",
               type: "uint256",
             },
@@ -8644,11 +8426,11 @@ const deployedContracts = {
           inputs: [
             {
               internalType: "uint256",
-              name: "_bidIncrement",
+              name: "_bidFee",
               type: "uint256",
             },
           ],
-          name: "setBidIncrement",
+          name: "setBidFee",
           outputs: [],
           stateMutability: "nonpayable",
           type: "function",
@@ -8676,45 +8458,6 @@ const deployedContracts = {
         {
           inputs: [],
           name: "setNewAuctionIsNotAllowed",
-          outputs: [],
-          stateMutability: "nonpayable",
-          type: "function",
-        },
-        {
-          inputs: [
-            {
-              internalType: "uint256",
-              name: "_percentageToUse",
-              type: "uint256",
-            },
-          ],
-          name: "setPercentageToUse",
-          outputs: [],
-          stateMutability: "nonpayable",
-          type: "function",
-        },
-        {
-          inputs: [
-            {
-              internalType: "uint256",
-              name: "_percentageToWithdraw",
-              type: "uint256",
-            },
-          ],
-          name: "setPercentageToWithdraw",
-          outputs: [],
-          stateMutability: "nonpayable",
-          type: "function",
-        },
-        {
-          inputs: [
-            {
-              internalType: "uint256",
-              name: "_platformFee",
-              type: "uint256",
-            },
-          ],
-          name: "setPlatformFee",
           outputs: [],
           stateMutability: "nonpayable",
           type: "function",
@@ -8772,72 +8515,6 @@ const deployedContracts = {
             {
               internalType: "uint256",
               name: "",
-              type: "uint256",
-            },
-          ],
-          stateMutability: "view",
-          type: "function",
-        },
-        {
-          inputs: [
-            {
-              internalType: "uint256",
-              name: "",
-              type: "uint256",
-            },
-          ],
-          name: "streamingAddresses",
-          outputs: [
-            {
-              internalType: "address",
-              name: "",
-              type: "address",
-            },
-          ],
-          stateMutability: "view",
-          type: "function",
-        },
-        {
-          inputs: [],
-          name: "streamingUnits",
-          outputs: [
-            {
-              internalType: "uint256",
-              name: "",
-              type: "uint256",
-            },
-          ],
-          stateMutability: "view",
-          type: "function",
-        },
-        {
-          inputs: [
-            {
-              internalType: "address",
-              name: "",
-              type: "address",
-            },
-          ],
-          name: "streamings",
-          outputs: [
-            {
-              internalType: "uint256",
-              name: "units",
-              type: "uint256",
-            },
-            {
-              internalType: "uint256",
-              name: "balance",
-              type: "uint256",
-            },
-            {
-              internalType: "uint256",
-              name: "flowRate",
-              type: "uint256",
-            },
-            {
-              internalType: "uint256",
-              name: "lastUpdated",
               type: "uint256",
             },
           ],
@@ -8924,13 +8601,6 @@ const deployedContracts = {
           type: "function",
         },
         {
-          inputs: [],
-          name: "withdrawPlatformFees",
-          outputs: [],
-          stateMutability: "nonpayable",
-          type: "function",
-        },
-        {
           stateMutability: "payable",
           type: "receive",
         },
@@ -8941,7 +8611,7 @@ const deployedContracts = {
         transferOwnership: "@openzeppelin/contracts/access/Ownable.sol",
         paused: "@openzeppelin/contracts/utils/Pausable.sol",
       },
-      deployedOnBlock: 7044001,
+      deployedOnBlock: 8365072,
     },
   },
 } as const;

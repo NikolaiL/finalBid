@@ -94,11 +94,13 @@ describe("FinalBidContract", function () {
     await dummyTokenContract.mint(user2.address, ethers.parseEther("1000000")); // 1,000 USDC
     await dummyTokenContract.mint(user3.address, ethers.parseEther("1000000")); // 1,000 USDC
     await dummyTokenContract.mint(finalBidContract.target, ethers.parseEther("1000000"));
+    await dummyTokenContract.mint(owner.address, ethers.parseEther("1000000"));
 
     // allowance for users to spend 1,000 Degen
     await dummyTokenContract.connect(user1).approve(finalBidContract.target, ethers.parseEther("1000000"));
     await dummyTokenContract.connect(user2).approve(finalBidContract.target, ethers.parseEther("1000000"));
     await dummyTokenContract.connect(user3).approve(finalBidContract.target, ethers.parseEther("1000000"));
+    await dummyTokenContract.connect(owner).approve(finalBidContract.target, ethers.parseEther("1000000"));
   });
 
   describe("Start Auction", function () {
@@ -195,6 +197,8 @@ describe("FinalBidContract", function () {
 
     it("Should allow anybody to place a bid", async function () {
       await finalBidContract.startAuction();
+      let auction = await finalBidContract.auctions(1);
+      expect(auction.bidCount).to.equal(1);
       expect(await finalBidContract.auctionId()).to.equal(1);
 
       const referralAddress = user2.address;
@@ -211,10 +215,10 @@ describe("FinalBidContract", function () {
 
       // call as user1
       await finalBidContract.connect(user1).placeBid(accessToken, referralAddress);
-      const auction = await finalBidContract.auctions(1);
+      auction = await finalBidContract.auctions(1);
 
       expect(auction.highestBidder).to.equal(user1.address);
-      expect(auction.bidCount).to.equal(1);
+      expect(auction.bidCount).to.equal(2); //1 for start auction, 2 after "first" bid
 
       // Calculate expected total: bid amount + platform fee
       const actualBalanceIncrease = (await dummyTokenContract.balanceOf(finalBidContract.target)) - balanceBefore;
@@ -260,6 +264,23 @@ describe("FinalBidContract", function () {
       auction = await finalBidContract.auctions(1);
       expect(Number(auction.endTime)).to.be.greaterThan(initialEndTime);
     });
+    it("Should return full amount to starter if no bids placed", async function () {
+      //const startBalance = await dummyTokenContract.balanceOf(user1.address);
+      await finalBidContract.connect(user1).startAuction();
+
+      expect(await finalBidContract.auctionId()).to.equal(1);
+      const afterStartBalance = await dummyTokenContract.balanceOf(user1.address);
+
+      // pass time to end the auction
+      const auction = await finalBidContract.auctions(1);
+      const increaseTime = Number(auction.endTime) + 1000;
+      await ethers.provider.send("evm_increaseTime", [increaseTime]);
+      await ethers.provider.send("evm_mine");
+
+      await finalBidContract.endAuction();
+      const afterEndBalance = await dummyTokenContract.balanceOf(user1.address);
+      expect(afterEndBalance).to.equal(afterStartBalance + auction.auctionAmount);
+    });
   });
 
   describe("Referral Rewards", function () {
@@ -284,14 +305,14 @@ describe("FinalBidContract", function () {
       // call as user2
       await finalBidContract.connect(user2).placeBid(accessToken2, user1);
 
-      auction = await finalBidContract.auctions(1);
+      //let auction = await finalBidContract.auctions(1);
 
       // get user1 balance
       const user1BalanceBefore = await dummyTokenContract.balanceOf(user1.address);
       // call as user3
       await finalBidContract.connect(user3).placeBid(accessToken3, user1);
 
-      auction = await finalBidContract.auctions(1);
+      //auction = await finalBidContract.auctions(1);
 
       // check the user1 balance
       const user1BalanceAfter = await dummyTokenContract.balanceOf(user1.address);

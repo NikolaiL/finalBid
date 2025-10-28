@@ -223,7 +223,15 @@ export default function HomeClient({
   const tokenSymbol = tokenSymbolProp ?? tokenSymbolRpc;
 
   const latestAuction = useMemo(() => AuctionCreatedEvents[0], [AuctionCreatedEvents]);
-  const bidFee = latestAuction?.bidFee;
+
+  // Call the hook unconditionally first
+  const { data: bidFeeFromContract } = useScaffoldReadContract({
+    contractName: "FinalBidContract",
+    functionName: "bidFee",
+  });
+
+  // Then use it with a fallback
+  const bidFee = latestAuction?.bidFee || bidFeeFromContract;
 
   const auctionId = latestAuction?.auctionId ?? 0;
 
@@ -410,6 +418,26 @@ export default function HomeClient({
     }
 
     return response.json();
+  };
+
+  const handleStartAuction = async () => {
+    if (!connectedAddress) return;
+
+    try {
+      setIsBidding(true);
+      setBidStatus("Checking allowance...");
+      const required = calcRequiredAmount() as bigint;
+      await ensureAllowance(required);
+      setBidStatus("Starting auction...");
+      await writeContractAsync({ functionName: "startAuction" });
+    } catch (e) {
+      console.error("handleStartAuction error:", e);
+      setIsBidding(false);
+      setBidStatus("");
+    } finally {
+      setIsBidding(false);
+      setBidStatus("");
+    }
   };
 
   const handlePlaceBid = async () => {
@@ -835,14 +863,22 @@ export default function HomeClient({
                   ) : null}
                   {!latestAuction?.auctionId || isAuctionOver ? (
                     newAuctionIsAllowed ? (
-                      <button
-                        className="btn btn-primary text-xl transition-all h-14 px-6 "
-                        onClick={async () => {
-                          await writeContractAsync({ functionName: "startAuction" });
-                        }}
-                      >
-                        Start a New Game!
-                      </button>
+                      <>
+                        <button
+                          className="btn btn-primary text-xl transition-all h-14 px-6 "
+                          onClick={handleStartAuction}
+                        >
+                          Start a New Game!
+                        </button>
+                        {isBidding ? (
+                          <div className="mt-1 text-gray-500 text-xs mb-4">Please wait...</div>
+                        ) : bidFee ? (
+                          <div className="mt-1 text-base-content/60 text-xs mb-4 mt-1">
+                            Cost to start: {formatToken(bidFee as unknown as bigint)} {String(tokenSymbol ?? "")}. If no
+                            one else joins your game, this fee will be fully refunded to you.
+                          </div>
+                        ) : null}
+                      </>
                     ) : (
                       <div className="text-xl sm:text-2xl font-black text-center py-8">Something is Cooking 🚀🚀🚀</div>
                     )
