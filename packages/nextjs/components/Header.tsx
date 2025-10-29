@@ -82,7 +82,7 @@ export const Header = () => {
         </details>
         <Link href="/" passHref className="flex items-center gap-1 ml-0 sm:ml-4 mr-6 shrink-0">
           <div className="flex relative w-10 h-10">
-            <Image alt="Final Bid logo" className="cursor-pointer" fill src="/firebid-celo.svg" />
+            <Image alt="Final Bid logo" className="cursor-pointer" fill src="/firebid-degen.svg" />
           </div>
           <div className="flex flex-col mt-1">
             <span className="text-xs sm:text-sm md:text-base font-bold leading-tight text-primary">

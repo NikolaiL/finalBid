@@ -39,7 +39,7 @@ function generateDefaultImage() {
         style: {
           width: "1200px",
           height: "800px",
-          background: "#151517",
+          background: "#141D2A",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
@@ -52,9 +52,9 @@ function generateDefaultImage() {
           style: {
             width: "1040px",
             height: "500px",
-            background: "#0A0E10",
+            background: "#1e2a3c",
             borderRadius: "20px",
-            border: "3px solid #2a292f",
+            border: "3px solid #314158",
             display: "flex",
             flexDirection: "column",
             alignItems: "center",
@@ -232,7 +232,7 @@ export async function GET(req: NextRequest) {
           style: {
             width: "1200px",
             height: "800px", // 3:2 aspect ratio
-            background: "#151517",
+            background: "#141D2A",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
@@ -247,9 +247,9 @@ export async function GET(req: NextRequest) {
             style: {
               width: "1040px",
               height: "500px",
-              background: "#0A0E10",
+              background: "#1e2a3c",
               borderRadius: "20px",
-              border: "3px solid #2a292f",
+              border: "3px solid #314158",
               display: "flex",
               flexDirection: "column",
               alignItems: "center",
@@ -290,7 +290,7 @@ export async function GET(req: NextRequest) {
                 style: {
                   fontSize: "100px",
                   fontFamily: "NotoSansBold",
-                  color: "#fcff52",
+                  color: "#a36efd",
                   marginRight: "8px",
                 },
               },
@@ -343,7 +343,7 @@ export async function GET(req: NextRequest) {
                       fontSize: "36px",
                       fontWeight: "800",
                       fontFamily: "NotoSansBold",
-                      color: "#2FC61E",
+                      color: "#9ae600",
                       paddingLeft: "10px",
                       paddingRight: "10px",
                     },
@@ -457,7 +457,7 @@ export async function GET(req: NextRequest) {
               style: {
                 width: "480px",
                 height: "100px",
-                background: "#fcff52",
+                background: "#a36efd",
                 borderRadius: "20px",
                 display: "flex",
                 alignItems: "center",
@@ -473,7 +473,7 @@ export async function GET(req: NextRequest) {
                 style: {
                   fontSize: "40px",
                   fontWeight: "700",
-                  color: "#0A0E10",
+                  color: "#ffffff",
                   fontFamily: "RubikBold",
                 },
               },
@@ -494,7 +494,7 @@ export async function GET(req: NextRequest) {
               },
             },
             React.createElement("img", {
-              src: `${baseUrl}/firebid-celo.svg`,
+              src: `${baseUrl}/firebid-degen.svg`,
               width: 45,
               height: 45,
               style: { marginRight: "8px" },
@@ -506,12 +506,12 @@ export async function GET(req: NextRequest) {
                 style: {
                   fontSize: "36px",
                   fontWeight: "700",
-                  color: "#fcff52",
+                  color: "#a36efd",
                   marginTop: "6px",
                   fontFamily: "RubikBold",
                 },
               },
-              "FireBid Celo",
+              "FireBid Degen",
             ),
           ),
 

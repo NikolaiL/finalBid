@@ -42,6 +42,9 @@ const _submitReferral = (receipt: any) => {
 const DISPLAY_DECIMALS = Number(process.env.NEXT_PUBLIC_DISPLAY_DECIMALS) ?? 2;
 const TOKEN_DECIMALS = Number(process.env.NEXT_PUBLIC_TOKEN_DECIMALS) ?? 18;
 
+console.log("DISPLAY_DECIMALS", DISPLAY_DECIMALS);
+console.log("TOKEN_DECIMALS", TOKEN_DECIMALS);
+
 const formatToken = (amount: bigint | 0n, decimals: number = DISPLAY_DECIMALS): string => {
   const amountNumber = Number(amount);
   const tokenAmount = amountNumber / 10 ** TOKEN_DECIMALS;
@@ -224,14 +227,26 @@ export default function HomeClient({
 
   const latestAuction = useMemo(() => AuctionCreatedEvents[0], [AuctionCreatedEvents]);
 
-  // Call the hook unconditionally first
+  // Call the hooks unconditionally first
   const { data: bidFeeFromContract } = useScaffoldReadContract({
     contractName: "FinalBidContract",
     functionName: "bidFee",
   });
 
-  // Then use it with a fallback
+  const { data: referralFeeFromContract } = useScaffoldReadContract({
+    contractName: "FinalBidContract",
+    functionName: "referralFee",
+  });
+
+  const { data: deployerFeeFromContract } = useScaffoldReadContract({
+    contractName: "FinalBidContract",
+    functionName: "deployerFee",
+  });
+
+  // Then use them with fallbacks
   const bidFee = latestAuction?.bidFee || bidFeeFromContract;
+  const referralFee = latestAuction?.referralFee || referralFeeFromContract;
+  const deployerFee = latestAuction?.deployerFee || deployerFeeFromContract;
 
   const auctionId = latestAuction?.auctionId ?? 0;
 
@@ -694,8 +709,8 @@ export default function HomeClient({
     );
   }
 
-  const signature = "🔥 @firebid on $Celo by @nikolaii.eth";
-  const signatureTwitter = "🔥 @Firebid_eth on @Celo by @NikolaiLeb";
+  const signature = "🔥 @firebid $Degen by @nikolaii.eth";
+  const signatureTwitter = "🔥 @Firebid_eth Degen by @NikolaiLeb";
 
   // let change it to: The pot is 4.49 USDC—place a 0.03 bid and win half of it!
   //
@@ -709,6 +724,10 @@ export default function HomeClient({
 
   const timeRunningOutLimit = 30;
   const isTimeRunningOut = secondsRemaining < timeRunningOutLimit && !isBidding;
+
+  const increaseAmount = formatToken(
+    ((bidFee ?? 0n) as bigint) - ((referralFee ?? 0n) as bigint) - ((deployerFee ?? 0n) as bigint),
+  );
 
   return (
     <div className="w-full max-w-3xl mx-auto px-2 sm:px-4 lg:px-6">
@@ -893,6 +912,16 @@ export default function HomeClient({
               </>
             )}
           </div>
+        </div>
+
+        <div className="flex flex-col justify-center px-4">
+          <p className="text-lg font-bold mt-0 mb-0">Rules:</p>
+          <ol className="list-decimal list-inside ml-2 mb-4">
+            <li className="my-1">
+              Each click increases the pot by {increaseAmount} {String(tokenSymbol ?? "")}.
+            </li>
+            <li className="my-0">Last player to click the button takes the whole pot!</li>
+          </ol>
         </div>
 
         {/* Share block */}
