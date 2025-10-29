@@ -97,6 +97,20 @@ function generateDefaultImage() {
   );
 }
 
+function transformImgurUrl(url: string): string {
+  // Check if the URL is from imgur.com
+  if (url?.includes("imgur.com")) {
+    //console.log("transforming imgur url", url);
+    // Encode the URL
+    const encodedUrl = encodeURIComponent(url);
+    // Return the Warpcast CDN proxy URL
+    const result = `https://wrpcd.net/cdn-cgi/image/anim=false,fit=contain,f=auto,w=288/${encodedUrl}`;
+    //console.log("transformed imgur url", result);
+    return result;
+  }
+  return url;
+}
+
 export async function GET(req: NextRequest) {
   try {
     // Declare variables outside try block so they're accessible in the image generation
@@ -178,7 +192,7 @@ export async function GET(req: NextRequest) {
         if (winnerDataTemp.user) {
           winnerData = {
             username: winnerDataTemp.user.username,
-            profilePicture: winnerDataTemp.user.pfp_url,
+            profilePicture: transformImgurUrl(winnerDataTemp.user.pfp_url),
           };
         } else {
           winnerData = {

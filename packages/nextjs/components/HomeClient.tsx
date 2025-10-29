@@ -701,8 +701,8 @@ export default function HomeClient({
   //
 
   const baseText = isAuctionActive
-    ? `The pot is ${formatToken(latestAuction?.auctionAmount)} $${String(tokenSymbol ?? "")} - click to win it all!`
-    : `Click to win on FireBid`;
+    ? `Someone left ${formatToken(latestAuction?.auctionAmount)} ${String(tokenSymbol ?? "")} in the pot - click to grab it!`
+    : `Click and grab the pot!`;
 
   const sharingText = latestResults ? `${baseText}\n\n${latestResults}\n\n${signature}` : `${baseText}\n${signature}`;
   const sharingTextTwitter = baseText + "\n\n" + signatureTwitter;
