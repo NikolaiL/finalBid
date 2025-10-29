@@ -24,10 +24,10 @@ contract FinalBidContract is Ownable, Pausable, ReentrancyGuard {
     uint256 public auctionId;
     uint256 public auctionDuration = 600; // 600 seconds
     uint256 public auctionDurationIncrease = 300; // 300 seconds
-    uint256 public startingAmount = 1 ether; // 1 Token
-    uint256 public referralFee = 0.1 ether; // 0.1 Token
-    uint256 public deployerFee = 0.1 ether; // 0.1 Token
-    uint256 public bidFee = 1 ether; // 1 Token
+    uint256 public startingAmount = 100 ether; // 100 Token
+    uint256 public referralFee = 10 ether; // 10 Token
+    uint256 public deployerFee = 10 ether; // 10 Token
+    uint256 public bidFee = 100 ether; // 100 Token
     uint256 public totalReferralRewardsCollected;
     bool public newAuctionIsAllowed = false;
     

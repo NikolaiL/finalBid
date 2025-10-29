@@ -1,7 +1,7 @@
 {
-  "chainId": 42220,
-  "finalBidAddress": "0x4127b3e3Cbf3f1BC01b9eE50f5a77EFcD795322e",
-  "tokenAddress": "0x471EcE3750Da237f93B8E339c536989b8978a438",
-  "symbol": "CELO",
+  "chainId": 84532,
+  "finalBidAddress": "0xD610E34f506b908343DD3fDb477776386c0ab8f8",
+  "tokenAddress": "0x11e42DBD20EB9785fe2C75cB73D3dA19e3b5E13C",
+  "symbol": "dTOKEN",
   "decimals": 18
 }
