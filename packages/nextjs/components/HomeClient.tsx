@@ -981,17 +981,17 @@ export default function HomeClient({
             <div className="flex gap-2 justify-center items-center">
               <button
                 className="btn btn-accent btn-sm flex items-center gap-2"
-                onClick={() => handlePreApprove(100)}
-                disabled={isApproving === 100}
+                onClick={() => handlePreApprove(1000)}
+                disabled={isApproving === 1000}
               >
-                {isApproving === 100 ? "Approving..." : "100" + " " + String(tokenSymbol ?? "USDC")}
+                {isApproving === 1000 ? "Approving..." : "1000" + " " + String(tokenSymbol ?? "USDC")}
               </button>
               <button
                 className="btn btn-accent btn-sm flex items-center gap-2"
-                onClick={() => handlePreApprove(500)}
-                disabled={isApproving === 500}
+                onClick={() => handlePreApprove(5000)}
+                disabled={isApproving === 5000}
               >
-                {isApproving === 500 ? "Approving..." : "500" + " " + String(tokenSymbol ?? "USDC")}
+                {isApproving === 5000 ? "Approving..." : "5000" + " " + String(tokenSymbol ?? "USDC")}
               </button>
               <button
                 className="btn btn-secondary btn-sm flex items-center gap-2"

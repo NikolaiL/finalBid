@@ -38,7 +38,8 @@ const config: HardhatUserConfig = {
     ],
   },
   //defaultNetwork: "localhost",
-  defaultNetwork: "baseSepolia",
+  //defaultNetwork: "baseSepolia",
+  defaultNetwork: "base",
   //defaultNetwork: "celoSepolia",
   //defaultNetwork: "celo",
   namedAccounts: {
