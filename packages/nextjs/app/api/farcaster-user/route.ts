@@ -13,7 +13,7 @@ export async function GET(req: NextRequest) {
   const upstream = `https://secretapp.altumbase.com/api/user-data?address=${address}`;
 
   try {
-    const res = await fetch(upstream, { cache: "no-store" });
+    const res = await fetch(upstream, { cache: "force-cache", next: { revalidate: 300 } });
     const data = await res.json();
     return NextResponse.json(data, {
       status: res.status,

@@ -76,7 +76,7 @@ let changeSignal = createSignal();
 
 // Subscribe to change events from event handlers
 changeEmitter.subscribe(() => {
-  console.log("Change event received, notifying SSE clients");
+  //console.log("Change event received, notifying SSE clients");
   changeSignal.resolve();
   changeSignal = createSignal();
 });
