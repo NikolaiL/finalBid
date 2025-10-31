@@ -178,7 +178,7 @@ ponder.on("FinalBidContract:BidPlaced", async ({ event, context }) => {
   // Notify SSE clients of data change
   changeEmitter.emit();
 
-  await reportNewBid(event);
+  reportNewBid(event);
 
 });
 
