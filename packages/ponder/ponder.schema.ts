@@ -34,6 +34,7 @@ export const auctionCreated = onchainTable("auctionCreated", (t) => ({
   blockNumber: t.bigint().notNull(),
   logIndex: t.integer().notNull(),
   timestamp: t.bigint().notNull(),
+  postHash: t.text(),
   ended: t.boolean().notNull().default(false),
 }), (table) => ({
   highestBidderIdx: index().on(table.highestBidder),

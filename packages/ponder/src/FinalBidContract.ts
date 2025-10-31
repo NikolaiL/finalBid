@@ -40,9 +40,8 @@ const formatTokenString = (amount: number, decimals: number, digits: number, tok
 
 const changeEmitter = getChangeEmitter();
 
-const reportNewBid = async (event: any) => {
+const reportNewBid = async (event: any, context: any) => {
   // we need to have process.env.REPORT_NEW_BID_URL and process.env.REPORT_NEW_BID_API_KEY
-
   const timestamp = Number(event.block.timestamp);
   // if it's not withinn last 20 seconds return to avoid reporting old bids
 
@@ -70,7 +69,31 @@ const reportNewBid = async (event: any) => {
     console.log("Amount", amount, event.args.auctionAmount);
 
     const postText = `${username} just added some tokens to the pot. The pot is ${amount} now. It's time to grab it:`;
-    const idem = event.transaction.hash;
+    const idem = process.env.NEYNAR_IDEM_PRE + event.transaction.hash;
+
+
+    let auctionPostHash = null;
+
+    try {
+
+      const auction = await context.db.find(auctionCreated, {auctionId: Number(event.args.auctionId)});
+      if (!auction) {
+        console.error("Auction not found", event.args.auctionId);
+      }
+      if (auction.postHash) {
+        console.log("We have a post already reported", event.args.auctionId, auction.postHash);
+      } else {
+        console.log("This auction has no post yet", event.args.auctionId, auction.postHash);
+      }
+
+      console.log("Auction", auction);
+      auctionPostHash = auction.postHash;
+    } catch (error) {
+      console.error("Error getting auction", error);
+    }
+
+    console.log("Out of nested try block");
+
     const data = {
       text: postText,
       signer_uuid: signerUuid,
@@ -79,9 +102,12 @@ const reportNewBid = async (event: any) => {
       }],
       idem: idem,
     };
+    
+    if (auctionPostHash) {
+      data.parent = auctionPostHash;
+    }
     const body = JSON.stringify(data);
-    console.log("Data to report", data);
-
+    console.log("Data to report", data, event.args.auctionId);
 
 
     if (!process.env.NEYNAR_POST_URL || !process.env.NEYNAR_API_KEY || !process.env.NEYNAR_SIGNER_UUID) {
@@ -89,19 +115,25 @@ const reportNewBid = async (event: any) => {
       return;
     }
 
-
-    
-
-
     console.log("Reporting new bid to", url, body, Number(event.args.auctionAmount));
     const response = await fetch(url, {
       method: "POST",
       headers: { 'x-api-key': `${apiKey}`, 'Content-Type': 'application/json' },
       body: body,
     });
-    console.log("Reported new bid to", url, response.status, response.statusText, response);
-  } catch (error) {
-    console.error("Error reporting new bid to Neynar", error.code, error.message, error.property, error.status);
+    const responseData = await response.json();
+    console.log("✅ Reported new bid to ", responseData.cast.hash);
+    // now, we need to save it to the database if we don;t have it yet...
+    if (!auctionPostHash) {
+      await context.db.update(auctionCreated, {auctionId: Number(event.args.auctionId)}).set({
+        postHash: responseData.cast.hash,
+      });
+      console.log("Updated auction with post hash", responseData.cast.hash);
+    } else {
+      console.log("Auction already has a post hash", auctionPostHash);
+    }
+  } catch (outerError) {
+    console.error("❌ Error reporting new bid to Neynar", outerError.code, outerError.message, outerError.property, outerError.status);
     return true;
   }
 };
@@ -178,7 +210,7 @@ ponder.on("FinalBidContract:BidPlaced", async ({ event, context }) => {
   // Notify SSE clients of data change
   changeEmitter.emit();
 
-  reportNewBid(event);
+  await reportNewBid(event, context);
 
 });
 

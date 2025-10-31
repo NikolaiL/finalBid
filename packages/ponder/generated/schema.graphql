@@ -161,6 +161,7 @@ type auctionCreated {
   blockNumber: BigInt!
   logIndex: Int!
   timestamp: BigInt!
+  postHash: String
   ended: Boolean!
 }
 
@@ -281,6 +282,16 @@ input auctionCreatedFilter {
   timestamp_lt: BigInt
   timestamp_gte: BigInt
   timestamp_lte: BigInt
+  postHash: String
+  postHash_not: String
+  postHash_in: [String]
+  postHash_not_in: [String]
+  postHash_contains: String
+  postHash_not_contains: String
+  postHash_starts_with: String
+  postHash_ends_with: String
+  postHash_not_starts_with: String
+  postHash_not_ends_with: String
   ended: Boolean
   ended_not: Boolean
   ended_in: [Boolean]
