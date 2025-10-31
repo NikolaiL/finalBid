@@ -174,7 +174,7 @@ export async function GET(req: NextRequest) {
         blockNumber: currentAuction[10] || "0",
         logIndex: currentAuction[11] || 0,
         timestamp: currentAuction[12] || "0",
-        ended: currentAuction[13] || false,
+        ended: currentAuction[14] || false,
       };
 
       //console.log("auction", auction);
