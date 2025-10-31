@@ -1,2 +1,7 @@
-packages/hardhat/deployments/** merge=ours
+packages/hardhat/deployments/* merge=ours
 packages/nextjs/public/token-meta.json merge=ours
+packages/nextjs/public/android* merge=ours
+packages/nextjs/public/appple* merge=ours
+packages/nextjs/public/favicon* merge=ours
+packages/nextjs/scaffold.config.ts merge=ours
+packages/hardhat/hardhat.config.ts merge=ours
