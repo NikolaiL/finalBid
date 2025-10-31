@@ -67,9 +67,15 @@ const reportNewBid = async (event: any, context: any) => {
     const tokenDigits = process.env.TOKEN_DIGITS !== null ? Number(process.env.TOKEN_DIGITS) : 0;
     const amount = formatTokenString(Number(event.args.auctionAmount), tokenDecimals, tokenDigits, tokenSymbol);
     console.log("Amount", amount, event.args.auctionAmount);
+    const bidCount = Number(event.args.bidCount);
 
-    const postText = `${username} just added some tokens to the pot. The pot is ${amount} now. It's time to grab it:`;
-    const idem = process.env.NEYNAR_IDEM_PRE + event.transaction.hash;
+    const postText = bidCount === 1 
+    ? 
+      `${username} just started a new game. The pot is ${amount}. Go grab it:` 
+    : 
+      `${username} just added some tokens to the game pot. It's ${amount} now. Go grab it:`;
+    
+      const idem = process.env.NEYNAR_IDEM_PRE + event.transaction.hash;
 
 
     let auctionPostHash = null;
