@@ -703,6 +703,53 @@ export default function HomeClient({
     (process.env.NEXT_PUBLIC_URL ?? "http://localhost:3000") +
     (connectedAddress ? "/" + connectedAddress + "/" + new Date().getTime() : "");
 
+  // Memoized Top Winners Block to prevent re-renders on timer updates
+  const topWinnersBlock = useMemo(
+    () =>
+      topWinnersData.length > 0 ? (
+        <div className="bg-base-100 mt-4 p-0 rounded-xl shadow-md shadow-secondary border border-base-300 flex flex-col">
+          <div className="text-lg font-light text-center mt-3 mb-2">🏆 Top Winners</div>
+          <div className="overflow-x-auto overflow-y-hidden">
+            <table className="table table-sm w-full">
+              <thead>
+                <tr>
+                  <th className="py-1 pl-3 pr-px text-xs font-light">Rank</th>
+                  <th className="py-1 px-px text-xs font-light">Player</th>
+                  <th className="py-1 pr-3 px-px text-xs text-right font-light">Total Won</th>
+                </tr>
+              </thead>
+              <tbody>
+                {topWinnersData.map(winner => (
+                  <tr
+                    key={winner.address}
+                    className={winner.address.toLowerCase() === connectedAddress?.toLowerCase() ? "bg-accent/20" : ""}
+                  >
+                    <td className="p-1 text-xs font-mono text-center">
+                      <div className="text-base-content/70">{winner.rank}</div>
+                    </td>
+                    <td className="p-1 text-xs">
+                      <div className="flex items-center gap-2">
+                        <AddressFarcaster size="xs" address={winner.address as `0x${string}`} />
+                        {winner.address.toLowerCase() === connectedAddress?.toLowerCase() && (
+                          <span className="text-xs">🎉</span>
+                        )}
+                      </div>
+                    </td>
+                    <td className="p-1 text-right font-mono text-xs whitespace-nowrap">
+                      <div className="text-base-content/70">
+                        {formatToken(winner.totalAmount)} {String(tokenSymbol ?? "USDC")}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      ) : null,
+    [topWinnersData, connectedAddress, tokenSymbol],
+  );
+
   // Loading gate: wait for initial wallet resolution and first fetch of auction-related data
   const isWalletInitializing = isConnecting || isReconnecting;
   const isLoadingApp = !!(bidEventsQuery?.isPending || auctionCreatedQuery?.isPending || isWalletInitializing);
@@ -1075,47 +1122,7 @@ export default function HomeClient({
         </div>
 
         {/* Top Winners Block */}
-        {topWinnersData.length > 0 && (
-          <div className="bg-base-100 mt-4 p-0 rounded-xl shadow-md shadow-secondary border border-base-300 flex flex-col">
-            <div className="text-lg font-light text-center mt-3 mb-2">🏆 Top Winners</div>
-            <div className="overflow-x-auto overflow-y-hidden">
-              <table className="table table-sm w-full">
-                <thead>
-                  <tr>
-                    <th className="py-1 pl-3 pr-px text-xs font-light">Rank</th>
-                    <th className="py-1 px-px text-xs font-light">Player</th>
-                    <th className="py-1 pr-3 px-px text-xs text-right font-light">Total Won</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {topWinnersData.map(winner => (
-                    <tr
-                      key={winner.address}
-                      className={winner.address.toLowerCase() === connectedAddress?.toLowerCase() ? "bg-accent/20" : ""}
-                    >
-                      <td className="p-1 text-xs font-mono text-center">
-                        <div className="text-base-content/70">{winner.rank}</div>
-                      </td>
-                      <td className="p-1 text-xs">
-                        <div className="flex items-center gap-2">
-                          <AddressFarcaster size="xs" address={winner.address as `0x${string}`} />
-                          {winner.address.toLowerCase() === connectedAddress?.toLowerCase() && (
-                            <span className="text-xs">🎉</span>
-                          )}
-                        </div>
-                      </td>
-                      <td className="p-1 text-right font-mono text-xs whitespace-nowrap">
-                        <div className="text-base-content/70">
-                          {formatToken(winner.totalAmount)} {String(tokenSymbol ?? "USDC")}
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
+        {topWinnersBlock}
       </div>
     </div>
   );
