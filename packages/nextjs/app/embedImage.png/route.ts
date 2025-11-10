@@ -39,7 +39,7 @@ function generateDefaultImage() {
         style: {
           width: "1200px",
           height: "800px",
-          background: "#141D2A",
+          background: "#131517",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
@@ -52,9 +52,9 @@ function generateDefaultImage() {
           style: {
             width: "1040px",
             height: "500px",
-            background: "#1e2a3c",
+            background: "#0A0F0F",
             borderRadius: "20px",
-            border: "3px solid #314158",
+            border: "3px solid #1F2A3C",
             display: "flex",
             flexDirection: "column",
             alignItems: "center",
@@ -234,7 +234,7 @@ export async function GET(req: NextRequest) {
           style: {
             width: "1200px",
             height: "800px", // 3:2 aspect ratio
-            background: "#141D2A",
+            background: "#131517",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
@@ -249,9 +249,9 @@ export async function GET(req: NextRequest) {
             style: {
               width: "1040px",
               height: "500px",
-              background: "#1e2a3c",
+              background: "#0A0F0F",
               borderRadius: "20px",
-              border: "3px solid #314158",
+              border: "3px solid #1F2A3C",
               display: "flex",
               flexDirection: "column",
               alignItems: "center",
