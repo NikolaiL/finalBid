@@ -57,7 +57,7 @@ Blockchain Event → Ponder Handler → Database Write → changeEmitter.emit()
 yarn ponder:dev
 
 # Terminal 2: Test SSE endpoint
-curl -N http://localhost:42072/live/data
+curl -N http://localhost:42070/live/data
 
 # You should see:
 # data: connected
@@ -68,7 +68,7 @@ curl -N http://localhost:42072/live/data
 ### Through ngrok
 ```bash
 # Start ngrok with proper headers
-ngrok http 42072 --host-header=rewrite
+ngrok http 42070 --host-header=rewrite
 
 # Test
 curl -N https://your-domain.ngrok.dev/ponder/live/data

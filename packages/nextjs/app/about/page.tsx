@@ -68,10 +68,10 @@ export default function AboutPage() {
     <div className="w-full max-w-3xl mx-auto px-2 sm:px-4 lg:px-6">
       <div className="flex flex-col gap-4 py-6">
         <div className="bg-base-100 p-6 rounded-3xl shadow-md shadow-secondary border border-base-300">
-          <h2 className="text-2xl font-extrabold mb-2 text-primary">About FireBid on Celo</h2>
+          <h2 className="text-2xl font-extrabold mb-2 text-primary">About FireBid Celo</h2>
           <p className="text-base leading-relaxed mb-3">
-            FireBid on Celo is an experiment miniApp, an implementation of fomo3d, powered by a smart contract on the
-            Celo network. It’s built with Scaffold-ETH 2 and designed to run as a Farcaster Mini App.
+            FireBid Celo is an experiment miniApp, an implementation of fomo3d, powered by a smart contract on the Base
+            network. It’s built with Scaffold-ETH 2 and designed to run as a Farcaster Mini App.
           </p>
           <h3 className="text-xl font-bold mt-8 mb-4 text-primary">How it works</h3>
           <ul className="list-disc ml-6 space-y-2">

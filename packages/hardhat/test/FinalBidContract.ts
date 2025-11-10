@@ -96,7 +96,7 @@ describe("FinalBidContract", function () {
     await dummyTokenContract.mint(finalBidContract.target, ethers.parseEther("1000000"));
     await dummyTokenContract.mint(owner.address, ethers.parseEther("1000000"));
 
-    // allowance for users to spend 1,000 Degen
+    // allowance for users to spend 1,000 Tokens
     await dummyTokenContract.connect(user1).approve(finalBidContract.target, ethers.parseEther("1000000"));
     await dummyTokenContract.connect(user2).approve(finalBidContract.target, ethers.parseEther("1000000"));
     await dummyTokenContract.connect(user3).approve(finalBidContract.target, ethers.parseEther("1000000"));

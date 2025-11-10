@@ -3,7 +3,7 @@ import { db } from "ponder:api";
 import schema from "ponder:schema";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
-import { client, graphql, desc, eq, gte, and, count } from "ponder";
+import { client, graphql, desc, eq, gte, and, count, sum, groupBy } from "ponder";
 import { replaceBigInts } from "@ponder/utils";
 import { streamSSE } from "hono/streaming";
 
@@ -76,7 +76,7 @@ let changeSignal = createSignal();
 
 // Subscribe to change events from event handlers
 changeEmitter.subscribe(() => {
-  console.log("Change event received, notifying SSE clients");
+  //console.log("Change event received, notifying SSE clients");
   changeSignal.resolve();
   changeSignal = createSignal();
 });
@@ -125,6 +125,23 @@ app.get("/latest-auction", async (c) => {
       .limit(1);
     const row = rows?.[0] ?? null;
     const safe = replaceBigInts(row, (v) => v.toString());
+    return c.json(safe);
+  } catch (e) {
+    return c.json({ error: e.message }, 500);
+  }
+});
+
+app.get("/top-list", async (c) => {
+  try {
+    const rows = await db
+      .select({
+        winner: (schema as any).auctionEnded.winner,
+        totalAmount: sum((schema as any).auctionEnded.amount)
+      })
+      .from((schema as any).auctionEnded)
+      .groupBy((schema as any).auctionEnded.winner)
+      .orderBy(desc(sum((schema as any).auctionEnded.amount)));
+    const safe = replaceBigInts(rows, (v) => v.toString());
     return c.json(safe);
   } catch (e) {
     return c.json({ error: e.message }, 500);

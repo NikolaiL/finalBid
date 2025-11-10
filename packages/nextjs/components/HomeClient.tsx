@@ -14,11 +14,7 @@ import {
   useTransactor,
 } from "~~/hooks/scaffold-eth";
 // Streaming data hooks removed - not in current contract
-import {
-  auctionCreatedQueryOptions,
-  auctionEndedQueryOptions,
-  createBidPlacedQueryOptions,
-} from "~~/lib/bid-events-query";
+import { auctionCreatedQueryOptions, createBidPlacedQueryOptions } from "~~/lib/bid-events-query";
 import { getAddressDisplayName } from "~~/lib/farcaster";
 import { formatTimeAgo, getServerTime, useServerTimeDrift } from "~~/lib/global-time";
 import { useDataLiveQuery } from "~~/lib/useDataLiveQuery";
@@ -41,6 +37,9 @@ const _submitReferral = (receipt: any) => {
 
 const DISPLAY_DECIMALS = Number(process.env.NEXT_PUBLIC_DISPLAY_DECIMALS) ?? 2;
 const TOKEN_DECIMALS = Number(process.env.NEXT_PUBLIC_TOKEN_DECIMALS) ?? 18;
+
+console.log("DISPLAY_DECIMALS", DISPLAY_DECIMALS);
+console.log("TOKEN_DECIMALS", TOKEN_DECIMALS);
 
 const formatToken = (amount: bigint | 0n, decimals: number = DISPLAY_DECIMALS): string => {
   const amountNumber = Number(amount);
@@ -107,15 +106,6 @@ export default function HomeClient({
 
   const bidEventsQuery: any = useDataLiveQuery(bidPlacedQueryOptions as any);
   const BidEvents: any[] = useMemo(() => (bidEventsQuery?.data ?? []) as any[], [bidEventsQuery?.data]);
-
-  const auctionEndedQuery: any = useDataLiveQuery(auctionEndedQueryOptions as any);
-  const AuctionEndedEvents: any[] = useMemo(() => (auctionEndedQuery?.data ?? []) as any[], [auctionEndedQuery?.data]);
-
-  // Exclude auctions with zero-address winner
-  const PastAuctions = useMemo(() => {
-    const zero = ZERO_ADDRESS.toLowerCase();
-    return (AuctionEndedEvents || []).filter((e: any) => (e?.winner || "").toLowerCase() !== zero);
-  }, [AuctionEndedEvents]);
 
   const { writeContractAsync } = useScaffoldWriteContract({
     contractName: "FinalBidContract",
@@ -207,7 +197,8 @@ export default function HomeClient({
   // State for button and transaction status
   const [isBidding, setIsBidding] = useState(false);
   const [bidStatus, setBidStatus] = useState<string>("");
-  const [latestResults, setLatestResults] = useState<string>("");
+  const [topResults, setTopResults] = useState<string>("");
+  const [topWinnersData, setTopWinnersData] = useState<any[]>([]);
   const [isApproving, setIsApproving] = useState(0);
   const [isRevoking, setIsRevoking] = useState(false);
 
@@ -224,14 +215,26 @@ export default function HomeClient({
 
   const latestAuction = useMemo(() => AuctionCreatedEvents[0], [AuctionCreatedEvents]);
 
-  // Call the hook unconditionally first
+  // Call the hooks unconditionally first
   const { data: bidFeeFromContract } = useScaffoldReadContract({
     contractName: "FinalBidContract",
     functionName: "bidFee",
   });
 
-  // Then use it with a fallback
+  const { data: referralFeeFromContract } = useScaffoldReadContract({
+    contractName: "FinalBidContract",
+    functionName: "referralFee",
+  });
+
+  const { data: deployerFeeFromContract } = useScaffoldReadContract({
+    contractName: "FinalBidContract",
+    functionName: "deployerFee",
+  });
+
+  // Then use them with fallbacks
   const bidFee = latestAuction?.bidFee || bidFeeFromContract;
+  const referralFee = latestAuction?.referralFee || referralFeeFromContract;
+  const deployerFee = latestAuction?.deployerFee || deployerFeeFromContract;
 
   const auctionId = latestAuction?.auctionId ?? 0;
 
@@ -260,28 +263,53 @@ export default function HomeClient({
     return () => clearInterval(id);
   }, []);
 
-  // Fetch latest auction results when PastAuctions changes
+  // Fetch top winners from the API
   useEffect(() => {
-    const fetchResults = async () => {
-      const latestResults = PastAuctions.slice(0, 5); // Get latest 5 auctions
-      if (latestResults.length === 0) {
-        setLatestResults("");
-        return;
+    const fetchTopWinners = async () => {
+      try {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_PONDER_URL}/top-list`);
+        if (!response.ok) {
+          setTopResults("");
+          return;
+        }
+
+        const topWinners = await response.json();
+        if (!topWinners || topWinners.length === 0) {
+          setTopResults("");
+          setTopWinnersData([]);
+          return;
+        }
+
+        // Store all winners data for display
+        const allWinnersWithNames = await Promise.all(
+          topWinners.map(async (item: any, index: number) => {
+            const winner = item.winner as string;
+            const displayName = await getAddressDisplayName(winner);
+            return {
+              rank: index + 1,
+              address: winner,
+              displayName,
+              totalAmount: BigInt(item.totalAmount),
+            };
+          }),
+        );
+        setTopWinnersData(allWinnersWithNames);
+
+        // Create sharing text with only top 7
+        const top7ForSharing = allWinnersWithNames.slice(0, 7);
+        const resultsText = top7ForSharing.map(item => {
+          const amount = formatToken(item.totalAmount);
+          const token = String(tokenSymbol ?? "USDC");
+          return `${item.rank}) ${item.displayName} won ${amount} $${token}`;
+        });
+        setTopResults("🏆 Top Winners:\n\n" + resultsText.join("\n") + "\n\nCould You be next?");
+      } catch (error) {
+        console.error("Error fetching top winners:", error);
+        setTopResults("");
       }
-
-      const resultsPromises = latestResults.map(async event => {
-        const winner = event.winner as string;
-        const displayName = await getAddressDisplayName(winner);
-        const amount = formatToken(event.amount as bigint);
-        const token = String(tokenSymbol ?? "USDC");
-        return `${displayName} wins ${amount} ${token}`;
-      });
-
-      const results = await Promise.all(resultsPromises);
-      setLatestResults("🎉 Congrats to the latest winners:\n" + results.join("\n") + "\n\nCould You be next?");
     };
-    fetchResults();
-  }, [PastAuctions, tokenSymbol]);
+    fetchTopWinners();
+  }, [tokenSymbol]);
 
   // Check if auction is ready to be over using blockchain-synchronized time
   const isAcutionReadytoBeOver = useMemo(() => {
@@ -675,14 +703,56 @@ export default function HomeClient({
     (process.env.NEXT_PUBLIC_URL ?? "http://localhost:3000") +
     (connectedAddress ? "/" + connectedAddress + "/" + new Date().getTime() : "");
 
+  // Memoized Top Winners Block to prevent re-renders on timer updates
+  const topWinnersBlock = useMemo(
+    () =>
+      topWinnersData.length > 0 ? (
+        <div className="bg-base-100 mt-4 p-0 rounded-xl shadow-md shadow-secondary border border-base-300 flex flex-col">
+          <div className="text-lg font-light text-center mt-3 mb-2">🏆 Top Winners</div>
+          <div className="overflow-x-auto overflow-y-hidden">
+            <table className="table table-sm w-full">
+              <thead>
+                <tr>
+                  <th className="py-1 pl-3 pr-px text-xs font-light">Rank</th>
+                  <th className="py-1 px-px text-xs font-light">Player</th>
+                  <th className="py-1 pr-3 px-px text-xs text-right font-light">Total Won</th>
+                </tr>
+              </thead>
+              <tbody>
+                {topWinnersData.map(winner => (
+                  <tr
+                    key={winner.address}
+                    className={winner.address.toLowerCase() === connectedAddress?.toLowerCase() ? "bg-accent/20" : ""}
+                  >
+                    <td className="p-1 text-xs font-mono text-center">
+                      <div className="text-base-content/70">{winner.rank}</div>
+                    </td>
+                    <td className="p-1 text-xs">
+                      <div className="flex items-center gap-2">
+                        <AddressFarcaster size="xs" address={winner.address as `0x${string}`} />
+                        {winner.address.toLowerCase() === connectedAddress?.toLowerCase() && (
+                          <span className="text-xs">🎉</span>
+                        )}
+                      </div>
+                    </td>
+                    <td className="p-1 text-right font-mono text-xs whitespace-nowrap">
+                      <div className="text-base-content/70">
+                        {formatToken(winner.totalAmount)} {String(tokenSymbol ?? "USDC")}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      ) : null,
+    [topWinnersData, connectedAddress, tokenSymbol],
+  );
+
   // Loading gate: wait for initial wallet resolution and first fetch of auction-related data
   const isWalletInitializing = isConnecting || isReconnecting;
-  const isLoadingApp = !!(
-    bidEventsQuery?.isPending ||
-    auctionCreatedQuery?.isPending ||
-    auctionEndedQuery?.isPending ||
-    isWalletInitializing
-  );
+  const isLoadingApp = !!(bidEventsQuery?.isPending || auctionCreatedQuery?.isPending || isWalletInitializing);
 
   if (isLoadingApp) {
     return (
@@ -694,8 +764,8 @@ export default function HomeClient({
     );
   }
 
-  const signature = "🔥 @firebid on $Celo by @nikolaii.eth";
-  const signatureTwitter = "🔥 @Firebid_eth on @Celo by @NikolaiLeb";
+  const signature = "🔥 @firebid $Celo by @nikolaii.eth";
+  const signatureTwitter = "🔥 @Firebid_eth Celo by @NikolaiLeb";
 
   // let change it to: The pot is 4.49 USDC—place a 0.03 bid and win half of it!
   //
@@ -704,11 +774,15 @@ export default function HomeClient({
     ? `Someone left ${formatToken(latestAuction?.auctionAmount)} ${String(tokenSymbol ?? "")} in the pot - click to grab it!`
     : `Click and grab the pot!`;
 
-  const sharingText = latestResults ? `${baseText}\n\n${latestResults}\n\n${signature}` : `${baseText}\n${signature}`;
+  const sharingText = topResults ? `${baseText}\n\n${topResults}\n\n${signature}` : `${baseText}\n${signature}`;
   const sharingTextTwitter = baseText + "\n\n" + signatureTwitter;
 
   const timeRunningOutLimit = 30;
   const isTimeRunningOut = secondsRemaining < timeRunningOutLimit && !isBidding;
+
+  const increaseAmount = formatToken(
+    ((bidFee ?? 0n) as bigint) - ((referralFee ?? 0n) as bigint) - ((deployerFee ?? 0n) as bigint),
+  );
 
   return (
     <div className="w-full max-w-3xl mx-auto px-2 sm:px-4 lg:px-6">
@@ -895,6 +969,19 @@ export default function HomeClient({
           </div>
         </div>
 
+        <div className="flex flex-col justify-center px-4">
+          <p className="text-lg font-bold mt-0 mb-0">Rules:</p>
+          <ol className="list-decimal list-inside ml-2 mb-4">
+            <li className="my-1">
+              Each click increases the pot by {increaseAmount} {String(tokenSymbol ?? "")}.
+            </li>
+            <li className="my-1">Last player to click the button takes the whole pot!</li>
+            <li className="my-1">
+              To keep things exciting, if timer is below 300 seconds, it will reset to 300 seconds on new click.
+            </li>
+          </ol>
+        </div>
+
         {/* Share block */}
         <div className="bg-base-100 p-4 rounded-xl shadow-md shadow-secondary border border-base-300 flex flex-col gap-3">
           {connectedAddress ? (
@@ -1032,29 +1119,10 @@ export default function HomeClient({
               ))}
             </>
           )}
-          {PastAuctions.map(event => (
-            <div
-              key={String(event.auctionId)}
-              className="relative flex flex-col items-center justify-center border border-base-300 rounded-xl bg-base-100 p-4 shadow-md shadow-secondary"
-            >
-              <div className="flex flex-col items-center gap-1">
-                <div className="flex flex-col sm:flex-row items-center gap-2 text-sm">
-                  <AddressFarcaster size="sm" address={event.winner as `0x${string}`} />
-                  <div className="text-sm">
-                    wins <span className="font-black">{formatToken(event.amount as bigint)}</span>{" "}
-                    {String(tokenSymbol ?? "USDC")}
-                  </div>
-                  {event.winner.toLowerCase() === connectedAddress?.toLowerCase() && (
-                    <button onClick={() => launchConfetti()} className="absolute top-2 right-2 btn btn-accent btn-sm">
-                      🎉
-                    </button>
-                  )}
-                </div>
-                <div className="text-xs text-base-content/50">{formatTimeAgo(event.timestamp as number)}</div>
-              </div>
-            </div>
-          ))}
         </div>
+
+        {/* Top Winners Block */}
+        {topWinnersBlock}
       </div>
     </div>
   );

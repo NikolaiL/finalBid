@@ -28,6 +28,8 @@ dist
 
 # settings
 .env.local
+.env.*.local
+.env.*.server
 .env
 .env.*.local
 .env.*.server

@@ -2,6 +2,7 @@
 import { ponder } from "ponder:registry";
 import { auctionCreated, auctionEnded, bidPlaced } from "ponder:schema";
 import { eq, and, gt } from "drizzle-orm";
+import { getFarcasterUser } from "../../nextjs/lib/farcaster";
 
 // Get or create global change emitter instance
 type Listener = () => void;
@@ -32,7 +33,140 @@ const getChangeEmitter = (): ChangeEmitter => {
   return (globalThis as any).__PONDER_CHANGE_EMITTER__;
 };
 
+const formatTokenString = (amount: number, decimals: number, digits: number, tokenSymbol: string): string => {
+  const tokenAmount = amount / 10 ** decimals;
+  return tokenAmount.toFixed(digits) + " " + String(tokenSymbol ?? "");
+};
+
 const changeEmitter = getChangeEmitter();
+
+const reportNewBid = async (event: any, context: any) => {
+  // we need to have process.env.REPORT_NEW_BID_URL and process.env.REPORT_NEW_BID_API_KEY
+  const timestamp = Number(event.block.timestamp);
+  // if it's not withinn last 20 seconds return to avoid reporting old bids
+
+  if (timestamp < Math.floor(Date.now()/1000) - 20) {
+    console.error("Bid is too old to report", timestamp, Math.floor(Date.now()/1000) - 20);
+    return;
+  }
+
+  try {
+
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+    const url = process.env.NEYNAR_POST_URL;
+    const apiKey = process.env.NEYNAR_API_KEY;
+    const signerUuid = process.env.NEYNAR_SIGNER_UUID;
+
+    const userRequestUrl = `${appUrl}/api/farcaster-user?address=${event.args.bidder}`;
+    
+    const user = await fetch(userRequestUrl).then(res => res.json());
+    const username = user?.user?.username ? "@" + user.user.username : "Someone";
+    
+    const tokenSymbol = process.env.TOKEN_SYMBOL ? '$' + process.env.TOKEN_SYMBOL : "";
+    const tokenDecimals = process.env.TOKEN_DECIMALS ? Number(process.env.TOKEN_DECIMALS) : 18;
+    const tokenDigits = process.env.TOKEN_DIGITS !== null ? Number(process.env.TOKEN_DIGITS) : 0;
+    const amount = formatTokenString(Number(event.args.auctionAmount), tokenDecimals, tokenDigits, tokenSymbol);
+    console.log("Amount", amount, event.args.auctionAmount);
+    const bidCount = Number(event.args.bidCount);
+
+    const postText = bidCount === 1 
+    ? 
+      `${username} just started a new game. The pot is ${amount}. Go grab it:` 
+    : 
+      `${username} just added some tokens to the game pot. It's ${amount} now. Go grab it:`;
+    
+      const idem = process.env.NEYNAR_IDEM_PRE + event.transaction.hash;
+
+
+    let auctionPostHash = null;
+
+    try {
+
+      const auction = await context.db.find(auctionCreated, {auctionId: Number(event.args.auctionId)});
+      if (!auction) {
+        console.error("Auction not found", event.args.auctionId);
+      }
+      if (auction.postHash) {
+        console.log("We have a post already reported", event.args.auctionId, auction.postHash);
+      } else {
+        console.log("This auction has no post yet", event.args.auctionId, auction.postHash);
+      }
+
+      console.log("Auction", auction);
+      auctionPostHash = auction.postHash;
+    } catch (error) {
+      console.error("Error getting auction", error);
+    }
+
+    console.log("Out of nested try block");
+
+    const data = {
+      text: postText,
+      signer_uuid: signerUuid,
+      embeds: [{
+        url: appUrl,
+      }],
+      idem: idem,
+    };
+    
+    if (auctionPostHash) {
+      data.parent = auctionPostHash;
+    }
+    const body = JSON.stringify(data);
+    console.log("Data to report", data, event.args.auctionId);
+
+
+    if (!process.env.NEYNAR_POST_URL || !process.env.NEYNAR_API_KEY || !process.env.NEYNAR_SIGNER_UUID) {
+      console.error("NEYNAR_POST_URL, NEYNAR_API_KEY, or NEYNAR_SIGNER_UUID is not set");
+      return;
+    }
+
+    console.log("Reporting new bid to", url, body, Number(event.args.auctionAmount));
+    const response = await fetch(url, {
+      method: "POST",
+      headers: { 'x-api-key': `${apiKey}`, 'Content-Type': 'application/json' },
+      body: body,
+    });
+    const responseData = await response.json();
+    console.log("✅ Reported new bid to ", responseData.cast.hash);
+    // now, we need to save it to the database if we don;t have it yet...
+    if (!auctionPostHash) {
+      await context.db.update(auctionCreated, {auctionId: Number(event.args.auctionId)}).set({
+        postHash: responseData.cast.hash,
+      });
+      console.log("Updated auction with post hash", responseData.cast.hash);
+    } else {
+      console.log("Auction already has a post hash", auctionPostHash);
+    }
+  } catch (outerError) {
+    console.error("❌ Error reporting new bid to Neynar", outerError.code, outerError.message, outerError.property, outerError.status);
+    return true;
+  }
+};
+
+
+/*
+curl --request POST \
+  --url https://api.neynar.com/v2/farcaster/cast/ \
+  --header 'Content-Type: application/json' \
+  --header 'x-api-key: <api-key>' \
+  --data '{
+  "signer_uuid": "19d0c5fd-9b33-4a48-a0e2-bc7b0555baec",
+  "text": "<string>",
+  "embeds": [
+    {
+      "cast_id": {
+        "hash": "<string>",
+        "fid": 3
+      }
+    }
+  ],
+  "parent": "<string>",
+  "channel_id": "neynar",
+  "idem": "<string>",
+  "parent_author_fid": 3
+}'
+*/
 
 ponder.on("FinalBidContract:AuctionCreated", async ({ event, context }) => {
   await context.db.insert(auctionCreated).values({
@@ -81,6 +215,9 @@ ponder.on("FinalBidContract:BidPlaced", async ({ event, context }) => {
   
   // Notify SSE clients of data change
   changeEmitter.emit();
+
+  await reportNewBid(event, context);
+
 });
 
 ponder.on("FinalBidContract:AuctionEnded", async ({ event, context }) => {
