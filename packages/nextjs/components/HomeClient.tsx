@@ -936,8 +936,7 @@ export default function HomeClient({
             </li>
             <li className="my-1">Last player to click the button takes the whole pot!</li>
             <li className="my-1">
-              To keep things exciting, if timer is below {timeRunningOutLimit} seconds, it will reset to{" "}
-              {timeRunningOutLimit} seconds on new click.
+              To keep things exciting, if timer is below 300 seconds, it will reset to 300 seconds on new click.
             </li>
           </ol>
         </div>
