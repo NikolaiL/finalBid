@@ -14,11 +14,7 @@ import {
   useTransactor,
 } from "~~/hooks/scaffold-eth";
 // Streaming data hooks removed - not in current contract
-import {
-  auctionCreatedQueryOptions,
-  auctionEndedQueryOptions,
-  createBidPlacedQueryOptions,
-} from "~~/lib/bid-events-query";
+import { auctionCreatedQueryOptions, createBidPlacedQueryOptions } from "~~/lib/bid-events-query";
 import { getAddressDisplayName } from "~~/lib/farcaster";
 import { formatTimeAgo, getServerTime, useServerTimeDrift } from "~~/lib/global-time";
 import { useDataLiveQuery } from "~~/lib/useDataLiveQuery";
@@ -111,15 +107,6 @@ export default function HomeClient({
   const bidEventsQuery: any = useDataLiveQuery(bidPlacedQueryOptions as any);
   const BidEvents: any[] = useMemo(() => (bidEventsQuery?.data ?? []) as any[], [bidEventsQuery?.data]);
 
-  const auctionEndedQuery: any = useDataLiveQuery(auctionEndedQueryOptions as any);
-  const AuctionEndedEvents: any[] = useMemo(() => (auctionEndedQuery?.data ?? []) as any[], [auctionEndedQuery?.data]);
-
-  // Exclude auctions with zero-address winner
-  const PastAuctions = useMemo(() => {
-    const zero = ZERO_ADDRESS.toLowerCase();
-    return (AuctionEndedEvents || []).filter((e: any) => (e?.winner || "").toLowerCase() !== zero);
-  }, [AuctionEndedEvents]);
-
   const { writeContractAsync } = useScaffoldWriteContract({
     contractName: "FinalBidContract",
   });
@@ -211,6 +198,7 @@ export default function HomeClient({
   const [isBidding, setIsBidding] = useState(false);
   const [bidStatus, setBidStatus] = useState<string>("");
   const [topResults, setTopResults] = useState<string>("");
+  const [topWinnersData, setTopWinnersData] = useState<any[]>([]);
   const [isApproving, setIsApproving] = useState(0);
   const [isRevoking, setIsRevoking] = useState(false);
 
@@ -288,22 +276,33 @@ export default function HomeClient({
         const topWinners = await response.json();
         if (!topWinners || topWinners.length === 0) {
           setTopResults("");
+          setTopWinnersData([]);
           return;
         }
 
-        // Get top 7 winners
-        const top7 = topWinners.slice(0, 7);
+        // Store all winners data for display
+        const allWinnersWithNames = await Promise.all(
+          topWinners.map(async (item: any, index: number) => {
+            const winner = item.winner as string;
+            const displayName = await getAddressDisplayName(winner);
+            return {
+              rank: index + 1,
+              address: winner,
+              displayName,
+              totalAmount: BigInt(item.totalAmount),
+            };
+          }),
+        );
+        setTopWinnersData(allWinnersWithNames);
 
-        const resultsPromises = top7.map(async (item: any) => {
-          const winner = item.winner as string;
-          const displayName = await getAddressDisplayName(winner);
-          const amount = formatToken(BigInt(item.totalAmount));
+        // Create sharing text with only top 7
+        const top7ForSharing = allWinnersWithNames.slice(0, 7);
+        const resultsText = top7ForSharing.map(item => {
+          const amount = formatToken(item.totalAmount);
           const token = String(tokenSymbol ?? "USDC");
-          return `${displayName} won ${amount} $${token}`;
+          return `${item.rank}) ${item.displayName} won ${amount} $${token}`;
         });
-
-        const results = await Promise.all(resultsPromises);
-        setTopResults("🏆 Top Winners:\n\n" + results.join("\n") + "\n\nCould You be next?");
+        setTopResults("🏆 Top Winners:\n\n" + resultsText.join("\n") + "\n\nCould You be next?");
       } catch (error) {
         console.error("Error fetching top winners:", error);
         setTopResults("");
@@ -706,12 +705,7 @@ export default function HomeClient({
 
   // Loading gate: wait for initial wallet resolution and first fetch of auction-related data
   const isWalletInitializing = isConnecting || isReconnecting;
-  const isLoadingApp = !!(
-    bidEventsQuery?.isPending ||
-    auctionCreatedQuery?.isPending ||
-    auctionEndedQuery?.isPending ||
-    isWalletInitializing
-  );
+  const isLoadingApp = !!(bidEventsQuery?.isPending || auctionCreatedQuery?.isPending || isWalletInitializing);
 
   if (isLoadingApp) {
     return (
@@ -1078,29 +1072,50 @@ export default function HomeClient({
               ))}
             </>
           )}
-          {PastAuctions.map(event => (
-            <div
-              key={String(event.auctionId)}
-              className="relative flex flex-col items-center justify-center border border-base-300 rounded-xl bg-base-100 p-4 shadow-md shadow-secondary"
-            >
-              <div className="flex flex-col items-center gap-1">
-                <div className="flex flex-col sm:flex-row items-center gap-2 text-sm">
-                  <AddressFarcaster size="sm" address={event.winner as `0x${string}`} />
-                  <div className="text-sm">
-                    wins <span className="font-black">{formatToken(event.amount as bigint)}</span>{" "}
-                    {String(tokenSymbol ?? "USDC")}
-                  </div>
-                  {event.winner.toLowerCase() === connectedAddress?.toLowerCase() && (
-                    <button onClick={() => launchConfetti()} className="absolute top-2 right-2 btn btn-accent btn-sm">
-                      🎉
-                    </button>
-                  )}
-                </div>
-                <div className="text-xs text-base-content/50">{formatTimeAgo(event.timestamp as number)}</div>
-              </div>
-            </div>
-          ))}
         </div>
+
+        {/* Top Winners Block */}
+        {topWinnersData.length > 0 && (
+          <div className="bg-base-100 mt-4 p-0 rounded-xl shadow-md shadow-secondary border border-base-300 flex flex-col">
+            <div className="text-lg font-light text-center mt-3 mb-2">🏆 Top Winners</div>
+            <div className="overflow-x-auto overflow-y-hidden">
+              <table className="table table-sm w-full">
+                <thead>
+                  <tr>
+                    <th className="py-1 pl-3 pr-px text-xs font-light">Rank</th>
+                    <th className="py-1 px-px text-xs font-light">Player</th>
+                    <th className="py-1 pr-3 px-px text-xs text-right font-light">Total Won</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {topWinnersData.map(winner => (
+                    <tr
+                      key={winner.address}
+                      className={winner.address.toLowerCase() === connectedAddress?.toLowerCase() ? "bg-accent/20" : ""}
+                    >
+                      <td className="p-1 text-xs font-mono text-center">
+                        <div className="text-base-content/70">{winner.rank}</div>
+                      </td>
+                      <td className="p-1 text-xs">
+                        <div className="flex items-center gap-2">
+                          <AddressFarcaster size="xs" address={winner.address as `0x${string}`} />
+                          {winner.address.toLowerCase() === connectedAddress?.toLowerCase() && (
+                            <span className="text-xs">🎉</span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="p-1 text-right font-mono text-xs whitespace-nowrap">
+                        <div className="text-base-content/70">
+                          {formatToken(winner.totalAmount)} {String(tokenSymbol ?? "USDC")}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
