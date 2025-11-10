@@ -210,7 +210,7 @@ export default function HomeClient({
   // State for button and transaction status
   const [isBidding, setIsBidding] = useState(false);
   const [bidStatus, setBidStatus] = useState<string>("");
-  const [latestResults, setLatestResults] = useState<string>("");
+  const [topResults, setTopResults] = useState<string>("");
   const [isApproving, setIsApproving] = useState(0);
   const [isRevoking, setIsRevoking] = useState(false);
 
@@ -275,28 +275,42 @@ export default function HomeClient({
     return () => clearInterval(id);
   }, []);
 
-  // Fetch latest auction results when PastAuctions changes
+  // Fetch top winners from the API
   useEffect(() => {
-    const fetchResults = async () => {
-      const latestResults = PastAuctions.slice(0, 5); // Get latest 5 auctions
-      if (latestResults.length === 0) {
-        setLatestResults("");
-        return;
+    const fetchTopWinners = async () => {
+      try {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_PONDER_URL}/top-list`);
+        if (!response.ok) {
+          setTopResults("");
+          return;
+        }
+
+        const topWinners = await response.json();
+        if (!topWinners || topWinners.length === 0) {
+          setTopResults("");
+          return;
+        }
+
+        // Get top 7 winners
+        const top7 = topWinners.slice(0, 7);
+
+        const resultsPromises = top7.map(async (item: any) => {
+          const winner = item.winner as string;
+          const displayName = await getAddressDisplayName(winner);
+          const amount = formatToken(BigInt(item.totalAmount));
+          const token = String(tokenSymbol ?? "USDC");
+          return `${displayName} won ${amount} $${token}`;
+        });
+
+        const results = await Promise.all(resultsPromises);
+        setTopResults("🏆 Top Winners:\n\n" + results.join("\n") + "\n\nCould You be next?");
+      } catch (error) {
+        console.error("Error fetching top winners:", error);
+        setTopResults("");
       }
-
-      const resultsPromises = latestResults.map(async event => {
-        const winner = event.winner as string;
-        const displayName = await getAddressDisplayName(winner);
-        const amount = formatToken(event.amount as bigint);
-        const token = String(tokenSymbol ?? "USDC");
-        return `${displayName} wins ${amount} ${token}`;
-      });
-
-      const results = await Promise.all(resultsPromises);
-      setLatestResults("🎉 Congrats to the latest winners:\n" + results.join("\n") + "\n\nCould You be next?");
     };
-    fetchResults();
-  }, [PastAuctions, tokenSymbol]);
+    fetchTopWinners();
+  }, [tokenSymbol]);
 
   // Check if auction is ready to be over using blockchain-synchronized time
   const isAcutionReadytoBeOver = useMemo(() => {
@@ -719,7 +733,7 @@ export default function HomeClient({
     ? `Someone left ${formatToken(latestAuction?.auctionAmount)} ${String(tokenSymbol ?? "")} in the pot - click to grab it!`
     : `Click and grab the pot!`;
 
-  const sharingText = latestResults ? `${baseText}\n\n${latestResults}\n\n${signature}` : `${baseText}\n${signature}`;
+  const sharingText = topResults ? `${baseText}\n\n${topResults}\n\n${signature}` : `${baseText}\n${signature}`;
   const sharingTextTwitter = baseText + "\n\n" + signatureTwitter;
 
   const timeRunningOutLimit = 30;
@@ -920,7 +934,11 @@ export default function HomeClient({
             <li className="my-1">
               Each click increases the pot by {increaseAmount} {String(tokenSymbol ?? "")}.
             </li>
-            <li className="my-0">Last player to click the button takes the whole pot!</li>
+            <li className="my-1">Last player to click the button takes the whole pot!</li>
+            <li className="my-1">
+              To keep things exciting, if timer is below {timeRunningOutLimit} seconds, it will reset to{" "}
+              {timeRunningOutLimit} seconds on new click.
+            </li>
           </ol>
         </div>
 
