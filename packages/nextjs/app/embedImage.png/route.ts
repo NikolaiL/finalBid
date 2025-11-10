@@ -475,7 +475,7 @@ export async function GET(req: NextRequest) {
                 style: {
                   fontSize: "40px",
                   fontWeight: "700",
-                  color: "#ffffff",
+                  color: "#000000",
                   fontFamily: "RubikBold",
                 },
               },
