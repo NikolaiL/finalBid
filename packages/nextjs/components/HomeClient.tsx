@@ -5,6 +5,7 @@ import { getReferralTag, submitReferral } from "@divvi/referral-sdk";
 import NumberFlow from "@number-flow/react";
 import { toast } from "react-hot-toast";
 import { useAccount, useReadContract, useWriteContract } from "wagmi";
+import ExternalAuctionBlock from "~~/components/ExternalAuctionBlock";
 import { useMiniapp } from "~~/components/MiniappProvider";
 import { AddressFarcaster, RainbowKitCustomConnectButton } from "~~/components/scaffold-eth";
 import {
@@ -764,8 +765,8 @@ export default function HomeClient({
     );
   }
 
-  const signature = "🔥 @firebid $Degen by @nikolaii.eth";
-  const signatureTwitter = "🔥 @Firebid_eth Degen by @NikolaiLeb";
+  const signature = "🔥 @firebid $Celo by @nikolaii.eth";
+  const signatureTwitter = "🔥 @Firebid_eth Celo by @NikolaiLeb";
 
   // let change it to: The pot is 4.49 USDC—place a 0.03 bid and win half of it!
   //
@@ -787,6 +788,16 @@ export default function HomeClient({
   return (
     <div className="w-full max-w-3xl mx-auto px-2 sm:px-4 lg:px-6">
       <div className="flex flex-col gap-1 py-4 px-2">
+        {/* External auction info */}
+        <ExternalAuctionBlock
+          infoUrl="https://firebid-celo.altumbase.com/ponder/latest-auction"
+          miniappUrl="https://firebid-celo.altumbase.com"
+          tokenName="CELO"
+          displayDecimals={2}
+          className="!bg-[#fcff52] !text-black"
+          tokenDecimals={18}
+        />
+
         {/* Auction info */}
         <div className="bg-base-100 px-5 py-3 rounded-xl shadow-md shadow-secondary border border-base-300 flex flex-col gap-3">
           {latestAuction ? (
@@ -1039,17 +1050,17 @@ export default function HomeClient({
             <div className="flex gap-2 justify-center items-center">
               <button
                 className="btn btn-accent btn-sm flex items-center gap-2"
-                onClick={() => handlePreApprove(1000)}
-                disabled={isApproving === 1000}
+                onClick={() => handlePreApprove(100)}
+                disabled={isApproving === 100}
               >
-                {isApproving === 1000 ? "Approving..." : "1000" + " " + String(tokenSymbol ?? "USDC")}
+                {isApproving === 100 ? "Approving..." : "100" + " " + String(tokenSymbol ?? "USDC")}
               </button>
               <button
                 className="btn btn-accent btn-sm flex items-center gap-2"
-                onClick={() => handlePreApprove(5000)}
-                disabled={isApproving === 5000}
+                onClick={() => handlePreApprove(500)}
+                disabled={isApproving === 500}
               >
-                {isApproving === 5000 ? "Approving..." : "5000" + " " + String(tokenSymbol ?? "USDC")}
+                {isApproving === 500 ? "Approving..." : "500" + " " + String(tokenSymbol ?? "USDC")}
               </button>
               <button
                 className="btn btn-secondary btn-sm flex items-center gap-2"
