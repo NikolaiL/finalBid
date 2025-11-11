@@ -17,6 +17,7 @@ interface MiniappContextType {
   openLink: (url: string) => Promise<void>;
   composeCast: (params: { text: string; embeds?: string[] }) => Promise<void>;
   openProfile: (params: { fid?: number; username?: string }) => Promise<void>;
+  openMiniApp: (url: string) => Promise<void>;
 }
 
 const MiniappContext = createContext<MiniappContextType | undefined>(undefined);
@@ -111,6 +112,19 @@ export const MiniappProvider = ({ children }: MiniappProviderProps) => {
     }
   };
 
+  const openMiniApp = async (url: string) => {
+    try {
+      const inMiniApp = await sdk.isInMiniApp();
+      if (inMiniApp) {
+        await sdk.actions.openMiniApp({ url });
+      } else {
+        if (typeof window !== "undefined") window.open(url, "_blank");
+      }
+    } catch (err) {
+      console.error("openMiniApp error", err);
+    }
+  };
+
   useEffect(() => {
     sdk.actions
       .ready()
@@ -174,6 +188,7 @@ export const MiniappProvider = ({ children }: MiniappProviderProps) => {
     openLink,
     composeCast,
     openProfile,
+    openMiniApp,
   };
 
   return <MiniappContext.Provider value={value}>{children}</MiniappContext.Provider>;
