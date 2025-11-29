@@ -281,9 +281,12 @@ export default function HomeClient({
           return;
         }
 
+        // limit to 50 winners
+        const limitedWinners = topWinners.slice(0, 50);
+
         // Store all winners data for display
         const allWinnersWithNames = await Promise.all(
-          topWinners.map(async (item: any, index: number) => {
+          limitedWinners.map(async (item: any, index: number) => {
             const winner = item.winner as string;
             const displayName = await getAddressDisplayName(winner);
             return {
