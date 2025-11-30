@@ -99,18 +99,39 @@ export default function HomeClient({
   // Fallback: fetch from endpoint if SQL returns nothing
   const [fallbackAuction, setFallbackAuction] = useState<any>(null);
 
+  // Helper to convert string BigInts from JSON to actual BigInts
+  const convertAuctionBigInts = useCallback((auction: any) => {
+    if (!auction) return null;
+    return {
+      ...auction,
+      auctionId: typeof auction.auctionId === "string" ? BigInt(auction.auctionId) : auction.auctionId,
+      auctionAmount: typeof auction.auctionAmount === "string" ? BigInt(auction.auctionAmount) : auction.auctionAmount,
+      startTime: typeof auction.startTime === "string" ? BigInt(auction.startTime) : auction.startTime,
+      endTime: typeof auction.endTime === "string" ? BigInt(auction.endTime) : auction.endTime,
+      bidFee: typeof auction.bidFee === "string" ? BigInt(auction.bidFee) : auction.bidFee,
+      referralFee: typeof auction.referralFee === "string" ? BigInt(auction.referralFee) : auction.referralFee,
+      deployerFee: typeof auction.deployerFee === "string" ? BigInt(auction.deployerFee) : auction.deployerFee,
+      startingAmount:
+        typeof auction.startingAmount === "string" ? BigInt(auction.startingAmount) : auction.startingAmount,
+      bidIncrement: typeof auction.bidIncrement === "string" ? BigInt(auction.bidIncrement) : auction.bidIncrement,
+      highestBid: typeof auction.highestBid === "string" ? BigInt(auction.highestBid) : auction.highestBid,
+      blockNumber: typeof auction.blockNumber === "string" ? BigInt(auction.blockNumber) : auction.blockNumber,
+    };
+  }, []);
+
   const fetchFallbackAuction = useCallback(async () => {
     try {
       const response = await fetch(`${process.env.NEXT_PUBLIC_PONDER_URL}/latest-auction`);
       if (!response.ok) return;
       const data = await response.json();
       if (data && !data.error) {
-        setFallbackAuction(data);
+        const converted = convertAuctionBigInts(data);
+        setFallbackAuction(converted);
       }
     } catch (error) {
       console.error("Error fetching fallback auction:", error);
     }
-  }, []);
+  }, [convertAuctionBigInts]);
 
   // Fetch fallback data when SQL query returns empty
   useEffect(() => {
