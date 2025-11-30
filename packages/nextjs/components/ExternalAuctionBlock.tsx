@@ -68,14 +68,13 @@ export default function ExternalAuctionBlock({
       }
       const data: ExternalAuction = await response.json();
       setExternalAuction(data);
+      console.log("fetchExternalAuction done");
+      console.log(data);
+      console.log(formatToken(BigInt(data?.auctionAmount ?? 0n), tokenDecimals, displayDecimals));
     } catch (error) {
       console.error("Failed to fetch external auction:", error);
-    } finally {
-      console.log("fetchExternalAuction done");
-      console.log(externalAuction);
-      console.log(formatToken(BigInt(externalAuction?.auctionAmount ?? 0n), tokenDecimals, displayDecimals));
     }
-  }, [infoUrl, tokenDecimals, displayDecimals, externalAuction]);
+  }, [infoUrl, tokenDecimals, displayDecimals]);
 
   // Fetch external auction data on component mount
   useEffect(() => {
