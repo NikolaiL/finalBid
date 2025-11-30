@@ -334,8 +334,8 @@ export default function HomeClient({
           return;
         }
 
-        // limit to 50 winners
-        const limitedWinners = topWinners.slice(0, 50);
+        // limit to 10 winners
+        const limitedWinners = topWinners.slice(0, 10);
 
         // Store all winners data for display
         const allWinnersWithNames = await Promise.all(
