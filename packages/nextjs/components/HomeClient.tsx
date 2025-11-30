@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { getReferralTag, submitReferral } from "@divvi/referral-sdk";
 import NumberFlow from "@number-flow/react";
 import { toast } from "react-hot-toast";
@@ -96,11 +96,43 @@ export default function HomeClient({
     [auctionCreatedQuery?.data],
   );
 
+  // Fallback: fetch from endpoint if SQL returns nothing
+  const [fallbackAuction, setFallbackAuction] = useState<any>(null);
+
+  const fetchFallbackAuction = useCallback(async () => {
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_PONDER_URL}/latest-auction`);
+      if (!response.ok) return;
+      const data = await response.json();
+      if (data && !data.error) {
+        setFallbackAuction(data);
+      }
+    } catch (error) {
+      console.error("Error fetching fallback auction:", error);
+    }
+  }, []);
+
+  // Fetch fallback data when SQL query returns empty
+  useEffect(() => {
+    if (AuctionCreatedEvents.length === 0) {
+      fetchFallbackAuction();
+    } else {
+      setFallbackAuction(null); // Clear fallback when we have SQL data
+    }
+  }, [AuctionCreatedEvents.length, fetchFallbackAuction]);
+
+  // Use SQL data if available, otherwise use fallback
+  const AuctionCreatedEventsWithFallback = useMemo(() => {
+    if (AuctionCreatedEvents.length > 0) return AuctionCreatedEvents;
+    if (fallbackAuction) return [fallbackAuction];
+    return [];
+  }, [AuctionCreatedEvents, fallbackAuction]);
+
   // Get the latest auction ID
   const latestAuctionId = useMemo(() => {
-    if (AuctionCreatedEvents.length === 0) return null;
-    return AuctionCreatedEvents[0]?.auctionId;
-  }, [AuctionCreatedEvents]);
+    if (AuctionCreatedEventsWithFallback.length === 0) return null;
+    return AuctionCreatedEventsWithFallback[0]?.auctionId;
+  }, [AuctionCreatedEventsWithFallback]);
 
   // Only fetch bids after we have the latest auction ID
   const bidPlacedQueryOptions = useMemo(() => createBidPlacedQueryOptions(latestAuctionId), [latestAuctionId]);
@@ -214,7 +246,7 @@ export default function HomeClient({
   });
   const tokenSymbol = tokenSymbolProp ?? tokenSymbolRpc;
 
-  const latestAuction = useMemo(() => AuctionCreatedEvents[0], [AuctionCreatedEvents]);
+  const latestAuction = useMemo(() => AuctionCreatedEventsWithFallback[0], [AuctionCreatedEventsWithFallback]);
 
   // Call the hooks unconditionally first
   const { data: bidFeeFromContract } = useScaffoldReadContract({
