@@ -81,11 +81,11 @@ export default function ExternalAuctionBlock({
     fetchExternalAuction();
   }, [fetchExternalAuction]);
 
-  // Refetch external auction data every 60 seconds
+  // Refetch external auction data every 5 seconds
   useEffect(() => {
     const interval = setInterval(() => {
       fetchExternalAuction();
-    }, 60000); // 60 seconds
+    }, 5000); // 5 seconds
 
     return () => clearInterval(interval);
   }, [fetchExternalAuction]);
