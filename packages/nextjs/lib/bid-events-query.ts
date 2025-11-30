@@ -45,8 +45,26 @@ const baseAuctionCreated = getPonderQueryOptions(
       .orderBy(desc((schema as any).auctionCreated.blockNumber), desc((schema as any).auctionCreated.logIndex))
       .limit(20) as any,
 );
+
+// Wrap the queryFn to add logging
+const wrappedQueryFn = async () => {
+  console.log("🔍 Fetching auction created events...");
+  try {
+    const result = await baseAuctionCreated.queryFn();
+    console.log("✅ Auction created events fetched:", {
+      count: Array.isArray(result) ? result.length : "not array",
+      data: result,
+    });
+    return result;
+  } catch (error) {
+    console.error("❌ Error fetching auction created events:", error);
+    throw error;
+  }
+};
+
 export const auctionCreatedQueryOptions = {
   ...baseAuctionCreated,
+  queryFn: wrappedQueryFn,
 } as const;
 
 const baseAuctionEnded = getPonderQueryOptions(

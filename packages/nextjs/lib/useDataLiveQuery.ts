@@ -28,11 +28,13 @@ function getGlobal(): GlobalLive {
 function ensureSharedES() {
   const g = getGlobal();
   if (g.es) return;
+  console.log("🚀 Creating new EventSource connection to:", liveUrl);
   g.es = new EventSource(liveUrl);
   const emit = () => {
     if (g.debounceTimer) return;
     g.debounceTimer = setTimeout(() => {
       g.debounceTimer = null;
+      console.log("📨 Broadcasting data update to", g.listeners.size, "listeners");
       g.listeners.forEach(fn => {
         try {
           fn();
@@ -40,8 +42,15 @@ function ensureSharedES() {
       });
     }, 250);
   };
-  g.es.addEventListener("message", emit);
-  g.es.addEventListener("error", () => {
+  g.es.addEventListener("message", event => {
+    console.log("📬 EventSource message received:", event.data);
+    emit();
+  });
+  g.es.addEventListener("open", () => {
+    console.log("✅ EventSource connection opened");
+  });
+  g.es.addEventListener("error", err => {
+    console.error("❌ EventSource error:", err);
     // Allow automatic reconnection; listeners remain registered.
   });
 }
@@ -57,9 +66,11 @@ export function useDataLiveQuery<T = unknown>(opts: Opts<T>) {
   const queryClient = useQueryClient();
 
   useEffect(() => {
+    console.log("📡 useDataLiveQuery connecting to:", liveUrl);
     ensureSharedES();
     const g = getGlobal();
     const onMsg = () => {
+      console.log("🔔 Live data update received, invalidating query:", opts.queryKey);
       queryClient.invalidateQueries({ queryKey: opts.queryKey });
     };
     g.listeners.add(onMsg);
@@ -68,10 +79,20 @@ export function useDataLiveQuery<T = unknown>(opts: Opts<T>) {
     };
   }, [queryClient, opts.queryKey]);
 
-  return useQuery<T>({
+  const result = useQuery<T>({
     queryKey: opts.queryKey,
     queryFn: opts.queryFn,
     staleTime: opts.staleTime ?? 5000, // 5 seconds default stale time
     refetchOnWindowFocus: opts.refetchOnWindowFocus ?? false,
   });
+
+  console.log("🔍 useDataLiveQuery result:", {
+    queryKey: opts.queryKey,
+    isLoading: result.isLoading,
+    isError: result.isError,
+    error: result.error,
+    dataLength: Array.isArray(result.data) ? result.data.length : "not array",
+  });
+
+  return result;
 }

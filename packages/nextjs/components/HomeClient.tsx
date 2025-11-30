@@ -96,9 +96,21 @@ export default function HomeClient({
     [auctionCreatedQuery?.data],
   );
 
+  console.log("🔍 auctionCreatedQuery:", {
+    isLoading: auctionCreatedQuery?.isLoading,
+    isError: auctionCreatedQuery?.isError,
+    error: auctionCreatedQuery?.error,
+    dataLength: auctionCreatedQuery?.data?.length,
+    data: auctionCreatedQuery?.data,
+  });
+
   // Get the latest auction ID
   const latestAuctionId = useMemo(() => {
-    if (AuctionCreatedEvents.length === 0) return null;
+    if (AuctionCreatedEvents.length === 0) {
+      console.log("❌ No auction created events found");
+      return null;
+    }
+    console.log("✅ Latest auction ID:", AuctionCreatedEvents[0]?.auctionId);
     return AuctionCreatedEvents[0]?.auctionId;
   }, [AuctionCreatedEvents]);
 
@@ -214,7 +226,11 @@ export default function HomeClient({
   });
   const tokenSymbol = tokenSymbolProp ?? tokenSymbolRpc;
 
-  const latestAuction = useMemo(() => AuctionCreatedEvents[0], [AuctionCreatedEvents]);
+  const latestAuction = useMemo(() => {
+    const auction = AuctionCreatedEvents[0];
+    console.log("🎯 latestAuction:", auction);
+    return auction;
+  }, [AuctionCreatedEvents]);
 
   // Call the hooks unconditionally first
   const { data: bidFeeFromContract } = useScaffoldReadContract({
