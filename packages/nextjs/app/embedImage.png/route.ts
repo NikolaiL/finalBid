@@ -1,10 +1,7 @@
 import React from "react";
 import { NextRequest } from "next/server";
-import { sql } from "@ponder/client";
 import { ImageResponse } from "@vercel/og";
 import { blo } from "blo";
-// Use lightweight Ponder client to avoid importing ponder schema/graph server
-import { client } from "~~/lib/ponderLight";
 import { formatToken, readTokenMeta } from "~~/lib/tokenMeta";
 
 export const runtime = "nodejs";
@@ -129,54 +126,62 @@ export async function GET(req: NextRequest) {
 
     const tokenSymbol = tokenMeta?.symbol ?? "USDC";
 
-    // Fetch current auction data from Ponder API
+    // Fetch current auction data from latest-auction endpoint
 
     try {
-      // Use the Ponder client with SQL operator for type-safe queries
+      // Determine the Ponder URL based on environment
+      // Priority: NEXT_PUBLIC_PONDER_URL > PONDER_URL > construct from baseUrl
+      let ponderUrl = process.env.NEXT_PUBLIC_PONDER_URL || process.env.PONDER_URL;
 
-      //console.log("client", client);
+      // If no env var is set, construct it from the base URL
+      if (!ponderUrl) {
+        // If baseUrl contains the domain, use it with /ponder path
+        ponderUrl = `${baseUrl}/ponder`;
+      }
 
-      const response = await client.db.execute(sql`
-          SELECT * FROM "auctionCreated"
-          ORDER BY timestamp DESC 
-          LIMIT 1
-        `);
+      const fetchUrl = `${ponderUrl}/latest-auction`;
+      console.log("Fetching auction data from:", fetchUrl);
+      console.log("Environment variables:", {
+        NEXT_PUBLIC_PONDER_URL: process.env.NEXT_PUBLIC_PONDER_URL,
+        PONDER_URL: process.env.PONDER_URL,
+        baseUrl,
+      });
 
-      if (!response || response.length === 0) {
-        console.error("No auction data found in Ponder", process.env.NEXT_PUBLIC_PONDER_URL);
+      const response = await fetch(fetchUrl, {
+        cache: "no-store", // Always fetch fresh data for OG images
+      });
+
+      console.log("Response status:", response.status);
+
+      if (!response.ok) {
+        console.error("Failed to fetch latest auction:", response.statusText);
         return generateDefaultImage();
       }
 
-      const currentAuction = response[0];
+      const data = await response.json();
+      console.log("Auction data received:", data);
 
-      if (!currentAuction) {
-        // No auction found, return default image
+      if (!data || data.error) {
+        console.error("No auction data found in Ponder", ponderUrl);
         return generateDefaultImage();
       }
 
-      // Validate that we have some data
-      if (!Array.isArray(currentAuction) || currentAuction.length === 0) {
-        console.error("Invalid auction data structure:", currentAuction);
-        return generateDefaultImage();
-      }
-
-      // Map the array values to an object with property names
-      // Since we might get different column orders, let's be flexible
+      // Data from endpoint has all fields as strings (BigInts are serialized)
       auction = {
-        auctionId: currentAuction[0] || "0",
-        hash: currentAuction[1] || "",
-        auctionAmount: currentAuction[2] || "0",
-        startTime: currentAuction[3] || "0",
-        endTime: currentAuction[4] || "0",
-        referralFee: currentAuction[5] || "0",
-        deployerFee: currentAuction[6] || "0",
-        bidFee: currentAuction[7] || "0",
-        bidCount: currentAuction[8] || 0,
-        highestBidder: currentAuction[9] || "",
-        blockNumber: currentAuction[10] || "0",
-        logIndex: currentAuction[11] || 0,
-        timestamp: currentAuction[12] || "0",
-        ended: currentAuction[14] || false,
+        auctionId: data.auctionId || "0",
+        hash: data.hash || "",
+        auctionAmount: data.auctionAmount || "0",
+        startTime: data.startTime || "0",
+        endTime: data.endTime || "0",
+        referralFee: data.referralFee || "0",
+        deployerFee: data.deployerFee || "0",
+        bidFee: data.bidFee || "0",
+        bidCount: data.bidCount || 0,
+        highestBidder: data.highestBidder || "",
+        blockNumber: data.blockNumber || "0",
+        logIndex: data.logIndex || 0,
+        timestamp: data.timestamp || "0",
+        ended: data.ended || false,
       };
 
       //console.log("auction", auction);
@@ -189,17 +194,39 @@ export async function GET(req: NextRequest) {
       //isWinner = false;
 
       if (isWinner) {
-        const winnerDataResponse = await fetch(`${baseUrl}/api/farcaster-user?address=${auction.highestBidder}`);
-        const winnerDataTemp = await winnerDataResponse.json();
-        if (winnerDataTemp.user) {
-          winnerData = {
-            username: winnerDataTemp.user.username,
-            profilePicture: transformImgurUrl(winnerDataTemp.user.pfp_url),
-          };
-        } else {
+        // Try to fetch Farcaster user data, but fallback to address if it fails
+        try {
+          const winnerDataResponse = await fetch(`${baseUrl}/api/farcaster-user?address=${auction.highestBidder}`);
+
+          // Check if response is OK and is JSON
+          if (winnerDataResponse.ok && winnerDataResponse.headers.get("content-type")?.includes("application/json")) {
+            const winnerDataTemp = await winnerDataResponse.json();
+            if (winnerDataTemp.user) {
+              winnerData = {
+                username: winnerDataTemp.user.username,
+                profilePicture: transformImgurUrl(winnerDataTemp.user.pfp_url),
+              };
+            } else {
+              // No user data, use address
+              winnerData = {
+                username: auction.highestBidder?.slice(0, 6) + "…" + auction.highestBidder?.slice(-4),
+                profilePicture: blo(auction.highestBidder as `0x${string}`),
+              };
+            }
+          } else {
+            // Response not OK or not JSON, use address
+            console.warn("Farcaster API returned non-JSON response, using address fallback");
+            winnerData = {
+              username: auction.highestBidder?.slice(0, 6) + "…" + auction.highestBidder?.slice(-4),
+              profilePicture: blo(auction.highestBidder as `0x${string}`),
+            };
+          }
+        } catch (error) {
+          // Any error fetching user data, fallback to address
+          console.warn("Error fetching Farcaster user data, using address fallback:", error);
           winnerData = {
             username: auction.highestBidder?.slice(0, 6) + "…" + auction.highestBidder?.slice(-4),
-            profilePicture: blo(auction.highestBidder as `0x${string}`), // generate an image from address
+            profilePicture: blo(auction.highestBidder as `0x${string}`),
           };
         }
       }
@@ -219,9 +246,20 @@ export async function GET(req: NextRequest) {
 
       // Validate auction data
       if (!auction.auctionAmount || !auction.endTime) {
-        console.error("Invalid auction data:", auction);
+        console.error("Invalid auction data - missing required fields:", {
+          auctionAmount: auction.auctionAmount,
+          endTime: auction.endTime,
+        });
         return generateDefaultImage();
       }
+
+      console.log("Auction data validated successfully:", {
+        auctionId: auction.auctionId,
+        auctionAmount: auctionAmountFormatted,
+        isActive,
+        isWinner,
+        ended: auction.ended,
+      });
     } catch (error) {
       console.error("Error fetching auction data from Ponder:", error);
       return generateDefaultImage();
