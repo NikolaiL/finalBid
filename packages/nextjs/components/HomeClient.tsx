@@ -1046,6 +1046,11 @@ export default function HomeClient({
             <li className="my-1">
               To keep things exciting, if timer is below 300 seconds, it will reset to 300 seconds on new click.
             </li>
+            <li className="my-1">
+              We use reCAPTCHA to prevent bot activity. If you encounter an Are you human? prompt, we recommend
+              exploring the miniapp, reviewing our About page, and trying again in a few minutes. Repeatedly clicking
+              the button will trigger reCAPTCHAs bot detection, so please avoid doing so.
+            </li>
           </ol>
         </div>
 
