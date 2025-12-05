@@ -1053,7 +1053,6 @@ export default function HomeClient({
             </li>
           </ol>
         </div>
-
         {/* Share block */}
         <div className="bg-base-100 p-4 rounded-xl shadow-md shadow-secondary border border-base-300 flex flex-col gap-3">
           {connectedAddress ? (
