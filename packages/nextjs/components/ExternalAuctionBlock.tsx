@@ -53,6 +53,16 @@ export default function ExternalAuctionBlock({
   const [externalAuction, setExternalAuction] = useState<ExternalAuction | null>(null);
   const [now, setNow] = useState<number>(() => Date.now());
 
+  // Log state changes
+  useEffect(() => {
+    console.log("📊 ExternalAuctionBlock state updated:", {
+      hasAuction: !!externalAuction,
+      auctionId: externalAuction?.auctionId,
+      ended: externalAuction?.ended,
+      willRender: !!(externalAuction && !externalAuction.ended),
+    });
+  }, [externalAuction]);
+
   // Live ticking timestamp (updates every second)
   useEffect(() => {
     const id = setInterval(() => setNow(Date.now()), 1000);
@@ -62,17 +72,24 @@ export default function ExternalAuctionBlock({
   // Fetch external auction data
   const fetchExternalAuction = useCallback(async () => {
     try {
+      console.log("🔄 Fetching external auction from:", infoUrl);
       const response = await fetch(infoUrl);
       if (!response.ok) {
+        console.error("❌ Fetch failed with status:", response.status);
         return false;
       }
       const data: ExternalAuction = await response.json();
+      console.log("✅ fetchExternalAuction done - setting state", {
+        auctionId: data.auctionId,
+        ended: data.ended,
+        auctionAmount: formatToken(BigInt(data?.auctionAmount ?? 0n), tokenDecimals, displayDecimals),
+        endTime: data.endTime,
+        willDisplay: !data.ended,
+      });
       setExternalAuction(data);
-      console.log("fetchExternalAuction done");
-      console.log(data);
-      console.log(formatToken(BigInt(data?.auctionAmount ?? 0n), tokenDecimals, displayDecimals));
+      console.log("📝 State update called for auction:", data.auctionId);
     } catch (error) {
-      console.error("Failed to fetch external auction:", error);
+      console.error("❌ Failed to fetch external auction:", error);
     }
   }, [infoUrl, tokenDecimals, displayDecimals]);
 
@@ -96,9 +113,31 @@ export default function ExternalAuctionBlock({
   };
 
   // Don't render if no external auction or if it's ended
-  if (!externalAuction || externalAuction.ended) {
+  if (!externalAuction) {
+    console.log("🔍 ExternalAuctionBlock: No auction data yet");
     return null;
   }
+
+  if (externalAuction.ended) {
+    console.log("⏹️ ExternalAuctionBlock: Auction has ended, not displaying", {
+      auctionId: externalAuction.auctionId,
+      endTime: externalAuction.endTime,
+    });
+    return null;
+  }
+
+  // Calculate display values
+  const displayAmount = Number(externalAuction.auctionAmount) / 10 ** tokenDecimals;
+  const timeRemaining = Math.max(0, Number(externalAuction.endTime) - Math.floor(now / 1000));
+
+  console.log("🎨 Rendering ExternalAuctionBlock:", {
+    auctionAmount: externalAuction.auctionAmount,
+    tokenDecimals,
+    displayAmount,
+    timeRemaining,
+    now: Math.floor(now / 1000),
+    endTime: Number(externalAuction.endTime),
+  });
 
   return (
     <div
@@ -114,7 +153,7 @@ export default function ExternalAuctionBlock({
           Win
           <span className="mx-2">
             <NumberFlow
-              value={Number(externalAuction.auctionAmount) / 10 ** tokenDecimals}
+              value={displayAmount}
               format={{
                 notation: "standard",
                 useGrouping: false,
@@ -129,7 +168,7 @@ export default function ExternalAuctionBlock({
           <span className="text-xs sm:text-lg">Ends in</span>
           <div className="text-xs sm:text-lg font-mono">
             <NumberFlow
-              value={Math.max(0, Number(externalAuction.endTime) - Math.floor(now / 1000))}
+              value={timeRemaining}
               format={{
                 notation: "standard",
                 minimumFractionDigits: 0,

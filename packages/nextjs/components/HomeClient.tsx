@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { getReferralTag, submitReferral } from "@divvi/referral-sdk";
 import NumberFlow from "@number-flow/react";
 import { toast } from "react-hot-toast";
@@ -98,6 +98,8 @@ export default function HomeClient({
 
   // Fallback: fetch from endpoint if SQL returns nothing
   const [fallbackAuction, setFallbackAuction] = useState<any>(null);
+  const [isFetchingFallback, setIsFetchingFallback] = useState(false);
+  const fallbackFetchedRef = useRef(false);
 
   // Helper to convert string BigInts from JSON to actual BigInts
   const convertAuctionBigInts = useCallback((auction: any) => {
@@ -120,47 +122,89 @@ export default function HomeClient({
   }, []);
 
   const fetchFallbackAuction = useCallback(async () => {
+    // Prevent multiple simultaneous fetches
+    if (isFetchingFallback) {
+      console.log("⏳ Fallback fetch already in progress, skipping");
+      return;
+    }
+
+    setIsFetchingFallback(true);
     try {
       // Use env var or construct from current origin
       const ponderUrl =
         process.env.NEXT_PUBLIC_PONDER_URL ||
         (typeof window !== "undefined" ? `${window.location.origin}/ponder` : "/ponder");
-      const response = await fetch(`${ponderUrl}/latest-auction`);
+      console.log("🔄 Fetching fallback auction from:", `${ponderUrl}/latest-auction`);
+      const response = await fetch(`${ponderUrl}/latest-auction`, {
+        cache: "no-store", // Always get fresh data
+      });
       if (!response.ok) {
-        console.warn("Fallback auction fetch failed:", response.status, response.statusText);
+        console.warn("⚠️ Fallback auction fetch failed:", response.status, response.statusText);
         return;
       }
       const data = await response.json();
       if (data && !data.error) {
         const converted = convertAuctionBigInts(data);
         setFallbackAuction(converted);
-        console.log("✅ Fallback auction loaded:", converted.auctionId);
+        fallbackFetchedRef.current = true;
+        console.log("✅ Fallback auction loaded:", {
+          auctionId: converted.auctionId,
+          auctionAmount: converted.auctionAmount?.toString(),
+          ended: converted.ended,
+        });
+      } else {
+        console.warn("⚠️ Invalid data received from fallback:", data);
       }
     } catch (error) {
-      console.error("Error fetching fallback auction:", error);
+      console.error("❌ Error fetching fallback auction:", error);
+    } finally {
+      setIsFetchingFallback(false);
     }
-  }, [convertAuctionBigInts]);
+  }, [convertAuctionBigInts, isFetchingFallback]);
 
   // Fetch fallback data when SQL query returns empty
   useEffect(() => {
-    if (AuctionCreatedEvents.length === 0) {
-      fetchFallbackAuction();
-    } else {
+    if (AuctionCreatedEvents.length === 0 && !isFetchingFallback) {
+      // Initial fetch
+      if (!fallbackFetchedRef.current) {
+        fetchFallbackAuction();
+      }
+
+      // Set up periodic polling every 5 seconds
+      const pollInterval = setInterval(() => {
+        fetchFallbackAuction();
+      }, 5000);
+
+      return () => clearInterval(pollInterval);
+    } else if (AuctionCreatedEvents.length > 0) {
       setFallbackAuction(null); // Clear fallback when we have SQL data
+      fallbackFetchedRef.current = false; // Reset for next time
     }
-  }, [AuctionCreatedEvents.length, fetchFallbackAuction]);
+  }, [AuctionCreatedEvents.length, fetchFallbackAuction, isFetchingFallback]);
 
   // Use SQL data if available, otherwise use fallback
   const AuctionCreatedEventsWithFallback = useMemo(() => {
-    if (AuctionCreatedEvents.length > 0) return AuctionCreatedEvents;
-    if (fallbackAuction) return [fallbackAuction];
-    return [];
+    const result = AuctionCreatedEvents.length > 0 ? AuctionCreatedEvents : fallbackAuction ? [fallbackAuction] : [];
+
+    console.log("🔄 AuctionCreatedEventsWithFallback calculated:", {
+      sqlDataCount: AuctionCreatedEvents.length,
+      hasFallback: !!fallbackAuction,
+      resultCount: result.length,
+      firstAuctionId: result[0]?.auctionId,
+    });
+
+    return result;
   }, [AuctionCreatedEvents, fallbackAuction]);
 
   // Get the latest auction ID
   const latestAuctionId = useMemo(() => {
-    if (AuctionCreatedEventsWithFallback.length === 0) return null;
-    return AuctionCreatedEventsWithFallback[0]?.auctionId;
+    if (AuctionCreatedEventsWithFallback.length === 0) {
+      console.log("❌ No auction ID - empty events");
+      return null;
+    }
+    const id = AuctionCreatedEventsWithFallback[0]?.auctionId;
+    console.log("✅ Latest auction ID:", id);
+    return id;
   }, [AuctionCreatedEventsWithFallback]);
 
   // Only fetch bids after we have the latest auction ID
@@ -275,7 +319,16 @@ export default function HomeClient({
   });
   const tokenSymbol = tokenSymbolProp ?? tokenSymbolRpc;
 
-  const latestAuction = useMemo(() => AuctionCreatedEventsWithFallback[0], [AuctionCreatedEventsWithFallback]);
+  const latestAuction = useMemo(() => {
+    const auction = AuctionCreatedEventsWithFallback[0];
+    console.log("🎯 latestAuction updated:", {
+      exists: !!auction,
+      auctionId: auction?.auctionId,
+      auctionAmount: auction?.auctionAmount,
+      ended: auction?.ended,
+    });
+    return auction;
+  }, [AuctionCreatedEventsWithFallback]);
 
   // Call the hooks unconditionally first
   const { data: bidFeeFromContract } = useScaffoldReadContract({
