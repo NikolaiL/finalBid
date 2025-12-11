@@ -5,7 +5,7 @@ import { getReferralTag, submitReferral } from "@divvi/referral-sdk";
 import NumberFlow from "@number-flow/react";
 import { toast } from "react-hot-toast";
 import { useAccount, useReadContract, useWriteContract } from "wagmi";
-import ExternalAuctionBlock from "~~/components/ExternalAuctionBlock";
+//import ExternalAuctionBlock from "~~/components/ExternalAuctionBlock";
 import { useMiniapp } from "~~/components/MiniappProvider";
 import { AddressFarcaster, RainbowKitCustomConnectButton } from "~~/components/scaffold-eth";
 import {
@@ -910,16 +910,6 @@ export default function HomeClient({
   return (
     <div className="w-full max-w-3xl mx-auto px-2 sm:px-4 lg:px-6">
       <div className="flex flex-col gap-1 py-4 px-2">
-        {/* External auction info */}
-        <ExternalAuctionBlock
-          infoUrl="https://firebid-degen.altumbase.com/ponder/latest-auction"
-          miniappUrl="https://firebid-degen.altumbase.com"
-          tokenName="DEGEN"
-          displayDecimals={0}
-          className="!bg-violet-700 !text-white"
-          tokenDecimals={18}
-        />
-
         {/* Auction info */}
         <div className="bg-base-100 px-5 py-3 rounded-xl shadow-md shadow-secondary border border-base-300 flex flex-col gap-3">
           {latestAuction ? (
