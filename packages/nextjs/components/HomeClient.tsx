@@ -121,12 +121,20 @@ export default function HomeClient({
 
   const fetchFallbackAuction = useCallback(async () => {
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_PONDER_URL}/latest-auction`);
-      if (!response.ok) return;
+      // Use env var or construct from current origin
+      const ponderUrl =
+        process.env.NEXT_PUBLIC_PONDER_URL ||
+        (typeof window !== "undefined" ? `${window.location.origin}/ponder` : "/ponder");
+      const response = await fetch(`${ponderUrl}/latest-auction`);
+      if (!response.ok) {
+        console.warn("Fallback auction fetch failed:", response.status, response.statusText);
+        return;
+      }
       const data = await response.json();
       if (data && !data.error) {
         const converted = convertAuctionBigInts(data);
         setFallbackAuction(converted);
+        console.log("✅ Fallback auction loaded:", converted.auctionId);
       }
     } catch (error) {
       console.error("Error fetching fallback auction:", error);
@@ -321,8 +329,13 @@ export default function HomeClient({
   useEffect(() => {
     const fetchTopWinners = async () => {
       try {
-        const response = await fetch(`${process.env.NEXT_PUBLIC_PONDER_URL}/top-list`);
+        // Use env var or construct from current origin
+        const ponderUrl =
+          process.env.NEXT_PUBLIC_PONDER_URL ||
+          (typeof window !== "undefined" ? `${window.location.origin}/ponder` : "/ponder");
+        const response = await fetch(`${ponderUrl}/top-list`);
         if (!response.ok) {
+          console.warn("Top winners fetch failed:", response.status, response.statusText);
           setTopResults("");
           return;
         }

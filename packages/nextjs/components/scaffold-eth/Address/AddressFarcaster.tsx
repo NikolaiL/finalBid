@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { memo, useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import { Address as AddressBase } from "./Address";
 import { AddressCopyIcon } from "./AddressCopyIcon";
@@ -47,7 +47,7 @@ type AddressFarcasterProps = {
   onlyEnsOrAddress?: boolean;
 };
 
-export const AddressFarcaster = ({
+const AddressFarcasterComponent = ({
   address,
   disableAddressLink,
   format,
@@ -60,15 +60,23 @@ export const AddressFarcaster = ({
   const [user, setUser] = useState<FarcasterUser | null>(null);
   const [fetched, setFetched] = useState(false);
   const [imageFailed, setImageFailed] = useState(false);
+  const prevAddressRef = useRef<string | undefined>(undefined);
   const { openProfile } = useMiniapp();
 
   useEffect(() => {
     let cancelled = false;
-    setUser(null);
-    setFetched(false);
-    setImageFailed(false);
+
+    // Only clear state if the address actually changed
+    if (prevAddressRef.current !== checksum) {
+      setUser(null);
+      setFetched(false);
+      setImageFailed(false);
+      prevAddressRef.current = checksum;
+    }
+
     if (!checksum || !isAddress(checksum)) return;
 
+    // getFarcasterUser is cached, so this will be fast for repeated addresses
     getFarcasterUser(checksum)
       .then(fcUser => {
         if (cancelled) return;
@@ -170,3 +178,6 @@ export const AddressFarcaster = ({
     </div>
   );
 };
+
+// Memoize to prevent re-renders when parent updates
+export const AddressFarcaster = memo(AddressFarcasterComponent);
