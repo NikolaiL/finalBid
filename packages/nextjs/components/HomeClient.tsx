@@ -910,14 +910,6 @@ export default function HomeClient({
   return (
     <div className="w-full max-w-3xl mx-auto px-2 sm:px-4 lg:px-6">
       <div className="flex flex-col gap-1 py-4 px-2">
-        <button
-          className="btn btn-primary btn-lg h-auto min-h-16 mb-4"
-          onClick={() => {
-            window.open("https://jokerace.io/contest/celo/0x2629e4647fa28c3c871f0842e48d91e470eb2204", "_blank");
-          }}
-        >
-          Vote for Firebid in the Best Miniapp on Celo Tournament!
-        </button>
         {/* Auction info */}
         <div className="bg-base-100 px-5 py-3 rounded-xl shadow-md shadow-secondary border border-base-300 flex flex-col gap-3">
           {latestAuction ? (
