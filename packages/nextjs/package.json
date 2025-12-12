@@ -33,7 +33,7 @@
     "canvas-confetti": "^1.9.3",
     "daisyui": "5.0.9",
     "kubo-rpc-client": "~5.0.2",
-    "next": "~15.2.3",
+    "next": "15.2.8",
     "next-nprogress-bar": "~2.3.13",
     "next-themes": "~0.3.0",
     "qrcode.react": "~4.0.1",
